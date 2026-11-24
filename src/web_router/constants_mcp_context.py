@@ -64,7 +64,7 @@ MCP_MSG_ALLOWLIST_SWITCH = (
 """The capabilities resource's ``tools.switch``, when the profile left tools off."""
 
 MCP_LOG_PROFILE_SLIM = (
-    "web-router: serving the slim tool profile, without the browser_* tools, browse, live_data or the vendor tools. "
+    "web-router: serving the slim tool profile, without the browser_* tools, browse, live_data or the data API tools. "
     "Set %s=full for every tool, or name the ones you want in %s."
 )
 """Logged at startup when the slim profile is in force, so the operator knows the switch."""

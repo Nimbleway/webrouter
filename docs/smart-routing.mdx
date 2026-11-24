@@ -6,7 +6,7 @@ icon: "route"
 
 Everything in this section is experimental: any name in it may change before
 1.0, except budgets, which are stable and covered in [Cost and budgets](/budgets).
-The default router, `rules`, is asked by `plan()` and `run()` alone: with no
+The default router, `data-driven`, is asked by `plan()` and `run()` alone: with no
 budget, `search()`, `extract()` and every other method you call run as they
 would with no router. `router=None` attaches none.
 
@@ -38,10 +38,13 @@ method, `functools.partial` or coroutine function, or an object with
 A string names a registered router, such as the built-in `remote`: see
 [A router service](/smart-routing#a-router-service).
 A router is shown a `RouteRequest` and nothing else: the `prompt`, the `urls`
-found in it, the `budget`, the method you pinned (`pinned_tool`), its own
-time to answer (`deadline_s`) and the `candidates`, each a `Candidate` named
-`tool:provider` (`search:exa`) with `est_cost_usd` and `est_latency_s` (p90),
-`None` when unknown. It holds no key values. The router runs in your process;
+found in it, the `budget`, the method you pinned (`pinned_tool`), a
+preference a router service was sent (`prefer`), its own time to answer
+(`deadline_s`) and the `candidates`, each a `Candidate` named `tool:provider`
+(`search:exa`) with `est_cost_usd` and `est_latency_s` (p90), `None` when
+unknown, and `measured`, `False` for a keyless tier or a call with
+`provider_options`, which a backend's benchmark score does not describe. It
+holds no key values. The router runs in your process;
 what it sends elsewhere is up to your code. With no router attached, nothing
 extra leaves the process. Every
 `RouteDecision` field is optional: `tools` and `providers`, best first,
@@ -104,9 +107,10 @@ the network and the hour: rerun the script for your own router.
 
 `plan(prompt, budget=, tool=)` runs nothing. It returns a `Plan`: the method
 (`tool`), its options (`params`), the backends in order (`providers`) and the
-decision record. With the default `rules` router a prompt with a URL is read,
-one asking for a report, a comparison or an in-depth analysis researched
-(billed per run: pass a `budget`), and anything else searched; with
+decision record. The default `data-driven` router picks the method the prompt's
+wording was most often served by in its training requests: a search, a read of
+the page the prompt names, or research (billed per run: pass a `budget`). With
+no research backend configured, the row's next method runs. With
 `router=None` it is a search. `tool` pins a method either way.
 `run(plan)` calls that method on `auto` in that order and returns its own
 response: a `SearchResponse`, `ExtractResponse`, `AnswerResponse`,
@@ -130,12 +134,89 @@ private, shared and reserved hosts, and URLs a browser could read another host
 from, among the URLs a plan finds in a prompt and those a router supplies; the
 record lists each refusal under `dropped` or `ignored`, by scheme and host. A
 refused URL is not sent to a backend as a URL, but it stays in the prompt,
-which still goes out as the search query or the browse task. It is a check of
-the host as written, before dispatch: it resolves no DNS and follows no
-redirect, so a public name that resolves to a private address is not caught.
+which still goes out as the search query or the browse task. It resolves the
+host before dispatch and refuses a name that points at a private, loopback or
+metadata address; a literal address is judged as written. It follows no
+redirect.
 A URL with no host is refused even with no policy.
 It is off by default, and leaves the URLs you pass to `extract` yourself
 alone; on the MCP server it holds for `web_run`'s plans only.
+
+## Preferring cheap, fast or accurate
+
+A preference belongs to the router: you build the router with it. `prefer` is
+the goal; `accuracy=` (below) is the data for one goal. `cheap` and `fast` rank
+by the prices and p90 latencies web-router ships, and `accurate` by the
+accuracy scores it ships for search and answer, or by scores you bring. `cheap` puts
+the lowest estimated cost first ($0 first), `fast` the lowest p90 latency, and
+`accurate` the highest accuracy score the router holds. A backend with no
+estimate or score goes last, and ties keep the default order. It orders and
+never caps: a `Budget` still caps, and a backend with no known price never runs
+under a cost cap. The default `data-driven` router takes no preference.
+
+The built-in `preferred` router sorts each method's backends by its
+preference, with no model and no key. It orders backends without choosing a
+method: `plan()` and `run()` default to search even when the prompt contains a
+URL. Set `tool="extract"` to read that URL, or call `extract()` directly; a
+method you name is kept. The default `data-driven` router chooses the method instead.
+
+```python
+from web_router import PreferredRouter, WebRouter
+
+wr = WebRouter(router=PreferredRouter("fast"))
+wr = WebRouter(router="preferred", router_config={"prefer": "cheap"})  # the same, by name
+```
+
+The model routers take one too --
+`llm_router(..., prefer="cheap")`, or `prefer` in their `router_config` -- and
+so does `remote`, which sends it as `RouteRequest.prefer`. Each member of a
+`fallback` keeps its own. The record names the preference of the router whose
+ranking the call used: `None` when that router has none, failed or decided
+nothing.
+
+**Accuracy scores (experimental).** With no `accuracy=`, `accurate` ranks by
+the scores web-router ships: each search and answer backend's share of correct
+answers in the benchmark behind `auto`'s order (`data/chains.json`), at its
+default mode. Extract, research and browse have none, so their backends keep
+the default order, and so does any backend the benchmark did not measure.
+To rank by your own benchmark, pass `accuracy=` a mapping or the path of a
+JSON file of the same shape. Your scores replace the shipped ones whole,
+since scores from two benchmarks do not compare. Shipped scores apply only to
+built-in implementations: registering a replacement excludes its name until
+unregistered, even on a router already built. Your own scores still apply to
+custom backends:
+
+
+```json
+{"search": {"exa": 0.161, "exa:exa-deep": 0.224}, "answer": {"perplexity": 0.953}}
+```
+
+A score is the share of questions answered correctly, from 0 to 1, and
+compares only within its method. `exa` scores the backend as the request
+sends it, `exa:exa-deep` that vendor mode; anything not listed, and a candidate
+whose `measured` is `False`, is unknown. A method, backend or mode that is not
+real, a mode not spelled the way the backend spells it, or a score outside 0
+to 1 raises `ConfigurationError`, and so does `accurate` with `accuracy={}`, or a
+`preferred` router given scores at `cheap` or `fast`, which never reads them.
+A model router at `accurate` shows the shipped scores, or yours, beside each
+option; given scores with no `prefer`, it shows them to the model as one
+more fact about each option, without asking it to favour them. A
+`preferred` router with mode scores is shown vendor modes by default. For a
+model router, set `WebRouter(..., route_modes=True)` to offer those modes;
+without it, `llm` and `systemone` see only backends, so mode-specific scores
+are unused. An explicit `route_modes=False` keeps every router on backends
+only.
+
+```python
+wr = WebRouter(router=PreferredRouter("accurate"))  # the shipped scores
+wr = WebRouter(router=PreferredRouter("accurate", accuracy="scores.json"))  # yours
+```
+
+With no preference, `auto`'s order is already accuracy-first: the backends the
+shipped benchmark cannot tell apart form one tier, cheapest first under a cost
+cap. `accurate` sorts by raw scores instead, so of two backends 0.003
+apart it runs the higher one first even when the gap is within a rerun's
+noise and the other is cheaper. Most callers want the default.
 
 ## The decision record
 
@@ -143,7 +224,8 @@ alone; on the MCP server it holds for `web_run`'s plans only.
 web_router import DecisionRecord`) on every routed or budgeted call, and
 `None` on any other. Every field may be `None`:
 
-- `decision_id`, `router`, `router_ms`, `router_timeout`, `reason`;
+- `decision_id`, `router`, `prefer` (the preference its ranking used), `router_ms`,
+  `router_timeout`, `reason`;
 - `offered`, the candidates the router saw; `dropped`, those left out before
   it, with why; `ranked`, its picks that survived the budget; `excluded` and
   `ignored`, what it excluded and what of its answer was set aside, including
@@ -174,12 +256,10 @@ results against the static order. The default search and answer orders come
 from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/README.md#route-eval-replaying-a-router).
 
-The library ships one keyless router, `rules`, attached unless you pass
-`router=` (`router="rules"` names it, `router=None` attaches none): a prompt
-with a URL is extracted; one asking in so many words for a report, a comparison
-or an in-depth analysis is researched, or searched when no research backend is
-configured; anything else is searched. It reads English phrases, never single
-words like "why" or "list", and never picks `browse` or `answer`. It ranks no
+The library ships one keyless router, `data-driven`, attached unless you pass
+`router=` (`router="data-driven"` names it, `router=None` attaches none). It ranks
+web methods from bundled data without a routing model call: see
+[The data-driven router](/smart-routing#the-data-driven-router). It ranks no
 backends, so under a cost cap they run cheapest first. It also ships
 three model routers,
 `router="llm"`, `router="systemone"` and `router="gemini"`: see
@@ -195,6 +275,122 @@ server, which bills for it. The
 MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
 sets: see [the MCP guide](/mcp-server#routing-and-budgets-web_run-budget_start-budget_status).
+
+## The data-driven router
+
+`router="data-driven"` ranks web methods from bundled data without a routing
+model call. The data is a table built from 1,600 requests from public
+benchmarks and 1,078 synthetic requests, all labelled by the trainers. It is
+experimental, needs no key, calls nothing and answers in microseconds. It is
+the default: only `plan()` and `run()` ask it, and it ranks no backends.
+
+It replaces `rules` as the default. That deprecated router reads a prompt with a URL,
+researches one asking in so many words for a report or a comparison, and
+searches everything else. Against that, expect three differences:
+
+- **A URL does not always mean extract.** "Summarize https://..." is ranked as
+  research, with extract after it. Pass `tool="extract"`, or call `extract()`,
+  to read a page whatever the wording.
+- **Research is picked far more often**, and for simple questions too. A
+  research word is enough ("compare", "why", "how does", "trends", "overview",
+  "report"), and so is an ask for many items ("list of ...", "which teams ...")
+  or a leading "write", "explain", "summarize", "describe" or "review". "Why is
+  the sky blue" and "list of US presidents" are planned as research when a
+  research backend is configured. Research is billed per run and takes a
+  minute or more, so pass a `budget`, or `tool="search"` to keep a call to a
+  search.
+- **`router="rules"` is deprecated.** It keeps its old behavior for one release and warns when built;
+  it is removed in the following release. The same applies to `WEB_ROUTER_MCP_ROUTER=rules`.
+  Use the default `data-driven`, `router=None` for a plain search plan, or use
+  [`examples/router_rules.py`](https://github.com/Nimbleway/webrouter/blob/main/examples/router_rules.py)
+  as a starting point for a custom router.
+
+```python
+from web_router import WebRouter
+
+router = WebRouter(router="data-driven")
+plan = router.plan("compare the pricing plans of the top 5 CRM tools")
+plan.tool             # "research", with a research backend configured
+plan.decision.reason  # "data-driven 0.1.1: research for verb=analyze, url_target=none"
+```
+
+It reads five things in the prompt, each with a regular expression:
+
+| Feature | Values | What it reads |
+|---|---|---|
+| `verb` | `extract`, `act`, `navigate`, `compile`, `analyze`, `question`, `other` | the leading verb after openers like "please" or "can you", or a question word |
+| `url_target` | `none`, `site`, `page` | no URL, a URL to a site's root, or a URL to one page |
+| `plural` | `yes`, `no` | an ask for many items: all, every, list, top 10 |
+| `kw_research` | `yes`, `no` | a research word: report, compare, in-depth, overview |
+| `ui_action` | `yes`, `no` | an action on a page: click, log in, add to cart |
+
+The table counts, for each combination of values, how many training requests
+each method served. The router looks up the prompt's five values; a
+combination training saw fewer than 20 times backs off to the first four
+values, then three, down to the counts of every request. It ranks that row's
+methods, most common first, and puts `search` last when the row does not name
+it. The expressions read English.
+
+Three methods are treated apart:
+
+- `browse` is ranked only when you opt in, since a browser agent is slow and
+  billed: `router_config={"browse": True}`. Without it, the row's next method
+  runs.
+- `extract` is ranked only when the call names a URL that passed your
+  [URL policy](/smart-routing#url-policy).
+- `answer` is not a method the table was trained on, so it is never picked.
+
+The table ships as a versioned release, apart from the
+library's own version: `src/web_router/data/data_driven/manifest.json` names the
+version, and every decision's `reason` starts with it. The version changes only
+when a newly trained table ships. A golden file of two thousand requests, with
+the features and method the training code gave each one, is replayed in the
+tests, so the shipped expressions cannot drift from the ones the table was
+trained with.
+
+### Trained on
+
+The training owner reports these sources for release `0.1.1`, and the release's
+manifest lists them under `tool_table.sources`. Counts describe requests used,
+not each dataset's size. The trainers assigned the method labels; the source
+datasets do not supply those labels. The shipped table contains aggregate
+counts, and the golden requests are synthetic.
+
+| Source | Requests | Version or snapshot reported | Licence reported |
+|---|---:|---|---|
+| [Mind2Web-Live](https://huggingface.co/datasets/iMeanAI/Mind2Web-Live) | 240 | `train_20240528` / `test_20241024` | CC-BY-4.0 |
+| [WebBench](https://huggingface.co/datasets/Halluminate/WebBench) | 240 | `webbenchfinal.csv` | MIT |
+| [DeepSearchQA](https://huggingface.co/datasets/google/deepsearchqa) | 200 | `DSQA-full.csv` | Apache-2.0 |
+| [Bananalyzer](https://github.com/reworkd/bananalyzer/tree/d1b1ae52) | 154 | `d1b1ae52` | MIT |
+| [SimpleQA Verified](https://huggingface.co/datasets/google/simpleqa-verified) | 120 | `simpleqa_verified.csv` | MIT |
+| [WebWalkerQA](https://huggingface.co/datasets/callanwu/WebWalkerQA) | 188 | main + silver, 94 each | Apache-2.0 |
+| [Exa benchmarks](https://github.com/exa-labs/benchmarks/tree/a6a9590b) | 240 | `a6a9590b`: WebCode highlights 80, RAG 80, Company RAG 40, contents 40 | MIT |
+| [ResearchQA](https://huggingface.co/datasets/realliyifei/ResearchQA) | 80 | test split | MIT |
+| [Researchy Questions](https://huggingface.co/datasets/corbyrosset/researchy_questions) | 80 | test split | CDLA-Permissive-2.0 |
+| [DeepResearch Bench](https://github.com/Ayanami0730/deep_research_bench) | 40 | `main` | Apache-2.0 |
+| [Stagehand extract evals](https://github.com/browserbase/stagehand/tree/9afa0952) | 18 | `9afa0952` | MIT |
+| Synthetic requests generated for this router | 1,078 | 790 matched-style + 288 fan-out | Not a third-party benchmark |
+
+The GitHub sources are pinned to the commits shown. The Hugging Face files and
+DeepResearch Bench's were fetched from `main` and frozen on 2026-11-08, and the
+manifest records a SHA-256 for each file: a freeze date and a checksum, not a
+dataset revision.
+
+Release `0.1.1` was retrained without three sources an earlier, unreleased
+table used, because their terms for derived data were unclear: NQ-Open
+(CC-BY-SA-3.0, share-alike), WideSearch (no licence text) and a FreshQA mirror
+that states no licence. The most common method of every row is unchanged,
+which the golden file replays. What a row ranks after its top method did
+change in three rows of requests that ask for an action on a page: with
+`browse` off, they now get search before research, where the earlier table
+ranked research first.
+
+Mind2Web-Live is licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), which asks for
+attribution: the table's counts are derived in part from Mind2Web-Live by
+iMean AI, relabelled by method and reduced to counts. The repository's `NOTICE`
+file carries the same line. The licences above are as the sources state them;
+this list is not legal advice.
 
 ## A router service
 
@@ -316,17 +512,18 @@ field may be left out or `null`):
   held to `url_policy="public_only"` even when you set no `url_policy`: a
   service cannot name a loopback, private or metadata address by hostname. A
   refused URL is set aside in the record's `ignored`. Your own `url_policy`
-  applies when you set one. `public_only` checks the hostname as written and
-  does not resolve it, so a service could name a host whose DNS points at a
-  private address; that matters only for a backend that fetches from your
-  machine, such as a provider you register or host yourself. Every built-in
-  backend hands the URL to its vendor, which fetches it from its own network.
+  applies when you set one. `public_only` resolves the hostname and refuses a
+  name that points at a private, loopback or metadata address, so a service
+  cannot name a host whose DNS points at a private address; that matters only
+  for a backend that fetches from your machine, such as a provider you register
+  or host yourself. Every built-in backend hands the URL to its vendor, which
+  fetches it from its own network.
 - **What is shown.** The decision record names it `remote(<scheme>://<host>)`:
   never the URL's path, and never the key.
 
 [`examples/router_remote_server.py`](https://github.com/Nimbleway/webrouter/blob/main/examples/router_remote_server.py) is a
 reference service in the standard library: the wire format around the
-built-in rules router, to run beside your code or port. It binds 127.0.0.1
+built-in data-driven router, to run beside your code or port. It binds 127.0.0.1
 (any other host needs the key), answers only a `Host` naming it, checks the bearer key in constant time and
 caps a request at 1 MB.
 
@@ -427,6 +624,17 @@ httpx, which the base install (`pip install webrouter`) includes.
   WebRouter(router="gemini")
   ```
 
+**Why the model routers skip search by default.** A search answers in a second
+or two, and a model router adds its own round trip before it: `llm` at a p50
+over a second, `gemini` and `systemone` up to their 1 s limit
+(`benchmarks/providers/router_latency.py` measures it). On a direct `search()`
+the method is already fixed, so the router could only reorder backends, a gain
+smaller than the wait. `plan()` and `run()` ask the router whatever its
+`route_tools`, so there a model router still chooses between search and the
+other methods and orders search's backends. `llm`, the slowest, also leaves out
+answer and extract. To have a model router order the backends of direct
+`search()` calls too, add search to `route_tools`.
+
 Each preset's key comes from that vendor's variable (`OPENAI_API_KEY`,
 `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, `GROQ_API_KEY`,
 `OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`, `GEMINI_API_KEY`), read once
@@ -434,9 +642,10 @@ when the router is built, and is sent only to that vendor's host: naming one
 for another `base_url` raises `ConfigurationError`, as does a key that is
 missing. Each call sends the server the prompt -- for an extract, its URLs
 whole, query strings included -- the budget (except `gemini`, which sends
-none), and the candidate ids, which name
-your configured backends, with their estimated cost and p90 latency; never a
-provider key. The transport is the `remote` router's: `https` only (plain
+none), the router's `prefer`, if any, and the candidate ids, which name
+your configured backends, with their estimated cost and p90 latency, and the
+accuracy scores the router holds, if any -- yours, or the shipped ones at
+`accurate`; never a provider key. The transport is the `remote` router's: `https` only (plain
 `http` only to this machine), no credentials, query or fragment in the URL,
 one request, no retries, no redirects, no proxy read from the environment, and
 answers of `application/json` under 256 KiB. A failure leaves the static
@@ -448,6 +657,16 @@ raises carries the error class or HTTP status and the scheme and host on its
 httpx, which the base install includes. Each call bills on that server: the
 router's own call is billed by its vendor and is not counted in a `Budget`'s
 cost or the record's `estimated_cost_usd`.
+
+A decider router built with `prefer` (see [Preferring cheap, fast or accurate](/smart-routing#preferring-cheap-fast-or-accurate))
+asks every question with one sentence in its `instructions`, to rank lower
+cost, lower p90 latency, or higher measured accuracy first, and as
+`DeciderQuestion.prefer` for a decider of your own: `DeciderRouter(decider,
+prefer=..., accuracy=...)`. `llm` also lists it as a `Prefer:` line beside the
+budget, and `systemone` sends it in the `state`. At `accurate`, or built with
+`accuracy=`, each option also reads `accuracy 0.161`, or `accuracy unknown`. Built with no
+preference, a router passes on one a router service was sent; with neither,
+each router sends what it sent before.
 
 ## Chaining routers
 

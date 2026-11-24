@@ -101,7 +101,7 @@ def test_the_three_registries_are_separate_tables() -> None:
 
 
 def test_the_builtin_live_data_providers() -> None:
-    assert available_live_data_providers() == ["apify", "brightdata", "nimble", "oxylabs"], (
+    assert available_live_data_providers() == ["apify", "brightdata", "merchant", "nimble", "oxylabs"], (
         "no auto: a source's name belongs to one vendor"
     )
 

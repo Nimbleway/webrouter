@@ -92,7 +92,7 @@ def test_a_named_router_that_is_a_plain_or_async_callable_is_called(route_eval: 
 
     q = _question(route_eval, _row("tavily", "incorrect"), _row("perplexity", "correct"))
     outcome = route_eval.replay(
-        route_eval.load_router("router:cheapest_first", "search"), q, route_eval.static_router("search")
+        route_eval.load_router("router:data-driven", "search"), q, route_eval.static_router("search")
     )
     assert not outcome.router_failed and outcome.router_error is None
     register_router("async_pick", lambda **config: pick)

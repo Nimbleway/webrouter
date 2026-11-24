@@ -28,7 +28,11 @@ the report names how many it withheld per backend. Scans combine only on the
 same set, and only when they withheld the same pages.
 
 Keys come from the repo's `.env` (or the environment): each backend's own, and
-`OPENAI_API_KEY` for the default judge (`openai:gpt-4o`). Every configured
+`OPENAI_API_KEY` for the default judge (`openai:gpt-4o`). `--judge` picks
+another, as `judge_from()` names it: `anthropic`, `openai:gpt-6-luna`,
+`litellm:<model>` for any model LiteLLM reaches, or `package.module:Class` for a
+judge of your own (`run.py` and `answer.py` alike). Scans combine only under the
+same judge. Every configured
 search backend runs unless `--providers` names some; `auto` is left out,
 because it would repeat one of the others under a name that says nothing about
 who answered.
@@ -776,7 +780,7 @@ to a tool in `route_tools`, and each ask adds the router's time to the call.
 outside CI.
 
 ```bash
-uv run --all-extras --with scikit-learn python benchmarks/providers/router_latency.py --router rules --router sklearn
+uv run --all-extras --with scikit-learn python benchmarks/providers/router_latency.py --router data-driven --router sklearn
 uv run --all-extras python benchmarks/providers/router_latency.py --router llm --router jev \
     --llm-model <model> --llm-price <in>,<out> --jev-price <usd> --dry-run
 uv run --all-extras python benchmarks/providers/router_latency.py \
@@ -793,7 +797,7 @@ number up. The latency belongs to the router, not the tool, so the result is a
 row per router: a router declares the tools it fits as its own `route_tools`
 (see https://docs.webrouter.net/smart-routing), and a caller's `route_tools` always wins.
 
-**How it times.** A router is one of `rules` (the built-in rules router),
+**How it times.** A router is one of `data-driven` (the built-in default router),
 `llm` (the built-in `router="llm"`, on the preset `LLM_ROUTER_PRESET` names,
 `openai` unless set), `sklearn` and `jev` (the examples in `examples/`), `remote:<url>` (a
 router service in the wire format, schema 1; `--remote-rtt-ms` adds the same
@@ -825,7 +829,9 @@ order, on `tools-effort-60` and `simpleqa-300-v2`. The LLM router is
 `examples/router_jev.py` on `jev-1.14.0`; the sklearn router is the example's
 toy-trained pipeline; remote is the built-in `remote` router asking
 `examples/router_remote_server.py` on loopback, then the same behind a
-simulated 40 ms round trip. The run cost about $0.10.
+simulated 40 ms round trip. The run cost about $0.10. Its `rules` row is the
+built-in rules router of that version, now deprecated; the `data-driven` router that
+replaced it as the default has not been timed in a recorded run.
 
 | Tool | First backend in `auto` | p50 s | p90 s |
 |---|---|--:|--:|
@@ -848,7 +854,7 @@ gives these same verdicts.
 
 What the examples declare from it: search and answer as measured, extract,
 research and browse by judgement, since they take seconds to minutes. The
-rules and sklearn routers pass every measured tool and declare no
+rules (then built in) and sklearn routers pass every measured tool and declare no
 `route_tools`. The LLM router declares `("research", "browse")` (it never picks
 extract with no URL in the prompt), and Jev `("answer", "extract", "research",
 "browse")`. A remote service declares its own through `router_config`; at the

@@ -232,7 +232,7 @@ A pull request should:
 - do one thing — a provider, a fix, a refactor; not all three
 - pass `make check` before review
 - explain *why* in the description, not just what changed
-- update `CHANGELOG.md` under `## [Unreleased]` if users would notice
+- add a changelog fragment in `changelog.d/` if users would notice
 - update the `docs/providers.mdx` support table if provider capabilities changed
 - include live-call evidence when it touches a provider mapping
 

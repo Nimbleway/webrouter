@@ -1,0 +1,112 @@
+{
+  "vendor": "internetdata",
+  "name": "InternetData",
+  "category": "maps",
+  "summary": "IP, AS and domain data: an address's country, time zone, ASN, company, abuse contact, hostname and Tor, relay, bot and anycast flags on the free plan, and city-level geolocation, VPN, proxy and hosting detection on paid plans.",
+  "docs_url": "https://docs.internetdata.io/api",
+  "pricing_url": "https://internetdata.io/pricing",
+  "base_url": "https://api.internetdata.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "INTERNETDATA_API_KEY"
+        ],
+        "required": false,
+        "description": "an InternetData API key (internetdata.io console > API keys). Optional: without one the free Unlimited plan answers"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "No key is needed: the free Unlimited plan answers every lookup with country-level location, ASN, company, abuse email, hostname and the Tor, relay, bot, anycast, carrier and satellite flags (terms: https://internetdata.io/terms#no-key).",
+    "A field missing from an answer is one the plan does not include; city, region, coordinates, VPN, proxy and hosting detection need a paid plan.",
+    "Private and reserved addresses answer 200 with is_bogon true, not an error. A 429 carries Retry-After."
+  ],
+  "sources": [
+    "https://docs.internetdata.io/api",
+    "https://docs.internetdata.io/api/lookup/lookupIp",
+    "https://docs.internetdata.io/api/lookup/lookupAsn",
+    "https://docs.internetdata.io/api/lookup/lookupDomain",
+    "https://docs.internetdata.io/get-started/plans-and-fields"
+  ],
+  "curated": "2026-11-23",
+  "endpoints": [
+    {
+      "id": "internetdata.ip.lookup",
+      "name": "Look up an IP address",
+      "summary": "Country, continent, time zone and currency, ASN and prefix, company, abuse email, hostname and is_tor/is_relay/is_bot/is_anycast/is_carrier/is_satellite flags for an IPv4 or IPv6 address; city, coordinates, VPN, proxy and hosting detail on paid plans.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ip}",
+      "params": {
+        "ip": {
+          "in": "path",
+          "required": true,
+          "description": "IPv4 or IPv6 address.",
+          "example": "8.8.8.8"
+        }
+      },
+      "job": "ip.lookup",
+      "docs_url": "https://docs.internetdata.io/api/lookup/lookupIp",
+      "verified": {
+        "docs": "https://docs.internetdata.io/api/lookup/lookupIp",
+        "live": "2026-11-23"
+      }
+    },
+    {
+      "id": "internetdata.asn.lookup",
+      "name": "Look up an autonomous system",
+      "summary": "An AS's name, country, registry, allocation date and domain; prefixes, RPKI counts, rank, upstreams, peers and downstreams on paid plans.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/asn/{asn}",
+      "params": {
+        "asn": {
+          "in": "path",
+          "required": true,
+          "description": "The AS number, bare or with the AS prefix.",
+          "example": "AS15169"
+        }
+      },
+      "job": "ip.asn",
+      "docs_url": "https://docs.internetdata.io/api/lookup/lookupAsn",
+      "verified": {
+        "docs": "https://docs.internetdata.io/api/lookup/lookupAsn",
+        "live": "2026-11-23"
+      }
+    },
+    {
+      "id": "internetdata.domain.lookup",
+      "name": "Look up a domain",
+      "summary": "Whether a domain is registered and which DNS record types (A, AAAA, MX, NS, CNAME) it has; the records, IP ranges, hosting and disposable-email flag on paid plans.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/domain/{domain}",
+      "params": {
+        "domain": {
+          "in": "path",
+          "required": true,
+          "description": "The domain name.",
+          "example": "example.com"
+        }
+      },
+      "notes": [
+        "Answered from InternetData's latest snapshots, not a live DNS query."
+      ],
+      "job": "domain.dns",
+      "docs_url": "https://docs.internetdata.io/api/lookup/lookupDomain",
+      "verified": {
+        "docs": "https://docs.internetdata.io/api/lookup/lookupDomain",
+        "live": "2026-11-23"
+      }
+    }
+  ]
+}

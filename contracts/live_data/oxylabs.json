@@ -1,18 +1,35 @@
 {
   "provider": "oxylabs",
   "method": "live_data",
-  "class": "web_router.providers.oxylabs_live_data.OxylabsLiveDataProvider",
+  "class": "web_router.providers.oxylabs_live_data_any.OxylabsLiveDataProvider",
   "transport": {
-    "kind": "http",
-    "base_url": "https://webapi.oxylabs.io",
-    "paths": {
-      "run_path": "/v1/scrape/{source}",
-      "scrapers_path": "/v1/scrapers"
-    },
-    "auth_header": "Authorization"
+    "kind": "apis",
+    "apis": {
+      "OxylabsClassicLiveDataProvider": {
+        "kind": "http",
+        "base_url": "https://realtime.oxylabs.io",
+        "paths": {
+          "run_path": "/v1/queries"
+        },
+        "auth_header": "Authorization"
+      },
+      "OxylabsWebApiLiveDataProvider": {
+        "kind": "http",
+        "base_url": "https://webapi.oxylabs.io",
+        "paths": {
+          "run_path": "/v1/scrape/{source}",
+          "scrapers_path": "/v1/scrapers"
+        },
+        "auth_header": "Authorization"
+      }
+    }
   },
   "credentials": [
     "OXYLABS_WEB_API_KEY"
+  ],
+  "or_credentials": [
+    "OXYLABS_USERNAME",
+    "OXYLABS_PASSWORD"
   ],
   "keyless": null,
   "always_sent": {
@@ -36,6 +53,7 @@
   },
   "not_mapped": [],
   "source": [
+    "https://developers.oxylabs.io/products/web-scraper-api/targets",
     "https://developers.oxylabs.io/products/web-api/scrape/endpoint-discovery",
     "https://developers.oxylabs.io/products/web-api/scrape/dedicated-scrapers",
     "https://developers.oxylabs.io/products/web-api/scrape/delivery-modes",

@@ -13,15 +13,17 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from web_router.constants_merge import HOST_CHARS, URL_HIDDEN
-from web_router.constants_urls import URL_BRACKETS, URL_TRAILING_PUNCTUATION
+from web_router.constants_urls import URL_BRACKETS, URL_PROSE_STOPS, URL_TRAILING_PUNCTUATION
 
-_URL = re.compile(r"https?://[^\s<>\"'`]+", re.IGNORECASE)
+_URL = re.compile(rf"https?://[^\s<>\"'`{URL_PROSE_STOPS}]+", re.IGNORECASE)
+_SCHEME = re.compile(r"https?://", re.IGNORECASE)
 
 
-def _url_end(text: str) -> int:
-    """Where the URL at the start of ``text`` ends: before the first closing bracket it did not open."""
+def _url_end(text: str, start: int = 0) -> int:
+    """Where the URL at ``start`` in ``text`` ends: before the first closing bracket it did not open."""
     opened: list[str] = []
-    for i, char in enumerate(text):
+    for i in range(start, len(text)):
+        char = text[i]
         if char in URL_BRACKETS.values():
             opened.append(char)
         elif char in URL_BRACKETS and (not opened or opened.pop() != URL_BRACKETS[char]):
@@ -29,14 +31,21 @@ def _url_end(text: str) -> int:
     return len(text)
 
 
-def _trimmed(match: str) -> str:
-    """``match`` cut at a closing bracket it did not open, then without the punctuation that ends a sentence."""
-    return match[: _url_end(match)].rstrip(URL_TRAILING_PUNCTUATION)
-
-
 def urls_in(text: str) -> list[str]:
     """The URLs in ``text``: a closing bracket kept only when the URL opened it, no sentence-ending punctuation."""
-    return [_trimmed(match) for match in _URL.findall(text)]
+    found: list[str] = []
+    for run in _URL.finditer(text):
+        chunk, resume = run.group(), 0
+        # A run can hold more than one URL: in ``[https://a](https://b)`` it goes on through the link's target,
+        # which the ``]`` cuts off. Each scheme after the URL before it starts another; each character is read
+        # once, so a prompt of many such fragments costs no more than its length.
+        for scheme in _SCHEME.finditer(chunk):
+            if scheme.start() < resume:
+                continue
+            url = chunk[scheme.start() : _url_end(chunk, scheme.start())].rstrip(URL_TRAILING_PUNCTUATION)
+            found.append(url)
+            resume = scheme.start() + len(url)
+    return found
 
 
 def host_of(url: str) -> str:

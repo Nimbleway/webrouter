@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import socket
 from typing import Any
 
 import pytest
@@ -84,3 +85,12 @@ def test_screen_hands_back_a_one_shot_iterator_as_the_list_it_read() -> None:
     urls = iter(["https://example.com/a", "https://example.com/b"])
     assert screen("extract", urls) == ["https://example.com/a", "https://example.com/b"]
     assert screen("extract", "https://example.com/") == "https://example.com/"
+
+
+def test_screen_refuses_a_name_that_resolves_to_a_non_public_address(monkeypatch: pytest.MonkeyPatch) -> None:
+    def rebinding(host: str, port: object, *args: object, **kwargs: object) -> list[tuple[object, ...]]:
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("169.254.169.254", port or 80))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", rebinding)
+    with pytest.raises(ValueError, match=r"metadata\.example"):
+        screen("extract", ["http://metadata.example/latest/meta-data/"])

@@ -43,12 +43,18 @@ RULES_DEFINITION_PATTERN = (
 """A prompt asking what something is or how to do something, which the rules router searches even when it names
 research's words: "What is market research?", "How do I compare two columns in Excel and ...?"."""
 
+MSG_RULES_DEPRECATED = (
+    "router='rules' is deprecated, retained for one release and removed in the following release; "
+    "use 'data-driven' (the default), router=None for a plain search plan, "
+    "or use examples/router_rules.py as a starting point for a custom router."
+)
+
 PROMPT_PARAMS = frozenset({"query", "task"})
 """The options that carry a plan's prompt, left out of its ``repr`` with the prompt itself."""
 
 MSG_BUDGET_VALUE = "Budget({name}=...) takes a finite number of 0 or more, or None for no cap; got {value!r}."
 
 CHEAPEST_ROUTER_NAME = "cheapest_first"
-"""The built-in router that orders every call's backends by estimated cost, the free ones first."""
-
-CHEAPEST_REASON = "cheapest estimate first"
+MSG_CHEAPEST_DEPRECATED = (
+    'cheapest_first is deprecated and will be removed in the following release; use PreferredRouter("cheap") instead.'
+)

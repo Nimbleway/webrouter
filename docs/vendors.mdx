@@ -1,22 +1,27 @@
 ---
-title: "Vendor data"
-description: "call_vendor() reaches a vendor's own API (Google Ads, Datadog, ...) with your credentials, from a curated catalog."
+title: "Data APIs"
+description: "call_data_api() reaches a vendor's own API (Google Ads, Semrush, SEC filings, ...) with your credentials, from a curated catalog."
 icon: "building"
 ---
 
-`call_vendor()` reaches a vendor's own API with your account's credentials —
-your Google Ads reports, your Datadog logs, a contact-data vendor you pay for.
-It is not a method with interchangeable backends: only Google Ads knows your
-Google Ads spend, so there is no `auto`, and nothing is normalized. The answer
-is the vendor's own JSON, in its own field names and units. What the router
-adds is everything around the call:
+<Card title="Browse the catalog" icon="book-open" href="/data-apis" horizontal>
+  Every data API you can call, by category, with its endpoints and the key it needs.
+</Card>
 
-- **A catalog** of vendors and their useful endpoints, one JSON file per vendor
-  in `src/web_router/data/vendors/`, each written from the vendor's docs and
-  listed in [VENDORS.md](https://github.com/Nimbleway/webrouter/blob/main/VENDORS.md). Every endpoint says what it does, its
-  inputs and where each goes, whether it reads or writes, and the notes a
-  caller gets wrong without (money in micros, timestamps in seconds, how
-  paging works).
+A data API is a vendor's own API: your Google Ads reports, Semrush backlinks,
+SEC filings, a weather service, a contact-data vendor you pay for.
+`call_data_api()` calls one with your account's credentials. It is not a method
+with interchangeable backends: only Google Ads knows your Google Ads spend, so
+there is no `auto`, and nothing is normalized. The answer is the vendor's own
+JSON, in its own field names and units. What the router adds is everything
+around the call:
+
+- **A catalog** of data APIs and their useful endpoints, one JSON file per
+  vendor in `src/web_router/data/vendors/`, each written from the vendor's
+  docs, with a page in the [Web Catalog](/data-apis). Every endpoint says
+  what it does, its inputs and where each goes, whether it reads or writes,
+  and the notes a caller gets wrong without (money in micros, timestamps in
+  seconds, how paging works).
 - **Credentials placed the way the vendor wants them**: header keys, a query
   key, HTTP Basic, or an OAuth refresh token the router exchanges for an
   access token and caches until shortly before it expires.
@@ -34,11 +39,11 @@ from web_router import WebRouter
 
 router = WebRouter()
 
-router.vendors(configured=True)  # the vendors whose keys are set here
-router.find_vendor_endpoints("google ads spend by campaign")
-router.vendor_endpoint("google-ads.query")  # inputs, notes, credentials
+router.data_apis(configured=True)  # the data APIs whose keys are set here
+router.find_data_api_endpoints("google ads spend by campaign")
+router.data_api_endpoint("google-ads.query")  # inputs, notes, credentials
 
-response = router.call_vendor(
+response = router.call_data_api(
     "google-ads.query",
     {
         "customer_id": "1234567890",
@@ -48,11 +53,11 @@ response = router.call_vendor(
 response.data  # Google's JSON, untouched
 
 # A path the catalog does not name, still with the vendor's credentials:
-router.vendor_request("datadog", "GET", "/api/v2/users", query={"page[size]": 10})
+router.data_api_request("datadog", "GET", "/api/v2/users", query={"page[size]": 10})
 
-# The catalog names only endpoints that read. A write goes through vendor_request,
+# The catalog names only endpoints that read. A write goes through data_api_request,
 # refused unless you say so. Dry-run first where the vendor can.
-router.vendor_request(
+router.data_api_request(
     "google-ads",
     "POST",
     "/customers/1234567890/campaignBudgets:mutate",
@@ -61,23 +66,91 @@ router.vendor_request(
 )
 ```
 
-Credentials come from the environment (the MCP server loads a `.env` into it; the library does not), under the variable names
-each vendor's file lists — `make vendors` writes them all into
-`.env.example`. To load a `.env` yourself, run
-`uv run --env-file .env python app.py`, or call `load_dotenv()` from
+## Finding a data API
+
+Every way of finding a data API reads the same local catalog, the one the
+[Web Catalog](/data-apis) shows. None of them calls a vendor or costs
+anything, and none of them runs a data API: only `call_data_api()` and
+`data_api_request()` do.
+
+**From a search.** A [search](/search#data-apis-that-match-the-search) also
+lists the data APIs whose catalog entries match the query, under
+`response.data_apis`, beside the web results. A query has to name the API or
+what it serves ("datadog monitors", "edgar filings"), so an everyday web search
+lists none.
+
+```python
+response = router.search("datadog monitors")
+response.data_apis[0].endpoint    # 'datadog.monitors.search', the name call_data_api takes
+response.data_apis[0].configured  # False until its credentials are set
+response.data_apis[0].missing     # the variable to set when it is not
+
+router.search("google ads campaigns", data_apis_only=True)  # the matches alone, no web search
+```
+
+**From a page you extract.** An
+[extract](/extract#data-apis-that-serve-the-pages-site) lists, per page, the
+data APIs that serve that page's site, under `document.data_apis`. A YouTube
+URL points to the YouTube Data API, and a GitHub URL to GitHub's API.
+
+```python
+page = router.extract("https://www.youtube.com/watch?v=dQw4w9WgXcQ").documents[0]
+page.data_apis[0].data_api  # 'youtube'
+```
+
+**By describing the job.** `find_data_api_endpoints()` ranks every endpoint in the
+catalog against a description of what you need, without naming a vendor:
+
+```python
+router.find_data_api_endpoints("verify a work email")          # best first
+router.find_data_api_endpoints("stock prices", category="finance", kind="read")
+```
+
+**By listing the catalog.**
+
+```python
+router.data_apis()                       # every data API, with whether its keys are set here
+router.data_apis(configured=True)        # the ones you can call now
+router.data_apis(category="enrichment")  # one category of the catalog
+```
+
+**From an agent.** The [MCP server](/mcp-server) exposes the same lookups as
+tools:
+
+| Tool | What it returns |
+|---|---|
+| `search`, `extract` | `data_apis` on the result, as above |
+| `data_apis` | Endpoints matching `query` (or one `vendor`'s), or every data API when called with neither |
+| `data_api_endpoint` | One endpoint in full: inputs, notes, credentials |
+| `call_data_api` | The call itself, its own tool so a client can ask before each one |
+
+## Credentials
+
+Credentials come from the environment (the MCP server loads a `.env` into it;
+the library does not), under the variable names each vendor's file lists —
+`make vendors` writes them all into `.env.example`. To load a `.env` yourself,
+run `uv run --env-file .env python app.py`, or call `load_dotenv()` from
 `python-dotenv`. To pass them in code instead, give the router
-`vendor_credentials={"datadog": {"api_key": ..., "app_key": ...}}`, read
+`data_api_credentials={"datadog": {"api_key": ..., "app_key": ...}}`, read
 before the environment; anything with a `get(vendor, name, env)` method can
 stand in for both, a vault, say. A vendor whose host depends on your region
-or account takes it as a setting: `DD_SITE=datadoghq.eu`.
+or account takes it as a setting: `DD_SITE=datadoghq.eu`. Over MCP, writes
+also need `WEB_ROUTER_ALLOW_DATA_API_WRITES=1` on the server.
 
 An HTTP error raises `ProviderError` with every credential masked out of the
 vendor's message, including URL-encoded copies of a key sent in the query.
-`AsyncWebRouter` has the same methods, awaited. The vendor methods need the
-`vendors` extra (httpx), which `all` and `mcp` include.
+`AsyncWebRouter` has the same methods, awaited. The data API methods need nothing
+beyond the base install, which carries httpx.
+
+The old names (`call_vendor`, `vendor_request`, `vendors()`, `vendor()`,
+`vendor_endpoint`, `find_vendor_endpoints`, `vendor_credentials=`,
+`WEB_ROUTER_ALLOW_VENDOR_WRITES`) keep working, with a
+deprecation warning.
+
+## Your own catalog entries
 
 To pin a vendor's file or add one without forking, point
 `WEB_ROUTER_VENDOR_CATALOG` at a directory of JSON files: one named for a
 shipped vendor replaces it whole. A vendor of your own takes one of the
-shipped shelves as its `category`, or `custom` when none fits.
+shipped categories as its `category`, or `custom` when none fits.
 [AGENTS.md](https://github.com/Nimbleway/webrouter/blob/main/AGENTS.md#adding-a-vendor) has the format's rules.

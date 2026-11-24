@@ -28,6 +28,13 @@ def test_with_no_router_the_plan_is_search_on_the_static_order() -> None:
 
 
 @pytest.mark.usefixtures("called")
+def test_preferred_keeps_a_url_prompt_on_search() -> None:
+    with _wr(router="preferred", router_config={"prefer": "cheap"}) as router:
+        plan = router.plan("read https://example.com/pricing")
+        assert plan.tool == "search"
+
+
+@pytest.mark.usefixtures("called")
 @pytest.mark.parametrize("tool", list(PARAMS))
 def test_with_no_router_a_pinned_tool_is_planned_with_its_params(tool: str) -> None:
     plan = _wr().plan(PROMPT, tool=tool)
@@ -103,6 +110,42 @@ def test_run_with_a_budget_records_the_spend(called: list[str], monkeypatch: pyt
     response = _wr(router=chooser("search")).run(PROMPT, budget=Budget(max_cost_usd=0.01))
     assert called == ["search:third"]
     assert response.decision.reason == "picked" and response.decision.estimated_cost_usd == 0.001
+
+
+async def test_async_plan_resolves_urls_off_the_event_loop(monkeypatch: pytest.MonkeyPatch, called: list[str]) -> None:
+    import socket
+    import threading
+
+    loop_thread = threading.current_thread()
+    seen: list[threading.Thread] = []
+
+    def fake(host: str, port: object, *args: object, **kwargs: object) -> list[tuple[object, ...]]:
+        seen.append(threading.current_thread())
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.215.14", port or 80))]
+
+    monkeypatch.setattr(socket, "getaddrinfo", fake)
+    await _wr(AsyncWebRouter, router=chooser("answer"), url_policy="public_only").plan(PROMPT)
+    assert seen and all(thread is not loop_thread for thread in seen)
+
+
+async def test_async_plan_builds_candidates_on_the_event_loop(
+    monkeypatch: pytest.MonkeyPatch, called: list[str]
+) -> None:
+    import threading
+    from typing import Any
+
+    from web_router.routing.candidates import CandidateSet, build_candidates
+
+    loop_thread = threading.current_thread()
+    seen: list[threading.Thread] = []
+
+    def recorded(*args: Any, **kwargs: Any) -> CandidateSet:
+        seen.append(threading.current_thread())
+        return build_candidates(*args, **kwargs)
+
+    monkeypatch.setattr("web_router.client_plan.build_candidates", recorded)
+    await _wr(AsyncWebRouter, router=chooser("answer")).plan(PROMPT)
+    assert seen and all(thread is loop_thread for thread in seen)
 
 
 async def test_async_plan_and_run_route_as_the_sync_ones_do(called: list[str]) -> None:

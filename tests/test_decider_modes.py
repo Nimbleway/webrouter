@@ -14,10 +14,10 @@ from tests.candidates_helpers import exa_tavily_fixture  # noqa: F401  (fixture)
 from tests.decider_helpers import chat, serve, systemone
 from web_router import Candidate, RouteDecision, RouteRequest, WebRouter
 from web_router.constants_mode_parts import EXA_TIERS
-from web_router.routing.cheapest import cheapest_first
 from web_router.routing.decider_llm import llm_router
 from web_router.routing.decider_question import decision_for, describe
 from web_router.routing.decider_systemone import systemone_router
+from web_router.routing.preferred import PreferredRouter
 
 INSTANT, DEEP, TAVILY, EXA = "search:exa:exa-instant", "search:exa:exa-deep", "search:tavily", "search:exa"
 CANDIDATES = (
@@ -95,16 +95,18 @@ def test_a_mode_of_a_backend_not_registered_reads_by_name() -> None:
     assert line == "search on not-here in mode not-here-x (not-here-x), unknown cost, unknown latency"
 
 
-def test_cheapest_first_shown_modes_answers_every_mode_at_its_own_price() -> None:
-    decision = cheapest_first(_request())
+def test_preferred_shown_modes_answers_every_mode_at_its_own_price() -> None:
+    decision = PreferredRouter("cheap").route(_request())
     assert decision.attempts == [INSTANT, EXA, TAVILY, DEEP] and decision.providers is None
 
 
-def test_cheapest_first_keeps_providers_when_the_method_it_runs_has_no_mode() -> None:
+def test_preferred_keeps_providers_when_the_method_it_runs_has_no_mode() -> None:
     req = RouteRequest(prompt="q", candidates=(*CANDIDATES, Candidate(tool="answer", provider="x")), deadline_s=1.0)
-    assert cheapest_first(req).attempts == [INSTANT, EXA, TAVILY, DEEP], "unpinned, the method is search"
+    assert PreferredRouter("cheap").route(req).attempts == [INSTANT, EXA, TAVILY, DEEP], (
+        "unpinned, the method is search"
+    )
     pinned = RouteRequest(prompt="q", candidates=req.candidates, deadline_s=1.0, pinned_tool="answer")
-    assert cheapest_first(pinned).providers == {"search": ["exa", "tavily"], "answer": ["x"]}
+    assert PreferredRouter("cheap").route(pinned).providers == {"search": ["exa", "tavily"], "answer": ["x"]}
 
 
 def _llm(monkeypatch: pytest.MonkeyPatch) -> Any:
@@ -122,7 +124,9 @@ def _systemone(monkeypatch: pytest.MonkeyPatch) -> Any:
     return systemone_router(base_url="http://localhost:9000", model="m")
 
 
-@pytest.mark.parametrize("build", [_llm, _systemone, lambda _: "cheapest_first"], ids=["llm", "systemone", "cheapest"])
+@pytest.mark.parametrize(
+    "build", [_llm, _systemone, lambda _: PreferredRouter("cheap")], ids=["llm", "systemone", "preferred"]
+)
 def test_a_callers_route_modes_shows_a_built_in_modes_and_its_plan_runs_them(keys: Any, build: Any) -> None:
     with WebRouter(provider_config=CHAIN, router=build(keys), route_modes=True) as wr:
         plan = wr.plan("q", tool="search")
@@ -130,7 +134,7 @@ def test_a_callers_route_modes_shows_a_built_in_modes_and_its_plan_runs_them(key
     assert "exa:exa-instant" in order and "exa" not in order[: order.index("exa:exa-instant")], "run in its mode first"
 
 
-def test_rules_shown_modes_still_picks_the_method_only(keys: Any) -> None:
-    with WebRouter(provider_config=CHAIN, router="rules", route_modes=True) as wr:
+def test_the_default_router_shown_modes_still_picks_the_method_only(keys: Any) -> None:
+    with WebRouter(provider_config=CHAIN, router="data-driven", route_modes=True) as wr:
         plan = wr.plan("q")
     assert plan.tool == "search" and plan.providers["search"][:2] == ("exa", "tavily")

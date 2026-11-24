@@ -116,6 +116,7 @@ def build_candidates(
     budget: Budget | None = None,
     provider: str | Provider | None = None,
     modes: bool = False,
+    extra_modes: Mapping[str, Sequence[str]] | None = None,
 ) -> CandidateSet:
     """Every (tool, provider) ``router`` can serve ``requests`` with, within ``budget``.
 
@@ -131,20 +132,19 @@ def build_candidates(
         provider: The backend the caller named. One other than ``auto``
             leaves nothing for a router to choose, so there are no candidates.
         modes: Follow each backend with a candidate per vendor mode it offers (:mod:`.candidate_modes`).
+        extra_modes: Per search backend, more vendor modes to follow it with, such as a tier at a depth
+            (``parallel-turbo+fast``): the ones the router's ``extra_modes`` asks for.
     """
     if provider is not None and provider_name(provider) != PROVIDER_AUTO:
         return CandidateSet()
-    found = Found()
+    found, asked = Found(), extra_modes or {}
     effort: EffortChoice | None = None
     for tool, request in requests.items():
         eligible, unbuilt = eligible_members(router, tool, request)
-        request, chosen = choose_effort([name for name, _ in eligible], request, budget)
-        if chosen is not None:  # a backend may refuse the effort for this request: offered only as it will run
-            effort, taken = chosen, eligible_members(router, tool, request)[0]
-            unbuilt |= {name: MSG_DROPPED_REFUSES_EFFORT.format(effort=chosen.effort) for name, _ in eligible}
-            eligible = taken
+        request, eligible, unbuilt, chosen = _with_effort(router, tool, request, eligible, unbuilt, budget)
+        effort = chosen or effort
         found.priced[tool] = request
-        expand = partial(mode_requests, router, tool, request) if modes else None
+        expand = partial(mode_requests, router, tool, request, offered=modes, extra=asked) if modes or asked else None
         price_members(tool, request, eligible, budget, found, expand)
         costed, _ = cost_route(getattr(router, AUTO_GETTERS[tool])(PROVIDER_AUTO), tool, request, budget)
         if costed is not None:
@@ -158,3 +158,20 @@ def build_candidates(
         requests=found.priced,
         cost_order=found.cost_order,
     )
+
+
+def _with_effort(
+    router: Any,
+    tool: ToolName,
+    request: NormalizedRequest,
+    eligible: list[tuple[str, bool]],
+    unbuilt: dict[str, str],
+    budget: Budget | None,
+) -> tuple[NormalizedRequest, list[tuple[str, bool]], dict[str, str], EffortChoice | None]:
+    """The request at the one effort the call sends, and the members that take it; the others unbuilt with why."""
+    request, chosen = choose_effort([name for name, _ in eligible], request, budget)
+    if chosen is not None:  # a backend may refuse the effort for this request: offered only as it will run
+        taken = eligible_members(router, tool, request)[0]
+        unbuilt |= {name: MSG_DROPPED_REFUSES_EFFORT.format(effort=chosen.effort) for name, _ in eligible}
+        eligible = taken
+    return request, eligible, unbuilt, chosen

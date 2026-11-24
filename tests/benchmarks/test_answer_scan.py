@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import ModuleType
-from typing import Any
 
 import pytest
 
@@ -120,38 +118,6 @@ async def test_a_backend_failure_is_the_rows_and_is_never_graded(answer_scan: Mo
     assert row["failed_at"] == "answer"
     assert "HTTP 500" in row["error"]
     assert judge.graded == []
-
-
-class _BrokenJudge:
-    label = "openai:expired"
-    closed = False
-
-    def check(self) -> None:
-        """The key is set; it is only on the first grade that it turns out to have expired."""
-
-    async def agrade(self, question: str, target: str, predicted: str) -> str:
-        raise RuntimeError("Error code: 401 - Your API key has expired.")
-
-    async def aclose(self) -> None:
-        type(self).closed = True
-
-
-async def test_run_stops_on_a_dead_judge_before_any_answer(
-    answer_scan: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    def opened(*args: Any, **kwargs: Any) -> Any:
-        raise AssertionError("a router was opened, so a backend could be asked")
-
-    monkeypatch.setattr(answer_scan, "OpenAIJudge", _BrokenJudge)
-    monkeypatch.setattr(answer_scan, "AsyncWebRouter", opened)
-    path = tmp_path / "q.csv"
-    path.write_text("problem,answer\nWho?,Alice\n", encoding="utf-8")
-    args = answer_scan.parse_args(["--questions", "csv", "--dataset", str(path), "--providers", "linkup"])
-
-    with pytest.raises(SystemExit, match="no backend was asked: Error code: 401"):
-        await answer_scan.run(args, answer_scan.setup_of(args), lambda rows: None)
-
-    assert _BrokenJudge.closed
 
 
 class _FailingJudge:

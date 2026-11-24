@@ -40,7 +40,9 @@ def test_a_call_on_another_loop_gets_a_client_of_its_own_closed_after_it(monkeyp
         made: list[Any] = []
         new_client = router._new_client
         monkeypatch.setattr(router, "_new_client", lambda: made.append(new_client()) or made[-1])
-        assert asyncio.run(router.aroute(sample_request())).tools == ["search"], "a call on another, live loop"
+        assert asyncio.run(router.aroute(sample_request())).tools == ["search", "research"], (
+            "a call on another, live loop"
+        )
         assert router._pool is pool and pool is not None and not pool.is_closed, "the owner's pool is left alone"
         (own,) = made
         assert own.is_closed, "the other loop's client closed when its call ended"

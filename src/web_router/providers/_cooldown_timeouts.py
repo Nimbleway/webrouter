@@ -10,9 +10,24 @@ how slow the backend is: counting it would let one caller with a short
 
 from __future__ import annotations
 
+from typing import NamedTuple
+
 from web_router.constants_production import TIMEOUT_COOLDOWN_AFTER, TIMEOUT_COOLDOWN_S
 from web_router.exceptions import ProviderError
 from web_router.types_errors import ERROR_KIND_TIMEOUT
+
+
+class Entry(NamedTuple):
+    """One backend's cooldown in :class:`~._cooldown.Cooldowns`."""
+
+    until: float
+    """The monotonic instant it may be tried again."""
+    status: int | None
+    """The status that set it; ``None`` for one with none, timeouts in a row among them."""
+    cause: str
+    """What set it, as a refusal names it: ``a 429``, ``3 timeouts in a row``."""
+    kind: str
+    """The kind a refusal carries: ``rate_limit`` for a throttle, ``timeout`` after timeouts in a row."""
 
 
 class HopTimeoutError(ProviderError):

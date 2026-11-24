@@ -8,6 +8,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 
 from web_router.constants_decider import (
+    DECIDER_ACCURACY,
+    DECIDER_ACCURACY_UNKNOWN,
     DECIDER_COST,
     DECIDER_COST_UNKNOWN,
     DECIDER_INSTRUCTIONS,
@@ -16,16 +18,26 @@ from web_router.constants_decider import (
     DECIDER_MODE_OPTION,
     DECIDER_OPTION,
     DECIDER_PINNED,
+    DECIDER_PREFER,
     DECIDER_REASON,
     DECIDER_REASON_SCORE,
 )
+from web_router.routing.accuracy import AccuracyScores, score_of
 from web_router.routing.contract import Candidate, RouteDecision, RouteRequest, ToolName
 from web_router.routing.decider import DeciderQuestion
 from web_router.routing.decider_modes import by_score, mode_does
 
 
-def describe(candidate: Candidate) -> str:
-    """One option as a decider reads it: method, backend, its vendor mode and what it does, est. cost and p90."""
+def describe(candidate: Candidate, scores: AccuracyScores | None = None) -> str:
+    """One option as a decider reads it: method, backend, its vendor mode and what it does, est. cost and p90,
+    and its accuracy when the router holds scores."""
+    if scores is None:
+        return _option(candidate)
+    score = score_of(scores, candidate)
+    return _option(candidate) + (DECIDER_ACCURACY_UNKNOWN if score is None else DECIDER_ACCURACY.format(score=score))
+
+
+def _option(candidate: Candidate) -> str:
     cost, latency = candidate.est_cost_usd, candidate.est_latency_s
     shown = {
         "tool": candidate.tool,
@@ -38,18 +50,21 @@ def describe(candidate: Candidate) -> str:
     return DECIDER_MODE_OPTION.format(**shown, mode=candidate.mode, does=mode_does(candidate.provider, candidate.mode))
 
 
-def question_for(req: RouteRequest) -> DeciderQuestion:
+def question_for(req: RouteRequest, scores: AccuracyScores | None = None) -> DeciderQuestion:
     """The question for ``req``: every candidate but extract when the prompt names no URL, since a decider
-    sets no URL for it to read."""
-    options = {c.id: describe(c) for c in req.candidates if c.tool != "extract" or req.urls}
+    sets no URL for it to read, each with its score in ``scores`` when given; ``req``'s ``prefer`` is in the
+    instructions, which every decider reads."""
+    options = {c.id: describe(c, scores) for c in req.candidates if c.tool != "extract" or req.urls}
     pinned = DECIDER_PINNED.format(tool=req.pinned_tool) if req.pinned_tool else ""
+    prefer = DECIDER_PREFER[req.prefer] if req.prefer else ""
     return DeciderQuestion(
         prompt=req.prompt,
-        instructions=DECIDER_INSTRUCTIONS + pinned,
+        instructions=DECIDER_INSTRUCTIONS + pinned + prefer,
         options=options,
         budget=req.budget,
         pinned_tool=req.pinned_tool,
         deadline_s=req.deadline_s,
+        prefer=req.prefer,
     )
 
 
@@ -68,16 +83,17 @@ def decision_for(
     """
     if not ranked:
         return RouteDecision(confidence=confidence)
-    by_id = {c.id: c for c in req.candidates}
+    by_id, prefer = {c.id: c for c in req.candidates}, req.prefer
     if not all(by_id[cid].is_backend for cid in ranked):
         attempts, ranked_on = by_score(by_id, ranked, scores)
-        return RouteDecision(attempts=attempts, confidence=confidence, reason=_reason(name, attempts[0], ranked_on))
+        reason = _reason(name, attempts[0], ranked_on)
+        return RouteDecision(attempts=attempts, confidence=confidence, reason=reason, prefer=prefer)
     providers: dict[ToolName, list[str]] = {}
     for cid in ranked:
         providers.setdefault(by_id[cid].tool, []).append(by_id[cid].provider)
-    return RouteDecision(
-        tools=list(providers), providers=providers, confidence=confidence, reason=_reason(name, ranked[0], scores)
-    )
+    reason = _reason(name, ranked[0], scores)
+    tools: list[ToolName] = list(providers)
+    return RouteDecision(tools=tools, providers=providers, confidence=confidence, reason=reason, prefer=prefer)
 
 
 def _reason(name: str, top: str, scores: Mapping[str, float] | None) -> str:

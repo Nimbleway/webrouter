@@ -157,7 +157,8 @@ class WebRouterTools(Generic[ResultT]):
         router = self.router
         if isinstance(router, WebRouter):
             return await asyncio.to_thread(self._call, name, tool_input)
-        planned = plan(name, tool_input, self.methods, self._url_check)
+        # Planning screens URLs synchronously, so keep its DNS lookup off the loop.
+        planned = await asyncio.to_thread(plan, name, tool_input, self.methods, self._url_check)
         if isinstance(planned, str):
             return self._result(planned, is_error=True)
         try:

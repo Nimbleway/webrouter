@@ -96,11 +96,11 @@ def test_named_for_the_mcp_server_with_no_config_its_key_is_still_taken_at_start
 def test_a_fallback_member_named_alone_has_its_key_taken_at_startup() -> None:
     environ = {
         "WEB_ROUTER_MCP_ROUTER": "fallback",
-        "WEB_ROUTER_MCP_ROUTER_CONFIG": json.dumps({"routers": ["gemini", "cheapest_first"]}),
+        "WEB_ROUTER_MCP_ROUTER_CONFIG": json.dumps({"routers": ["gemini", "data-driven"]}),
         "GEMINI_API_KEY": TOKEN,
     }
     config = McpRouting.from_environ(environ).router_config
-    assert config is not None and config["routers"] == [{"name": "gemini", "api_key": TOKEN}, "cheapest_first"]
+    assert config is not None and config["routers"] == [{"name": "gemini", "api_key": TOKEN}, "data-driven"]
 
 
 def test_a_routers_setting_of_another_router_is_left_as_given() -> None:

@@ -106,6 +106,7 @@ The base install carries every search, extract, research and answer provider exc
 | `browser` | Playwright, so a browser handle can drive the page |
 | `mcp` | The MCP server, which exposes the methods as tools, the `browser_*` ones included |
 | `evals` | The OpenAI and Anthropic SDKs behind the built-in judges of `evaluate()` |
+| `evals-litellm` | `evals` and LiteLLM, for a judge on any model LiteLLM reaches (`LiteLLMJudge`) |
 | `langchain` | `langchain-core` for the LangChain tools |
 | `aws` | `botocore`, for AWS AgentCore Web Search |
 | `all` | The MCP server, `browser` and `aws`. Not `evals` or `langchain`: add those by name, as in `webrouter[all,evals]` |

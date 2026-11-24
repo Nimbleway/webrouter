@@ -5,28 +5,22 @@ dependency stays valid until that provider is actually requested.
 
 There is a table per method rather than per vendor, because a name does not imply a capability: ``brave``
 searches and cannot extract, ``oxylabs`` extracts and cannot search, and ``nimble`` searches, extracts, runs
-templates and researches through four different classes. Asking the wrong table for a name reports it as unknown
+live data and researches through four different classes. Asking the wrong table for a name reports it as unknown
 and lists the ones that method does serve, which is the honest answer.
 """
 
 from __future__ import annotations
 
 import importlib
-import os
-from collections.abc import Mapping
 from functools import partial
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from web_router.constants import (
     AUTO_EXTRA,
-    BROWSE_ENV_BY_PROVIDER,
-    BROWSER_ENV_BY_PROVIDER,
-    ENV_BY_PROVIDER,
     EXTRA_AWS,
     EXTRA_EXTRACT,
     EXTRA_RESEARCH,
     EXTRA_SEARCH,
-    EXTRACT_ENV_BY_PROVIDER,
     PROVIDER_AGENTCORE,
     PROVIDER_AUTO,
     PROVIDER_BRAVE,
@@ -54,14 +48,18 @@ from web_router.constants import (
     PROVIDER_WEBIQ,
     PROVIDER_YOU,
     PROVIDER_YOU_MCP,
-    RESEARCH_ENV_BY_PROVIDER,
 )
 from web_router.constants_browse import BUILTIN_BROWSE_PROVIDERS, BUILTIN_BROWSER_PROVIDERS
-from web_router.constants_litellm import LITELLM_SEARCH_SETTINGS_BY_PROVIDER as _SEARCH_SETTINGS
 from web_router.constants_litellm import PROVIDER_EXA_LITELLM, PROVIDER_PARALLEL_LITELLM, PROVIDER_TAVILY_LITELLM
-from web_router.constants_live_data import BUILTIN_LIVE_DATA_PROVIDERS, LIVE_DATA_ENV_BY_PROVIDER
+from web_router.constants_live_data import BUILTIN_LIVE_DATA_PROVIDERS
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.providers._pinning import pinned_class
+from web_router.registry_configured import configured_browse_providers as configured_browse_providers
+from web_router.registry_configured import configured_browser_providers as configured_browser_providers
+from web_router.registry_configured import configured_extract_providers as configured_extract_providers
+from web_router.registry_configured import configured_live_data_providers as configured_live_data_providers
+from web_router.registry_configured import configured_providers as configured_providers
+from web_router.registry_configured import configured_research_providers as configured_research_providers
 from web_router.types import Provider, provider_name
 
 if TYPE_CHECKING:
@@ -147,6 +145,23 @@ _CUSTOM_LIVE_DATA_PROVIDERS: dict[str, type[LiveDataProvider]] = {}
 _CUSTOM_RESEARCH_PROVIDERS: dict[str, type[ResearchProvider]] = {}
 _CUSTOM_BROWSER_PROVIDERS: dict[str, type[BrowserProvider]] = {}
 _CUSTOM_BROWSE_PROVIDERS: dict[str, type[BrowseProvider]] = {}
+
+
+def is_custom(method: str, name: str) -> bool:
+    """Whether ``name`` currently has a caller-registered implementation for ``method``."""
+    if method == "answer":
+        from web_router.registry_answer import is_custom as answer_custom
+
+        return answer_custom(name)
+    tables: dict[str, Any] = {
+        "search": _CUSTOM_PROVIDERS,
+        "extract": _CUSTOM_EXTRACT_PROVIDERS,
+        "live_data": _CUSTOM_LIVE_DATA_PROVIDERS,
+        "research": _CUSTOM_RESEARCH_PROVIDERS,
+        "browse": _CUSTOM_BROWSE_PROVIDERS,
+        "open_browser": _CUSTOM_BROWSER_PROVIDERS,
+    }
+    return name in tables.get(method, {})
 
 
 def register_provider(name: str | Provider, provider_cls: type[SearchProvider]) -> None:
@@ -237,82 +252,6 @@ def available_browser_providers() -> list[str]:
 def available_browse_providers() -> list[str]:
     """Every browse provider name the router knows, installed or not."""
     return sorted(set(_BUILTIN_BROWSE_PROVIDERS) | set(_CUSTOM_BROWSE_PROVIDERS))
-
-
-def _is_set(env_var: str) -> bool:
-    """Whether ``env_var`` holds a value, counting whitespace-only as unset, as the providers do."""
-    return bool((os.environ.get(env_var) or "").strip())
-
-
-def configured_providers() -> list[str]:
-    """Every builtin search provider you currently have a credential for, plus the keyless ones.
-
-    Reports what the environment makes usable, which :func:`available_providers` deliberately does not: that
-    lists every name the router knows, key or no key.
-
-    This reads environment variables only. A key passed as ``provider_config`` is invisible here, and a key that is
-    present may still be rejected by the service -- so treat this as "worth trying", not as a guarantee, and let the
-    provider itself raise when a credential is actually missing or bad. A backend that needs a setting beside its
-    credential -- a LiteLLM proxy's URL -- is reported only when it has both.
-    """
-    return sorted(
-        name
-        for name, env_var in ENV_BY_PROVIDER.items()
-        if (env_var is None or _is_set(env_var)) and all(map(_is_set, _SEARCH_SETTINGS.get(name, ())))
-    )
-
-
-def _keyed(table: Mapping[str, tuple[str, ...]]) -> list[str]:
-    """The names in a ``*_ENV_BY_PROVIDER`` table whose variables are all set; ``()`` needs none, so always."""
-    return sorted(name for name, env_vars in table.items() if all(map(_is_set, env_vars)))
-
-
-def _auto_beside_a_key(table: Mapping[str, tuple[str, ...]]) -> list[str]:
-    """As :func:`_keyed`, with ``auto`` only beside a backend that has its key: alone it has nothing to run."""
-    names = [name for name in _keyed(table) if name != PROVIDER_AUTO]
-    return sorted([PROVIDER_AUTO, *names]) if names else []
-
-
-def configured_extract_providers() -> list[str]:
-    """Every builtin extract provider you currently have credentials for, plus the keyless ones.
-
-    The same caveats as :func:`configured_providers`. A backend needing more than one variable -- Oxylabs its
-    username and password, Bright Data its token and zone -- is reported only when it has all of them.
-    """
-    return _keyed(EXTRACT_ENV_BY_PROVIDER)
-
-
-def configured_live_data_providers() -> list[str]:
-    """Every builtin template provider you currently have credentials for.
-
-    The same caveats as :func:`configured_providers`. A template run fetches and parses on the backend's account,
-    so there is no keyless member and no ``auto``; with no key at all this is empty.
-    """
-    return _keyed(LIVE_DATA_ENV_BY_PROVIDER)
-
-
-def configured_research_providers() -> list[str]:
-    """Every builtin research provider you currently have credentials for, with ``auto`` once there is one.
-
-    The same caveats as :func:`configured_providers`. Every research backend bills for the run, so there is no
-    keyless member, and with no key at all this is empty: ``auto`` would have nothing to run, and calling it
-    then says which variables would fix that.
-    """
-    return _auto_beside_a_key(RESEARCH_ENV_BY_PROVIDER)
-
-
-def configured_browser_providers() -> list[str]:
-    """Every builtin browser provider you currently have credentials for.
-
-    The same caveats as :func:`configured_providers`. A cloud browser bills for every minute it is open; ``local`` needs
-    no key and is always listed, whether or not a browser is installed for it to launch.
-    """
-    return _keyed(BROWSER_ENV_BY_PROVIDER)
-
-
-def configured_browse_providers() -> list[str]:
-    """As :func:`configured_research_providers`, for browse: no keyless tier, so with no key this is empty."""
-    return _auto_beside_a_key(BROWSE_ENV_BY_PROVIDER)
 
 
 def _resolve(

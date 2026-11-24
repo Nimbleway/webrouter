@@ -1,6 +1,6 @@
-# Vendor catalog
+# Data APIs
 
-`call_vendor()` reaches a vendor's own API with your account's credentials:
+`call_data_api()` reaches a vendor's own API with your account's credentials:
 your Google Ads reports, your Datadog logs, a contact-data vendor you pay
 for. Unlike `search` or `extract`, nothing here is interchangeable or
 normalized: each vendor answers in its own shape, and the router adds the
@@ -8,7 +8,7 @@ credentials, finds the endpoint, and keeps three guarantees (credentials go
 only to the vendor's host, no input is dropped or invented, writes are
 opt-in). Every endpoint listed here reads: none sends, publishes, writes or
 generates media, and none is a raw model call, though some return what an AI
-engine answered as data. See https://docs.webrouter.net/vendors for the API.
+engine answered as data. See https://docs.webrouter.net/vendors for the API and https://docs.webrouter.net/data-apis for the Web Catalog, a page per data API.
 
 Every entry is written from the vendor's own documentation. **Checked** says
 how: `docs <date>` means the entry was transcribed from the vendor's reference
@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-470 vendors, 3472 endpoints.
+473 vendors, 3492 endpoints.
 
 ### advertising
 
@@ -213,6 +213,7 @@ Companies, funding, jobs, technographics and business registries.
 | [Crunchbase](https://data.crunchbase.com/docs/using-the-api) `crunchbase` | Company, funding, investor and people data from the Crunchbase REST API (v4): entity lookup, search and autocomplete. | 6 read | key in header | `CRUNCHBASE_API_KEY` | docs 2026-11-08 |
 | [Crustdata](https://docs.crustdata.com) `crustdata` | Company and people search, enrichment, job listings and web search from Crustdata's datasets. | 11 read | key in header | `CRUSTDATA_API_KEY` | docs 2026-11-08 |
 | [Diffbot](https://www.diffbot.com/docs/) `diffbot` | Diffbot Knowledge Graph: search organizations, people and articles with DQL, and enhance records from partial data. | 4 read | key in query | `DIFFBOT_TOKEN` | docs 2026-11-08 |
+| [Engagemii](https://engagemii.com/aeo/data/api) `engagemii` | Company records with AI visibility scores, AI engine reads, category, location, tech stack and social profiles from the Engagemii index. | 4 read | key in header | `ENGAGEMII_DATA_KEY` | docs 2026-11-22 |
 | [Explorium AgentSource](https://developers.explorium.ai/v2/overview) `explorium` | B2B business data for 80M+ companies: match companies to ids, filter and count companies by firmographics, and enrich them with firmographics, technographics, funding, financials, workforce trends, hierarchies and recent business events. | 12 read | key in header | `EXPLORIUM_API_KEY` | docs 2026-11-16 |
 | [Extruct AI](https://docs.extruct.ai/api-reference/introduction) `extruct` | Company search by natural-language description, lookalikes of a reference company, company profiles, and async Deep Search and Deep Research tasks. | 9 read | key in header | `EXTRUCT_API_TOKEN` | docs 2026-11-09 |
 | [Fantastic.jobs](https://developer.fantastic.jobs) `fantasticjobs` | A job-postings feed from 58 ATS platforms and LinkedIn, Wellfound and Y Combinator, with AI-derived salary, seniority and remote fields and company details. | 6 read | key in header | `FANTASTICJOBS_API_KEY` | docs 2026-11-09 |
@@ -342,6 +343,7 @@ Web, news and archive search.
 | [Parallel](https://docs.parallel.ai/getting-started/overview) `parallel` | People and company discovery from Parallel Web Systems: entity search and FindAll runs. | 3 read | key in header | `PARALLEL_API_KEY` | docs 2026-11-08 |
 | [Querit](https://www.querit.ai/en/docs/overview/about) `querit` | Web search API for AI agents, with highlights, optional full page text and code and finance verticals. | 1 read | key in header | `QUERIT_API_KEY` | docs 2026-11-09 |
 | [Search1API](https://s1.dev/docs) `search1api` | Web, news and Maps search, page reading, screenshots, extraction and site crawling through one API. | 12 read | key in header | `SEARCH1API_KEY` | docs 2026-11-08 |
+| [SearchApi](https://www.searchapi.io/docs/google) `searchapi` | Structured results from Google (web, News, Maps, Shopping, Images, Videos, Scholar, Jobs, Trends, Autocomplete), Bing, YouTube and Amazon as JSON, one GET per engine. | 13 read | key in header | `SEARCHAPI_API_KEY` | live 2026-11-22 |
 | [Seltz](https://docs.seltz.ai/) `seltz` | Cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports; web search is served by search(). | 6 read | key in header | `SELTZ_API_KEY` | docs 2026-11-09 |
 | [SerpApi](https://serpapi.com/search-api) `serpapi` | Structured search results from Google, Google News, Maps, Play and YouTube, with an archive of past searches. | 8 read | key in query | `SERPAPI_API_KEY` | docs 2026-11-08 |
 | [Tako](https://docs.tako.com/) `tako` | Knowledge search that returns sourced data cards (charts and tables), cited answers, card data exports, a browsable data graph and answer agents. | 8 read | key in header | `TAKO_API_KEY` | docs 2026-11-09 |
@@ -469,6 +471,7 @@ Maps, places, routing and geolocation.
 | [Google Maps Platform](https://developers.google.com/maps/documentation) `google-maps` | Places search and details (Places API New), forward and reverse geocoding, and Street View coverage lookups. | 6 read | key in query | `GOOGLE_MAPS_API_KEY` | docs 2026-11-09 |
 | [GraphHopper Directions API](https://docs.graphhopper.com/) `graphhopper` | Routing, distance matrices, isochrones and geocoding on OpenStreetMap data. | 5 read | key in query | `GRAPHHOPPER_API_KEY` | docs 2026-11-09 |
 | [HERE](https://docs.here.com/geocoding-and-search/docs/introduction-to-here-geocoding-search-api-v7) `here-maps` | HERE Geocoding & Search v7 (geocode, reverse geocode, place search by text or category, lookup by id) and Routing v8 (traffic-aware routes for cars, trucks, walking and more). | 6 read | key in query | `HERE_API_KEY` | docs 2026-11-16 |
+| [InternetData](https://docs.internetdata.io/api) `internetdata` | IP, AS and domain data: an address's country, time zone, ASN, company, abuse contact, hostname and Tor, relay, bot and anycast flags on the free plan, and city-level geolocation, VPN, proxy and hosting detection on paid plans. | 3 read | key in header | `INTERNETDATA_API_KEY` | live 2026-11-23 |
 | [IP2Location.io](https://www.ip2location.io/ip2location-documentation) `ip2location-io` | IP geolocation with ISP, ASN, usage type, mobile carrier and proxy/fraud data (by plan), plus domain WHOIS records and the domains hosted on an IP. | 3 read | key in header | `IP2LOCATIONIO_API_KEY` | docs 2026-11-16 |
 | [ipapi.is](https://ipapi.is/developers.html) `ipapiis` | IP address intelligence: geolocation, ASN, owning company and abuse contact, and VPN, proxy, Tor, datacenter and crawler detection. | 3 read | key in query | `IPAPI_IS_API_KEY` | docs 2026-11-09 |
 | [ipdata](https://docs.ipdata.co/docs/getting-started) `ipdata` | IP geolocation with ASN, company, mobile carrier, time zone, currency and threat data (Tor, proxy, VPN, datacenter, known attacker or abuser, blocklists), plus detailed ASN records. | 3 read | key in query | `IPDATA_API_KEY` | docs 2026-11-16 |

@@ -23,30 +23,47 @@ from __future__ import annotations
 import asyncio
 import inspect
 from collections.abc import Awaitable, Callable, Generator
+from dataclasses import replace
 from typing import Any, TypeVar
 
 from web_router.constants_decider import MSG_DECIDER_FORM
+from web_router.constants_prefer import MSG_ACCURATE_NEEDS_SCORES
 from web_router.exceptions import ConfigurationError
 from web_router.routing._forms import _declared_timeout
 from web_router.routing._runner import _close, _close_late, _on_thread
-from web_router.routing.contract import RouteDecision, RouteRequest
+from web_router.routing.accuracy import AccuracyLike, AccuracyScores, accuracy_scores, live_scores, scoped
+from web_router.routing.contract import Prefer, RouteDecision, RouteRequest
 from web_router.routing.decider import Decider, DeciderQuestion
 from web_router.routing.decider_question import decision_for, question_for
 from web_router.routing.decider_reply import checked_reply
 from web_router.routing.registry import aclose_router, discard_router
+from web_router.routing.route_tools import checked_prefer
 
 _Factory = TypeVar("_Factory", bound=Callable[..., Any])
 
 
 def takes_config_of(decider: type) -> Callable[[_Factory], _Factory]:
-    """Give a ``**config`` router factory ``decider``'s signature, so a ``router_config`` key it does not take,
-    or one it needs, is a ``ConfigurationError`` when the router is built by name."""
+    """Give a ``**config`` router factory ``decider``'s signature and the router's ``prefer`` and ``accuracy``, so a
+    ``router_config`` key it does not take, or one it needs, is a ``ConfigurationError`` when built by name."""
+    own = [inspect.Parameter(key, inspect.Parameter.KEYWORD_ONLY, default=None) for key in _ROUTER_KEYS]
+    signature = inspect.signature(decider)
+    params = [p for p in signature.parameters.values() if p.kind != p.VAR_KEYWORD]
 
     def mark(factory: _Factory) -> _Factory:
-        factory.__signature__ = inspect.signature(decider)  # type: ignore[attr-defined]
+        factory.__signature__ = signature.replace(parameters=[*params, *own])  # type: ignore[attr-defined]
         return factory
 
     return mark
+
+
+_ROUTER_KEYS = ("prefer", "accuracy")
+"""The ``router_config`` keys a decider router factory keeps for the :class:`DeciderRouter` itself."""
+
+
+def decider_router(decider: Callable[..., Decider], config: dict[str, Any]) -> DeciderRouter:
+    """A :class:`DeciderRouter` on ``decider(**config)``, with ``config``'s ``prefer`` and ``accuracy`` its own."""
+    own = {key: config.pop(key) for key in _ROUTER_KEYS if key in config}
+    return DeciderRouter(decider(**config), **own)
 
 
 def _decider_name(decider: object) -> str:
@@ -99,34 +116,55 @@ class DeciderRouter:
     answers with an awaitable makes it answer with one too, which the router call awaits as it awaits any
     router's, within the deadline, closed if it never runs."""
 
-    def __init__(self, decider: Decider, *, owns_decider: bool = True) -> None:
+    def __init__(
+        self,
+        decider: Decider,
+        *,
+        owns_decider: bool = True,
+        prefer: Prefer | None = None,
+        accuracy: AccuracyLike | None = None,
+    ) -> None:
         """
         Args:
             decider: An object with ``decide(question)``, ``adecide(question)`` or both.
             owns_decider: Whether ``close()`` and ``aclose()`` close the decider too. True unless set.
+            prefer: What every question asks the decider to prefer: ``cheap``, ``fast`` or ``accurate``. Unset,
+                a request's own ``prefer`` -- one a router service was sent -- is asked.
+            accuracy: Scores shown beside each option (:mod:`.accuracy`); at ``accurate``, the shipped ones unless set.
 
         Raises:
-            ConfigurationError: for a decider with neither method, or a ``timeout_s`` that is not a positive
-                number of seconds.
+            ConfigurationError: for a decider with neither method, a ``timeout_s`` that is not a positive
+                number of seconds, an unknown ``prefer``, ``accurate`` with empty scores, or scores refused.
         """
-        self._decide = getattr(decider, "decide", None)
-        self._adecide = getattr(decider, "adecide", None)
+        self.prefer = checked_prefer(prefer)
+        self._accuracy = accuracy_scores(accuracy)
+        if self.prefer == "accurate" and not self.scores:
+            raise ConfigurationError(MSG_ACCURATE_NEEDS_SCORES)
+        self._decide, self._adecide = getattr(decider, "decide", None), getattr(decider, "adecide", None)
         if not callable(self._decide) and not callable(self._adecide):
             raise ConfigurationError(MSG_DECIDER_FORM.format(kind=type(decider).__name__))
-        self.decider = decider
-        self._owns = owns_decider
-        self.timeout_s = _declared_timeout(decider)
-        self.router_name = _decider_name(decider)
-        self.route_tools = getattr(decider, "route_tools", None)
-        self.route_modes = getattr(decider, "route_modes", None)
+        self.decider, self._owns = decider, owns_decider
+        self.timeout_s, self.router_name = _declared_timeout(decider), _decider_name(decider)
+        declared = (getattr(decider, name, None) for name in ("route_tools", "route_modes", "extra_modes"))
+        self.route_tools, self.route_modes, self.extra_modes = declared
         if callable(self._decide) and not inspect.iscoroutinefunction(self._decide):
             self.route = self._route
+
+    @property
+    def scores(self) -> AccuracyScores | None:
+        return live_scores(self.prefer, self._accuracy)
 
     def __repr__(self) -> str:
         return f"DeciderRouter({self.router_name!r}, timeout_s={self.timeout_s})"
 
+    def _asked(self, req: RouteRequest) -> RouteRequest:
+        """``req`` with this router's ``prefer``; unset, the one it came with, never cleared."""
+        return req if self.prefer is None else replace(req, prefer=self.prefer)
+
     def _route(self, req: RouteRequest) -> RouteDecision | Awaitable[RouteDecision]:
-        question = question_for(req)
+        req = self._asked(req)
+        req, scores = scoped(req, req.prefer, self._accuracy)
+        question = question_for(req, scores)
         if not question.options:
             return RouteDecision()
         assert callable(self._decide)  # called only when the decider has decide()
@@ -139,7 +177,9 @@ class DeciderRouter:
         """Ask the decider: ``adecide`` when it has one, else ``decide`` on a worker thread."""
         if not callable(self._adecide):
             return await _on_worker(self._route, req)
-        question = question_for(req)
+        req = self._asked(req)
+        req, scores = scoped(req, req.prefer, self._accuracy)
+        question = question_for(req, scores)
         if not question.options:
             return RouteDecision()
         return self._decision(req, question, await self._adecide(question))

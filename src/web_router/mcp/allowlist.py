@@ -31,6 +31,7 @@ from web_router.constants_mcp_env import (
     ENV_MCP_PROFILE,
     MCP_PROFILE_FULL,
 )
+from web_router.constants_vendors_mcp import MCP_TOOL_RENAMED
 from web_router.live_data_backends import custom_live_data_backends
 from web_router.mcp import methods
 from web_router.mcp.env_policy import switch
@@ -57,7 +58,7 @@ def allowed(handlers: Mapping[str, _T], value: str | None = None) -> dict[str, _
         ConfigurationError: for a value :data:`ENV_MCP_PROFILE` does not take.
     """
     profile = switch(ENV_MCP_PROFILE)
-    patterns = _patterns(value)
+    patterns = [pattern for entry in _patterns(value) for pattern in _renamed(entry, handlers)]
     if not patterns:
         if profile == MCP_PROFILE_FULL:
             return dict(handlers)
@@ -96,3 +97,12 @@ def _patterns(value: str | None) -> list[str]:
 def allowlist_set() -> bool:
     """Whether the operator named any tools instead of choosing a profile."""
     return bool(_patterns(None))
+
+
+def _renamed(entry: str, handlers: Mapping[str, object]) -> list[str]:
+    """``entry`` as today's patterns: one written before the data API rename (``vendors``, ``vendor*``) still names
+    the tools it meant, and is kept itself only when it also names a current tool (``*``)."""
+    if not entry:
+        return []
+    old = [MCP_TOOL_RENAMED[name] for name in fnmatch.filter(MCP_TOOL_RENAMED, entry)]
+    return [*old, entry] if not old or fnmatch.filter(handlers, entry) else old
