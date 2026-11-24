@@ -26,8 +26,8 @@
     ]
   },
   "notes": [
-    "No key is needed: the free Unlimited plan answers every single lookup with is_vpn, is_tor and is_relay with their detail objects, is_bot, is_anycast, is_bogon, hostname, country-level location and the announcing ASN with its type (isp, hosting, business...), prefix and RPKI status (terms: https://vpndetection.io/terms#no-key).",
-    "A field missing from an answer is one the plan does not include, never false: the proxy flags (is_resproxy, is_dcproxy, is_mobproxy, is_pubproxy), is_hosting, is_cdn, the operator behind a flag, city and coordinates need a paid plan. For hosting traffic on the free plan, read asn.type.",
+    "No key is needed: the free Unlimited plan answers every single lookup with is_vpn, is_tor and is_relay, the tor and relay detail objects with their provider, is_bot, is_anycast, is_bogon, hostname, country-level location and the announcing ASN with its type (isp, hosting, business...), prefix and RPKI status (terms: https://vpndetection.io/terms#no-key).",
+    "A field missing from an answer is one the plan does not include, never false: the proxy flags (is_resproxy, is_dcproxy, is_mobproxy, is_pubproxy), is_hosting, is_cdn, the vpn object (which VPN it is), city and coordinates need a paid plan. For hosting traffic on the free plan, read asn.type.",
     "Private and reserved addresses answer 200 with is_bogon true, not an error. A 429 carries Retry-After."
   ],
   "sources": [
