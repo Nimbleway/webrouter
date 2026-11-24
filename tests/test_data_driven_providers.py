@@ -8,10 +8,12 @@ import pytest
 
 from tests.candidates_helpers import clear_keys, set_keys
 from web_router import Budget, RouteRequest, WebRouter
+from web_router.constants_data_driven import DATA_DRIVEN_MANIFEST_FILE
 from web_router.exceptions import ConfigurationError
 from web_router.routing.contract import Candidate
 from web_router.routing.data_driven import DataDrivenRouter
 from web_router.routing.data_driven.providers import shipped_providers
+from web_router.routing.data_driven.table import read_release
 from web_router.types import SearchRequest
 
 KEYED = ("exa", "parallel", "keenable", "you", "nimble", "tavily", "brave")
@@ -22,7 +24,11 @@ SPEED_LINE += ["exa:exa-deep-lite+fast"]
 KNEE_FIRST = [COST_LINE[2], COST_LINE[3], COST_LINE[1], COST_LINE[0]]
 """Best first, after the knee: Parallel's advanced tier overlaps Exa's deep-lite and costs less."""
 BEST_FIRST = "by measured quality, the cheapest of the best first by benchmark prices"
-ROW = "data-driven 0.1.2: search for verb=question, url_target=none, plural=no, kw_research=no, ui_action=no"
+MANIFEST = read_release(DATA_DRIVEN_MANIFEST_FILE)
+"""The shipped manifest: the version and date below are read from it, so a new release changes no line here."""
+RELEASE = MANIFEST["version"]
+MEASURED_ON = MANIFEST["provider_table"]["measured"]
+ROW = f"data-driven {RELEASE}: search for verb=question, url_target=none, plural=no, kw_research=no, ui_action=no"
 
 
 @pytest.fixture
@@ -32,7 +38,8 @@ def keyed(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_the_router_asks_to_be_shown_the_modes_its_rows_name() -> None:
     shipped = shipped_providers()
-    assert (len(shipped.search), shipped.measured) == (10, "2026-11-23")
+    rows = read_release(MANIFEST["provider_table"]["file"])["search"]
+    assert rows and (len(shipped.search), shipped.measured) == (len(rows), MEASURED_ON)
     asked = DataDrivenRouter().extra_modes
     assert asked["parallel"] == ["parallel-turbo+fast", "parallel-advanced+fast"]
     assert asked["nimble"] == ["fast"] and "brave" not in asked, "a row at the backend's default names no mode"
@@ -57,7 +64,7 @@ def test_plan_tries_the_measured_search_backends_in_the_preferences_order(
         config.get("prefer"), BEST_FIRST
     )
     assert decision.prefer == config.get("prefer")
-    assert decision.reason == f"{ROW}; search backends {order}, by the 2026-11-23 measures"
+    assert decision.reason == f"{ROW}; search backends {order}, by the {MEASURED_ON} measures"
 
 
 def test_a_cost_cap_drops_what_the_price_list_says_does_not_fit_and_the_rest_keep_their_order(keyed: None) -> None:
@@ -99,8 +106,8 @@ def test_backends_are_ordered_only_when_search_is_the_method_that_runs() -> None
 
 
 def test_the_reason_says_when_search_runs_because_the_first_method_has_no_backend() -> None:
-    router, tail = DataDrivenRouter(), f"search backends {BEST_FIRST}, by the 2026-11-23 measures"
-    row = "data-driven 0.1.2: research for verb=analyze, url_target=none"
+    router, tail = DataDrivenRouter(), f"search backends {BEST_FIRST}, by the {MEASURED_ON} measures"
+    row = f"data-driven {RELEASE}: research for verb=analyze, url_target=none"
     decision = router.route(RouteRequest(prompt=RESEARCHY, candidates=MEASURED, deadline_s=1))
     assert decision.reason == f"{row}; research has no backend here, so search runs; {tail}"
     one = router.route(RouteRequest(prompt=RESEARCHY, candidates=MEASURED[:1], deadline_s=1))

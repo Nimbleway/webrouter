@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from tests.routing_remote_helpers import URL_PROMPT, config, reference, running
+from tests.routing_remote_helpers import URL_PROMPT, config, reference, running, url_reason
 from web_router import RouterError, WebRouter
 from web_router.routing.remote import RemoteRouterError, RemoteRouterInvalid
 
@@ -51,10 +51,7 @@ def test_unknown_decision_fields_are_ignored() -> None:
     with running(extended) as server:
         plan = WebRouter(router="remote", router_config=config(server)).plan(URL_PROMPT)
     assert plan.tool == "extract"
-    assert (
-        plan.decision.reason
-        == "data-driven 0.1.2: extract for verb=other, url_target=page, plural=no, kw_research=no, ui_action=no"
-    )
+    assert plan.decision.reason == url_reason()
 
 
 def test_a_long_reason_is_cut_short() -> None:
