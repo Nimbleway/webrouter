@@ -1625,12 +1625,10 @@ keeps its ancestry, then squash only the final integration pull request into `ma
 
 A required code-owner approval is valid only for the head commit it covers; Qodo's review is a
 separate gate. After any new commit, wait for fresh code-owner approval of the latest head.
-For a pull request into `main`, the [auto-merge controller](.github/auto-merge.md) disables any old
-auto-merge request and resets `qodo-ready` on every new head. When Qodo adds `Qodo approved` to that
-exact head, the controller arms squash auto-merge with the head SHA pinned. GitHub then waits for
-required CI, `qodo-ready`, current code-owner approval, and resolved conversations. Do not arm it
-manually except to recover a failed controller run after rechecking the same conditions. Pull requests
-into integration branches are ignored, so stack parents keep the merge-commit exception above.
+For a pull request into `main`, follow the [auto-merge controller](.github/auto-merge.md). Do not arm
+auto-merge manually except to recover a failed controller run after rechecking the same conditions.
+Pull requests into integration branches are ignored, so stack parents keep the merge-commit exception
+above.
 
 A change users would notice adds a fragment, `changelog.d/<name>.<type>.md`, holding one entry of at
 most 400 characters (format in `changelog.d/README.md`); never edit `CHANGELOG.md`, which `make changelog`

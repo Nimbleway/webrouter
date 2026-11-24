@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from scripts.auto_merge_policy import QODO_LABEL, Decision, decide
+from scripts.auto_merge_policy import QODO_ACTOR_ID, QODO_LABEL, Decision, decide
 
 HEAD = "a" * 40
 
@@ -55,9 +55,65 @@ def test_closed_pull_request_is_ignored() -> None:
 
 
 def test_qodo_label_on_current_ready_head_is_ready() -> None:
-    result = decide("labeled", HEAD, QODO_LABEL, pull_request(labels=(QODO_LABEL,)))
+    result = decide(
+        "labeled",
+        HEAD,
+        QODO_LABEL,
+        pull_request(labels=(QODO_LABEL,)),
+        event_actor_id=QODO_ACTOR_ID,
+    )
 
     assert result == Decision("ready", HEAD, "Qodo approved the current head")
+
+
+def test_label_from_another_actor_holds() -> None:
+    result = decide(
+        "labeled",
+        HEAD,
+        QODO_LABEL,
+        pull_request(labels=(QODO_LABEL,)),
+        event_actor_id="1234",
+    )
+
+    assert result == Decision("hold", HEAD, "Qodo label was not applied by Qodo")
+
+
+def test_qodo_label_on_draft_records_head_approval() -> None:
+    result = decide(
+        "labeled",
+        HEAD,
+        QODO_LABEL,
+        pull_request(draft=True, labels=(QODO_LABEL,)),
+        event_actor_id=QODO_ACTOR_ID,
+    )
+
+    assert result == Decision("approve", HEAD, "Qodo approved the current draft head")
+
+
+def test_ready_for_review_uses_authenticated_head_status() -> None:
+    result = decide(
+        "ready_for_review",
+        HEAD,
+        None,
+        pull_request(labels=(QODO_LABEL,)),
+        event_actor_id=QODO_ACTOR_ID,
+        qodo_status="success",
+    )
+
+    assert result == Decision("ready", HEAD, "Qodo approved the current head")
+
+
+def test_ready_for_review_rejects_untrusted_label_history() -> None:
+    result = decide(
+        "ready_for_review",
+        HEAD,
+        None,
+        pull_request(labels=(QODO_LABEL,)),
+        event_actor_id="1234",
+        qodo_status="success",
+    )
+
+    assert result == Decision("hold", HEAD, "Qodo label was not applied by Qodo")
 
 
 def test_ready_for_review_without_qodo_approval_holds() -> None:
@@ -66,10 +122,22 @@ def test_ready_for_review_without_qodo_approval_holds() -> None:
     assert result == Decision("hold", HEAD, "current head is not Qodo approved")
 
 
-def test_draft_holds_even_with_qodo_label() -> None:
+def test_draft_holds_untrusted_qodo_label() -> None:
     result = decide("converted_to_draft", HEAD, None, pull_request(draft=True, labels=(QODO_LABEL,)))
 
     assert result == Decision("hold", HEAD, "pull request is draft")
+
+
+def test_base_change_into_main_resets_state() -> None:
+    result = decide("edited", HEAD, None, pull_request(), previous_base="integration/feature")
+
+    assert result == Decision("reset", HEAD, "base changed to main")
+
+
+def test_title_edit_is_ignored() -> None:
+    result = decide("edited", HEAD, None, pull_request())
+
+    assert result == Decision("ignore", HEAD, "pull request metadata changed")
 
 
 def test_qodo_label_removal_holds() -> None:
