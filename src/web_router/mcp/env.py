@@ -27,7 +27,7 @@ The rules are the same wherever a file comes from. Only provider credentials
 are read -- :func:`credential_variables` -- because a
 server registered at user scope can start in any workspace, and a foreign file
 must not flip a policy switch such as file-URL navigation or point
-``CHROME_PATH`` at a binary of its choosing. A variable already set keeps its
+``CHROME_PATH`` or ``OBSCURA_PATH`` at a binary of its choosing. A variable already set keeps its
 value. And no value is ever returned, reported or put in an error message:
 names and paths are.
 """

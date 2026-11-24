@@ -173,7 +173,7 @@ the client exports always keeps its value over any file's.
 
 Whichever file it is, only the provider credentials listed in
 [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example) are taken from it. A switch such as
-`WEB_ROUTER_MCP_ALLOW_FILE_URLS` or `CHROME_PATH` in a file is ignored, because
+`WEB_ROUTER_MCP_ALLOW_FILE_URLS`, `CHROME_PATH` or `OBSCURA_PATH` in a file is ignored, because
 a server registered at user scope starts in any workspace and that workspace's
 file is not whoever runs the server; `${...}` is not expanded, so a file cannot
 copy another secret into a provider's key. The server never writes a

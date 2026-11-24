@@ -146,6 +146,24 @@ and what they read joins the answer, in the order you asked. `response.provider`
 names the backend that answered first. A URL no backend could read stays in
 `failures`, its error giving the reason from each backend that answered for it.
 
+## Pages that render in JavaScript, on your own machine: `obscura`
+
+`obscura` runs [Obscura](https://github.com/h4ckf0r0day/obscura), an open-source
+headless browser, on your machine: one `obscura fetch` per URL, which loads the
+page, runs its scripts and returns `markdown`, `html` or `text`. It needs no key
+and no Chromium, and no page goes to a vendor. Install a release binary and put
+it on `PATH`, or set `OBSCURA_PATH` to it, then name it:
+
+```python
+response = router.extract("https://quotes.toscrape.com/js/", provider="obscura")
+```
+
+It is opt-in: no `auto` chain holds it, and the MCP server offers it only once the
+binary is found. Only `http` and `https` URLs are fetched, and Obscura refuses
+loopback and private addresses itself. A PDF or other file is a failure rather
+than a page, `provider_options` is refused, and a call's `timeout` becomes the
+binary's own. It returns no title or status code.
+
 ## Data APIs that serve the page's site
 
 An extract lists, per page, the [data APIs](/vendors) whose catalog entry names that page's
