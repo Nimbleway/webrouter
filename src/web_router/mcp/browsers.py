@@ -253,9 +253,9 @@ class BrowserSessions:
             if session_id in self._ended:
                 return self._ended[session_id]
             raise ValueError(self._unknown_message(session_id))
-        extra = frozenset(self._open_secrets)  # snapshot: release error still names the ending session
-        self._end(session_id, reason)
         async with session.lock:
+            extra = frozenset(self._open_secrets)  # snapshot: release error still names the ending session
+            self._end(session_id, reason)
             try:
                 await session.handle.release()
             except WebRouterError as exc:

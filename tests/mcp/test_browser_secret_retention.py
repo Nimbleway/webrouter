@@ -11,10 +11,11 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import anyio
 from pydantic import SecretStr
 
 from web_router.constants import MCP_BROWSER_END_CLOSED, MCP_REDACTED
-from web_router.exceptions import PageClosedError, WebRouterError
+from web_router.exceptions import BrowserActionError, PageClosedError, WebRouterError
 from web_router.mcp.browsers import BrowserSessions, BrowserToolError
 
 SHARED_QUERY = "apiKey=shared-account-key"
@@ -109,3 +110,47 @@ async def test_ending_session_values_still_scrub_that_operations_error() -> None
     for value in (closing.session_id, closing.cdp_url, closing.live_view_url):
         assert value not in message
         assert value not in sessions._open_secrets
+
+
+async def test_an_action_in_flight_when_close_starts_is_still_scrubbed() -> None:
+    sessions = BrowserSessions()
+    session_id = await sessions.open(_opener(0))
+    handle = sessions._sessions[session_id].handle
+    action_started = anyio.Event()
+    let_action_fail = anyio.Event()
+    close_started = anyio.Event()
+    messages: list[str] = []
+
+    async def _failing(_: object) -> None:
+        action_started.set()
+        await let_action_fail.wait()
+        raise BrowserActionError(
+            "fake",
+            handle.session_id,
+            "click",
+            f"click failed on {handle.session_id} at {handle.cdp_url}",
+        )
+
+    async def _acting() -> None:
+        try:
+            await sessions.run(session_id, "browser_click", _failing)
+        except BrowserToolError as exc:
+            messages.append(str(exc))
+
+    async def _closing() -> None:
+        close_started.set()
+        await sessions.close(session_id, MCP_BROWSER_END_CLOSED)
+
+    with anyio.fail_after(5):
+        async with anyio.create_task_group() as group:
+            group.start_soon(_acting)
+            await action_started.wait()
+            group.start_soon(_closing)
+            await close_started.wait()
+            let_action_fail.set()
+
+    assert len(messages) == 1
+    message = messages[0]
+    assert MCP_REDACTED in message
+    assert handle.session_id not in message
+    assert handle.cdp_url not in message
