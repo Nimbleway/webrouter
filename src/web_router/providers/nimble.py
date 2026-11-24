@@ -143,12 +143,13 @@ class NimbleExtractProvider(_NimbleKeyless, ExtractProvider):
         url = payload.get("url") or urls[0]
         status = payload.get("status")
         data = payload.get("data") or {}
+        warnings = [str(warning) for warning in payload.get("warnings") or []]
 
         # Nimble answers 200 and says in `status` whether it got the page: a block or a fatal fetch error is a
         # successful call with no content, which reported as an empty document would be hidden.
         if status != NIMBLE_EXTRACT_SUCCESS_STATUS:
             detail = MSG_EXTRACT_FETCHED_NOTHING.format(status=status)
-            reason = "; ".join([detail, *(payload.get("warnings") or [])])
+            reason = "; ".join([detail, *warnings])
             failure = ExtractFailure(url=url, error=reason, status_code=_as_int(payload.get("status_code")))
             return ExtractResponse(provider=self.name, failures=[failure], raw=[payload], **keyless_cost(self))
 
@@ -159,7 +160,7 @@ class NimbleExtractProvider(_NimbleKeyless, ExtractProvider):
             content=data.get(body_field) or "",
             format=body_format,
             status_code=_as_int(payload.get("status_code")),
-            warnings=list(payload.get("warnings") or []),
+            warnings=warnings,
             # Read rather than popped: `data` is `payload["data"]`, so popping would take the body out of `raw` too.
             extra=compact({"metadata": payload.get("metadata"), **{k: v for k, v in data.items() if k != body_field}}),
         )
