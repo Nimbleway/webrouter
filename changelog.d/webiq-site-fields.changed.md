@@ -1,0 +1,1 @@
+WebIQ search sends `include_domains` and `exclude_domains` as WebIQ's `includeSites` and `excludeSites` fields instead of `site:` operators in the query, so the filters no longer reduce relevance or count toward the 1,000-character query limit. Each list takes at most 250 domains.

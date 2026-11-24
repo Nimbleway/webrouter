@@ -39,12 +39,16 @@
     },
     "include_domains": {
       "sample": {
-        "body.query": "probe query site:example.com"
+        "body.includeSites": [
+          "example.com"
+        ]
       }
     },
     "exclude_domains": {
       "sample": {
-        "body.query": "probe query -site:example.org"
+        "body.excludeSites": [
+          "example.org"
+        ]
       }
     },
     "country": {
@@ -69,8 +73,8 @@
   "verified": {
     "max_results": "live: tests/providers/test_webiq.py::test_live_search_returns_passages",
     "search_depth": "docs: https://webiq.microsoft.ai/documentation/openapi.json (WebRequest.maxLength and contentFormat); not yet run live, and deep's text format needs a key with full-document access",
-    "include_domains": "docs: https://webiq.microsoft.ai/documentation/openapi.json (WebRequest.query documents 'site:'); not yet run live, nor the OR between several sites",
-    "exclude_domains": "docs: https://webiq.microsoft.ai/documentation/openapi.json (WebRequest.query documents '-site:'); not yet run live",
+    "include_domains": "docs: https://webiq.microsoft.ai/documentation/openapi.json (WebRequest.includeSites, at most 250 sites, paths up to two segments); not yet run live",
+    "exclude_domains": "docs: https://webiq.microsoft.ai/documentation/openapi.json (WebRequest.excludeSites, at most 250 sites, paths up to two segments); not yet run live",
     "country": "docs: https://webiq.microsoft.ai/documentation/openapi.json (WebRequest.region, any two-letter code); not yet run live",
     "locale": "docs: https://webiq.microsoft.ai/documentation/openapi.json (WebRequest.language, ISO 639-1); not yet run live"
   },

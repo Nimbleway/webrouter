@@ -13,8 +13,8 @@ from web_router.providers.you_mcp import YouMcpProvider
 from web_router.registry import get_provider_class
 from web_router.types import SearchRequest
 
-SITE_BACKENDS = ("brave", "deepseek", "webiq", "you-mcp")
-"""The backends that write a domain filter into the query as ``site:``."""
+SITE_BACKENDS = ("brave", "deepseek", "you-mcp")
+"""The backends that write a domain filter into the query as ``site:``; WebIQ's own fields are tested beside it."""
 
 
 @pytest.mark.parametrize("name", SITE_BACKENDS)
@@ -22,7 +22,7 @@ SITE_BACKENDS = ("brave", "deepseek", "webiq", "you-mcp")
 def test_a_domain_filter_that_is_not_a_host_name_is_refused_unsent(
     monkeypatch: pytest.MonkeyPatch, name: str, domains: list[str], sends: bool
 ) -> None:
-    for env in ("BRAVE_SEARCH_API_KEY", "DEEPSEEK_API_KEY", "WEBIQ_API_KEY"):
+    for env in ("BRAVE_SEARCH_API_KEY", "DEEPSEEK_API_KEY"):
         monkeypatch.setenv(env, "test-key")
     sent: list[httpx.Request] = []
     provider = get_provider_class(name)(transport=httpx.MockTransport(lambda r: sent.append(r) or httpx.Response(200)))
