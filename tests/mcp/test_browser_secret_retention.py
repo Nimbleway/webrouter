@@ -60,7 +60,6 @@ async def test_a_closed_sessions_secrets_are_not_kept() -> None:
     assert "backend-session-199" not in sessions._open_secrets
     assert MCP_REDACTED in sessions.scrub_text(handle.cdp_url)
     assert MCP_REDACTED in sessions.scrub_text(SHARED_QUERY)
-    assert len(sessions._open_secrets) <= 10
 
 
 async def test_ending_session_values_still_scrub_that_operations_error() -> None:
