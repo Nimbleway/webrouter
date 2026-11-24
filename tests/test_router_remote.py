@@ -26,7 +26,7 @@ def test_the_reference_server_routes_a_plan_with_the_data_driven_router() -> Non
     assert plan.decision.router == "remote(http://127.0.0.1)"
     assert (
         plan.decision.reason
-        == "data-driven 0.1.1: extract for verb=other, url_target=page, plural=no, kw_research=no, ui_action=no"
+        == "data-driven 0.1.2: extract for verb=other, url_target=page, plural=no, kw_research=no, ui_action=no"
     )
     sent = recorder.bodies[0]
     assert sent["schema"] == 1 and sent["urls"] == ["https://en.wikipedia.org/wiki/Web_scraping"]

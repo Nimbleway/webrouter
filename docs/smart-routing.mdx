@@ -262,7 +262,8 @@ The built-in keyless router, `data-driven`, is attached unless you pass
 `router=` (`router="data-driven"` names it, `router=None` attaches none). It ranks
 web methods and search providers from bundled data without a routing model call: see
 [The data-driven router](/smart-routing#the-data-driven-router). It orders measured search
-candidates by its provider table; other methods keep `auto`'s order, cheapest first under a cost cap. It also ships
+candidates by its provider table. Other methods keep `auto`'s order; a cost cap
+orders answer backends by cost within their accuracy tiers. The library also ships
 three model routers,
 `router="llm"`, `router="systemone"` and `router="gemini"`: see
 [Decision APIs](/smart-routing#decision-apis).
@@ -346,7 +347,8 @@ Three methods are treated apart:
 
 ### Which search backend
 
-When the method is search, the router orders the backends by a second table:
+By default, `plan()`, `run()` and MCP `web_run` ask this router. When the method
+is search, it orders the backends by a second table:
 search backends and vendor tiers, each with the quality
 [webench.net](https://webench.net) measured for it (0 to 100, scored by WCE
 judge v2.8, with a 95% confidence interval), its price per thousand requests

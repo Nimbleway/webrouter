@@ -1,1 +1,0 @@
-The experimental `data-driven` router orders search's backends too: the backends and vendor tiers a benchmark measured, tried along a cost line or a speed line. `router_config={"prefer": "cheap"}` starts from the cheapest, `"fast"` from the fastest, and by default the cheapest of the best measured goes first. Only rows web-router can run as measured ship.

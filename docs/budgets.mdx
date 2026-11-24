@@ -170,8 +170,10 @@ too, `auto` or a named backend, with or without a `budget=` of its own. A thread
 
 With a cost cap, `auto` tries search's and answer's backends in cost order
 among those the benchmark cannot tell apart, unless a router ranks them itself.
-The default `data-driven` router picks only the method, so `plan()`, `run()` and the
-MCP server's `web_run` keep this order too. The default order is
+The default `data-driven` router orders measured search candidates in `plan()`,
+`run()` and the MCP server's `web_run`, using its
+[provider table](/smart-routing#which-search-backend). Budget eligibility still uses
+the price list below. Where no router orders the backends, the static order is
 ranked by measured accuracy, and backends within the method's noise floor of
 each other -- a gap smaller than a rerun's spread -- form one tier. Under a cost
 cap each tier runs cheapest first, priced for this request: its depth, result

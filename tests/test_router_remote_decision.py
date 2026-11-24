@@ -53,7 +53,7 @@ def test_unknown_decision_fields_are_ignored() -> None:
     assert plan.tool == "extract"
     assert (
         plan.decision.reason
-        == "data-driven 0.1.1: extract for verb=other, url_target=page, plural=no, kw_research=no, ui_action=no"
+        == "data-driven 0.1.2: extract for verb=other, url_target=page, plural=no, kw_research=no, ui_action=no"
     )
 
 

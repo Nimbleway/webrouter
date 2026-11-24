@@ -175,9 +175,9 @@ prices.estimate("tavily", "search")  # 0.008: list price of one request
 
 Every response carries `cost_usd`: the backend's own figure where it states
 one (`cost_source="reported"`), `0` for a call on a backend's keyless tier
-(`cost_source="keyless"`), else an estimate. Unless a router ranks the
-backends itself (the default `data-driven` router does not), a cost cap makes `auto`
-try the cheaper of the backends that score alike first.
+(`cost_source="keyless"`), else an estimate. The default `data-driven` router orders measured search candidates in `plan()`,
+`run()` and MCP `web_run`. When no router orders the backends, a cost cap makes
+`auto` try the cheaper of the backends that score alike first.
 
 Each attempt is checked against what is left before it starts, so parallel
 calls never overspend together, and a backend that does not fit is skipped
