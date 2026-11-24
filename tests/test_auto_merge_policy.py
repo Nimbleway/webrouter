@@ -60,7 +60,7 @@ def test_qodo_label_on_current_ready_head_is_ready() -> None:
         HEAD,
         QODO_LABEL,
         pull_request(labels=(QODO_LABEL,)),
-        event_actor_id=QODO_ACTOR_ID,
+        label_actor_id=QODO_ACTOR_ID,
     )
 
     assert result == Decision("ready", HEAD, "Qodo approved the current head")
@@ -72,7 +72,7 @@ def test_label_from_another_actor_holds() -> None:
         HEAD,
         QODO_LABEL,
         pull_request(labels=(QODO_LABEL,)),
-        event_actor_id="1234",
+        label_actor_id="1234",
     )
 
     assert result == Decision("hold", HEAD, "Qodo label was not applied by Qodo")
@@ -84,7 +84,7 @@ def test_qodo_label_on_draft_records_head_approval() -> None:
         HEAD,
         QODO_LABEL,
         pull_request(draft=True, labels=(QODO_LABEL,)),
-        event_actor_id=QODO_ACTOR_ID,
+        label_actor_id=QODO_ACTOR_ID,
     )
 
     assert result == Decision("approve", HEAD, "Qodo approved the current draft head")
@@ -96,7 +96,7 @@ def test_ready_for_review_uses_authenticated_head_status() -> None:
         HEAD,
         None,
         pull_request(labels=(QODO_LABEL,)),
-        event_actor_id=QODO_ACTOR_ID,
+        label_actor_id=QODO_ACTOR_ID,
         qodo_status="success",
     )
 
@@ -109,11 +109,23 @@ def test_ready_for_review_rejects_untrusted_label_history() -> None:
         HEAD,
         None,
         pull_request(labels=(QODO_LABEL,)),
-        event_actor_id="1234",
+        label_actor_id="1234",
         qodo_status="success",
     )
 
     assert result == Decision("hold", HEAD, "Qodo label was not applied by Qodo")
+
+
+def test_ready_for_review_requires_the_draft_head_status() -> None:
+    result = decide(
+        "ready_for_review",
+        HEAD,
+        None,
+        pull_request(labels=(QODO_LABEL,)),
+        label_actor_id=QODO_ACTOR_ID,
+    )
+
+    assert result == Decision("hold", HEAD, "current head is not Qodo approved")
 
 
 def test_ready_for_review_without_qodo_approval_holds() -> None:
@@ -125,7 +137,20 @@ def test_ready_for_review_without_qodo_approval_holds() -> None:
 def test_draft_holds_untrusted_qodo_label() -> None:
     result = decide("converted_to_draft", HEAD, None, pull_request(draft=True, labels=(QODO_LABEL,)))
 
-    assert result == Decision("hold", HEAD, "pull request is draft")
+    assert result == Decision("hold", HEAD, "Qodo label was not applied by Qodo")
+
+
+def test_converting_an_approved_head_to_draft_preserves_approval() -> None:
+    result = decide(
+        "converted_to_draft",
+        HEAD,
+        None,
+        pull_request(draft=True, labels=(QODO_LABEL,)),
+        label_actor_id=QODO_ACTOR_ID,
+        qodo_status="success",
+    )
+
+    assert result == Decision("approve", HEAD, "Qodo approved the current draft head")
 
 
 def test_base_change_into_main_resets_state() -> None:
@@ -143,23 +168,41 @@ def test_base_change_away_from_main_cleans_up_auto_merge() -> None:
 def test_title_edit_is_ignored() -> None:
     result = decide("edited", HEAD, None, pull_request())
 
-    assert result == Decision("ignore", HEAD, "pull request metadata changed")
+    assert result == Decision("hold", HEAD, "current head is not Qodo approved")
 
 
 def test_qodo_label_removal_holds() -> None:
     result = decide("unlabeled", HEAD, QODO_LABEL, pull_request())
 
-    assert result == Decision("hold", HEAD, "Qodo approval was removed")
+    assert result == Decision("hold", HEAD, "current head is not Qodo approved")
 
 
 def test_stale_qodo_label_removal_cannot_undo_a_newer_approval() -> None:
-    result = decide("unlabeled", HEAD, QODO_LABEL, pull_request(labels=(QODO_LABEL,)))
+    result = decide(
+        "unlabeled",
+        HEAD,
+        QODO_LABEL,
+        pull_request(labels=(QODO_LABEL,)),
+        label_actor_id=QODO_ACTOR_ID,
+    )
 
-    assert result == Decision("ignore", HEAD, "Qodo approval is present again")
+    assert result == Decision("ready", HEAD, "Qodo approved the current head")
 
 
-@pytest.mark.parametrize("action", ["labeled", "unlabeled"])
-def test_unrelated_label_event_is_ignored(action: str) -> None:
-    result = decide(action, HEAD, "documentation", pull_request(labels=(QODO_LABEL,)))
+def test_a_delayed_qodo_event_rejects_a_collaborator_reapplied_label() -> None:
+    result = decide(
+        "labeled",
+        HEAD,
+        QODO_LABEL,
+        pull_request(labels=(QODO_LABEL,)),
+        label_actor_id="1234",
+    )
 
-    assert result == Decision("ignore", HEAD, "unrelated label event")
+    assert result == Decision("hold", HEAD, "Qodo label was not applied by Qodo")
+
+
+@pytest.mark.parametrize("action", ["labeled", "unlabeled", "edited"])
+def test_a_later_event_reconciles_a_removed_qodo_label(action: str) -> None:
+    result = decide(action, HEAD, "documentation", pull_request())
+
+    assert result == Decision("hold", HEAD, "current head is not Qodo approved")

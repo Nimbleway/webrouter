@@ -33,6 +33,8 @@ The label is accepted only when GitHub records Qodo's bot account, ID `151058649
 draft pull request, that authenticated event records `qodo-ready` success on the exact head without
 arming auto-merge. When the pull request becomes ready, the controller requires the label's latest
 timeline actor and the current head's App-produced status to match before it arms auto-merge.
+Every accepted pull-request event re-reads that live timeline state. This means a later queued event
+cannot hide a removed or collaborator-reapplied label by replacing the original label event.
 
 ## Scope
 
@@ -79,6 +81,9 @@ The controller fails closed. A new head posts `qodo-ready` as pending. If arming
 readiness was recorded, it changes that status to error. A label from any actor other than Qodo also
 leaves the status pending. Stale webhook events and pull requests that never targeted `main` make no
 changes; a pull request retargeted away from `main` has auto-merge disabled.
+
+Converting an approved head back to draft disables auto-merge but preserves the authenticated,
+head-bound `qodo-ready` success so the same unchanged head can become ready again.
 
 To roll back automation, disable or remove the workflow and remove `qodo-ready` from required checks.
 Existing branch protection continues to block merges that lack CI, approval, or resolved conversations.

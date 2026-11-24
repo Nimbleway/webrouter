@@ -24,7 +24,7 @@ def decide(
     event_label: str | None,
     pull_request: dict[str, object],
     *,
-    event_actor_id: str | None = None,
+    label_actor_id: str | None = None,
     previous_base: str | None = None,
     qodo_status: str | None = None,
 ) -> Decision:
@@ -35,19 +35,9 @@ def decide(
 
     if action in {"opened", "reopened", "synchronize"}:
         return Decision("reset", head, "new pull request state")
-    if action == "edited":
-        return _edited_decision(head, previous_base)
-    if action in {"labeled", "unlabeled"} and event_label != QODO_LABEL:
-        return Decision("ignore", head, "unrelated label event")
-    if action == "unlabeled":
-        return _unlabeled_decision(head, pull_request)
-    if action == "labeled":
-        return _labeled_decision(head, pull_request, event_actor_id)
-    if pull_request.get("draft") is True:
-        return Decision("hold", head, "pull request is draft")
-    if action == "ready_for_review":
-        return _ready_for_review_decision(head, pull_request, event_actor_id, qodo_status)
-    return Decision("hold", head, "current head is not Qodo approved")
+    if action == "edited" and previous_base:
+        return Decision("reset", head, "base changed to main")
+    return _current_state_decision(action, head, pull_request, label_actor_id, qodo_status)
 
 
 def _guard_event(
@@ -68,38 +58,21 @@ def _guard_event(
     return None
 
 
-def _edited_decision(head: str, previous_base: str | None) -> Decision:
-    if previous_base:
-        return Decision("reset", head, "base changed to main")
-    return Decision("ignore", head, "pull request metadata changed")
-
-
-def _unlabeled_decision(head: str, pull_request: dict[str, object]) -> Decision:
-    if QODO_LABEL in _label_names(pull_request):
-        return Decision("ignore", head, "Qodo approval is present again")
-    return Decision("hold", head, "Qodo approval was removed")
-
-
-def _labeled_decision(head: str, pull_request: dict[str, object], event_actor_id: str | None) -> Decision:
-    if event_actor_id != QODO_ACTOR_ID:
-        return Decision("hold", head, "Qodo label was not applied by Qodo")
-    if QODO_LABEL not in _label_names(pull_request):
-        return Decision("ignore", head, "Qodo approval is no longer present")
-    if pull_request.get("draft") is True:
-        return Decision("approve", head, "Qodo approved the current draft head")
-    return Decision("ready", head, "Qodo approved the current head")
-
-
-def _ready_for_review_decision(
+def _current_state_decision(
+    action: str,
     head: str,
     pull_request: dict[str, object],
-    event_actor_id: str | None,
+    label_actor_id: str | None,
     qodo_status: str | None,
 ) -> Decision:
-    if QODO_LABEL not in _label_names(pull_request) or qodo_status != "success":
+    if QODO_LABEL not in _label_names(pull_request):
         return Decision("hold", head, "current head is not Qodo approved")
-    if event_actor_id != QODO_ACTOR_ID:
+    if label_actor_id != QODO_ACTOR_ID:
         return Decision("hold", head, "Qodo label was not applied by Qodo")
+    if pull_request.get("draft") is True:
+        return Decision("approve", head, "Qodo approved the current draft head")
+    if action == "ready_for_review" and qodo_status != "success":
+        return Decision("hold", head, "current head is not Qodo approved")
     return Decision("ready", head, "Qodo approved the current head")
 
 
@@ -124,7 +97,7 @@ def _label_names(pull_request: dict[str, object]) -> set[str]:
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Decide how the auto-merge controller handles a pull request event.")
     parser.add_argument("--action", required=True)
-    parser.add_argument("--event-actor-id")
+    parser.add_argument("--label-actor-id")
     parser.add_argument("--event-head", required=True)
     parser.add_argument("--event-label")
     parser.add_argument("--previous-base")
@@ -146,7 +119,7 @@ def main() -> None:
         args.event_head,
         args.event_label,
         pull_request,
-        event_actor_id=args.event_actor_id,
+        label_actor_id=args.label_actor_id,
         previous_base=args.previous_base,
         qodo_status=args.qodo_status,
     )
