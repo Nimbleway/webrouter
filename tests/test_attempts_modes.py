@@ -132,11 +132,11 @@ def test_a_throttled_mode_cools_its_backend_so_the_next_call_runs_none_of_its_mo
 
 def test_a_cap_only_a_mode_fits_still_asks_the_router_and_runs_that_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     calls, cap = fake_backends(monkeypatch), Budget(max_cost_usd=0.015)
-    assert (price("exa-instant") or 1) < 0.015, "over the instant mode; the router's ids show the default is not"
+    assert (price("exa-instant") or 1) < 0.015, "over the instant and lite modes; the ids show the default is not"
     router = Shown(RouteDecision(attempts=[INSTANT]), route_modes=True)
     with WebRouter(provider_config={"auto": {"chain": {"search": ["exa"]}}}, router=router) as wr:
         response = wr.search("q", budget=cap)
-    assert (router.ids, calls.exa, response.provider) == ([INSTANT], ["instant"], "exa")
+    assert (router.ids, calls.exa, response.provider) == ([INSTANT, "search:exa:exa-lite"], ["instant"], "exa")
 
 
 def test_a_router_answer_that_leaves_nothing_to_run_lets_the_budget_say_why(monkeypatch: pytest.MonkeyPatch) -> None:
