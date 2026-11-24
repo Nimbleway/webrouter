@@ -80,16 +80,25 @@ def left_call(ledger: Ledger, exc: BaseException) -> None:
     """Note that ``exc`` is leaving the call ``ledger`` holds, unless it already left a call nested in it.
 
     A provider may keep one error and raise it again in a later call: there the old note names other calls, so it
-    is replaced rather than kept.
+    is replaced rather than kept. Only a refusal is noted, and only one that can be a key: a provider's own error
+    class may define ``__eq__`` without ``__hash__``, and the note must never replace that error with a TypeError.
     """
-    if not _among(ledger, _LEFT.get(exc, ())):
+    if isinstance(exc, _REFUSED_BEFORE_SENDING) and _keyable(exc) and not _among(ledger, _LEFT.get(exc, ())):
         _LEFT[exc] = LEDGERS.get()
 
 
 def _from_nested(exc: BaseException, ledger: Ledger) -> bool:
-    """Whether ``exc`` already left a call nested in the one ``ledger`` holds."""
-    chain = _LEFT.get(exc, ())
+    """Whether ``exc`` already left a call nested in the one ``ledger`` holds; one that cannot be noted never did."""
+    chain = _LEFT.get(exc, ()) if _keyable(exc) else ()
     return _among(ledger, chain) and chain[-1] is not ledger
+
+
+def _keyable(exc: BaseException) -> bool:
+    try:
+        hash(exc)
+    except TypeError:
+        return False
+    return True
 
 
 def _among(ledger: Ledger, chain: tuple[Ledger, ...]) -> bool:

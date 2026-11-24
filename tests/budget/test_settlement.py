@@ -106,6 +106,21 @@ def test_a_refusal_raised_again_in_a_later_call_is_charged_nothing_there(chain: 
     assert chain.called == ["first", "second"], "an earlier call's note does not make it a nested refusal here"
 
 
+class _Unhashable(ProviderError):
+    def __eq__(self, other: object) -> bool:  # defining __eq__ leaves the class without __hash__
+        return self is other
+
+    __hash__ = None  # type: ignore[assignment]
+
+
+@pytest.mark.parametrize("tool", ["search"], indirect=True)
+def test_a_provider_error_that_cannot_be_hashed_still_reaches_the_caller(chain: Chain, priced: Table) -> None:
+    chain.raises["first"] = _Unhashable("first", "the provider's own failure")
+    priced.update(first=(0.02, None))
+    with pytest.raises(_Unhashable):
+        call(chain, Budget(max_cost_usd=0.10), provider="first")
+
+
 def test_a_refusal_passed_on_from_a_nested_call_leaves_the_provider_charged(priced: Table) -> None:
     router, depth = WebRouter(), []
 
