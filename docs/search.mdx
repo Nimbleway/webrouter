@@ -84,8 +84,8 @@ less under its name.
 | `deep` | The whole page | `standard` + `full_content` | `advanced` + raw content | `full_page` | whole text | `text` | refused | refused | refused | refused | `need_content` |
 
 Octen serves `fast` (`full_content` at its default of 2,048 tokens a page) and `deep` (100,000 tokens, its
-maximum), and refuses `lite`: its default highlight runs to about 2,000 characters. Linkup, AgentCore and
-Parallel MCP do not map it. Where a vendor's size setting
+maximum), and refuses `lite`: its default highlight runs to about 2,000 characters. Linkup, AgentCore,
+Parallel MCP, Valyu, Seltz, Keirolabs and SpecStream do not map it. Where a vendor's size setting
 does not bind (Tavily's `basic` returns up to three chunks of about 500
 characters, You.com's snippets can run past 500, Exa's highlights cap,
 Parallel's excerpt cap and Perplexity's token budget are soft, DeepSeek's default carries its whole
@@ -143,7 +143,7 @@ date gets today (UTC) minus 1, 7, 30 or 365 days.
 | Seltz | `from_date` as an offset from now (`now-1d`, `now-7d`, `now-1M`, `now-1y`): month and year are calendar ones |
 | Octen | `time_range` (`day`, `week`, `month`, `year`) |
 
-WebIQ and Parallel MCP do not map it.
+WebIQ, Parallel MCP, Keirolabs and SpecStream do not map it.
 
 ## Values a backend refuses
 
