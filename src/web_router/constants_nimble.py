@@ -11,6 +11,12 @@ import re
 NIMBLE_AUTH_HEADER = "Authorization"
 """The header the SDK sends a key in; a keyless call omits it, which Nimble serves on its keyless tier."""
 
+MSG_NIMBLE_LITE_RECENCY = (
+    "Nimble's lite depth does not filter by recency; ask for search_depth 'fast' or 'deep', leave recency unset, "
+    "or name another provider."
+)
+"""Checked live 2026-11-24: ``recency='day'`` left lite's results unchanged and replaced standard's."""
+
 NIMBLE_INDEX_HEADING = re.compile(r"^[ \t#*_]*source index[*_]*:?[*_]*[ \t]*$", re.IGNORECASE | re.MULTILINE)
 """The line the prose's own source list starts after, as Nimble writes it: ``Source index:``."""
 

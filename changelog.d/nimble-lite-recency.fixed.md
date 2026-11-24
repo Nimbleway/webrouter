@@ -1,0 +1,1 @@
+Nimble search refuses `recency` at `search_depth="lite"`, which does not filter by it, instead of returning unfiltered results. Ask for `fast` or `deep`, or leave `recency` unset; `auto` passes Nimble over for such a call.
