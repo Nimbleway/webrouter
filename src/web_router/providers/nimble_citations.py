@@ -119,8 +119,10 @@ def _passages(body: str) -> list[str]:
         text = line.strip()
         if not text:
             passages.append([])
-        elif _ITEM_START.match(line) or not passages:
-            passages.append([text.removeprefix("- ").removeprefix("* ")])
+        elif item := _ITEM_START.match(line):
+            passages.append([line[item.end() :].strip()])
+        elif not passages:
+            passages.append([text])
         else:
             passages[-1].append(text)
     return [" ".join(lines) for lines in passages if lines]
