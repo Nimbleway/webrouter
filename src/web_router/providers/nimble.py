@@ -159,6 +159,7 @@ class NimbleExtractProvider(_NimbleKeyless, ExtractProvider):
             content=data.get(body_field) or "",
             format=body_format,
             status_code=_as_int(payload.get("status_code")),
+            warnings=list(payload.get("warnings") or []),
             # Read rather than popped: `data` is `payload["data"]`, so popping would take the body out of `raw` too.
             extra=compact({"metadata": payload.get("metadata"), **{k: v for k, v in data.items() if k != body_field}}),
         )
