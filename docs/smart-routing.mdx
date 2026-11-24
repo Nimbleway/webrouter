@@ -131,9 +131,9 @@ from, among the URLs a plan finds in a prompt and those a router supplies; the
 record lists each refusal under `dropped` or `ignored`, by scheme and host. A
 refused URL is not sent to a backend as a URL, but it stays in the prompt,
 which still goes out as the search query or the browse task. It resolves the
-host before dispatch and refuses a name whose answers are unstable or point at
-a private, loopback or metadata address; a literal address is judged as
-written. It follows no redirect.
+host before dispatch and refuses a name that points at a private, loopback or
+metadata address; a literal address is judged as written. It follows no
+redirect.
 A URL with no host is refused even with no policy.
 It is off by default, and leaves the URLs you pass to `extract` yourself
 alone; on the MCP server it holds for `web_run`'s plans only.
@@ -318,11 +318,11 @@ field may be left out or `null`):
   service cannot name a loopback, private or metadata address by hostname. A
   refused URL is set aside in the record's `ignored`. Your own `url_policy`
   applies when you set one. `public_only` resolves the hostname and refuses a
-  name whose answers are unstable or point at a private, loopback or metadata
-  address, so a service cannot name a host whose DNS points at a private
-  address; that matters only for a backend that fetches from your machine,
-  such as a provider you register or host yourself. Every built-in
-  backend hands the URL to its vendor, which fetches it from its own network.
+  name that points at a private, loopback or metadata address, so a service
+  cannot name a host whose DNS points at a private address; that matters only
+  for a backend that fetches from your machine, such as a provider you register
+  or host yourself. Every built-in backend hands the URL to its vendor, which
+  fetches it from its own network.
 - **What is shown.** The decision record names it `remote(<scheme>://<host>)`:
   never the URL's path, and never the key.
 
