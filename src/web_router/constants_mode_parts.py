@@ -58,7 +58,8 @@ KEENABLE_TIERS: Mapping[str, Tier] = {
     "keenable-realtime": Tier(wire={"mode": "realtime"}, does="Keenable's realtime search, its fastest"),
     "keenable-pro": Tier(wire={"mode": "pro"}, does="Keenable's pro search, its default, named outright"),
 }
-"""Keenable's two modes; unset, a search runs in ``pro``, which ``keenable-pro`` sends by name."""
+"""Keenable's two modes; unset, a search runs in ``pro``, which ``keenable-pro`` sends by name: the default tier,
+so a router is not offered it beside the backend itself."""
 
 YOU_CONTENTS: Mapping[str, Content] = {
     "you-full-page-cache": Content(

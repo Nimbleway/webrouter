@@ -5,21 +5,31 @@ Offline: the members are read from their classes and the shipped price list; not
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 
-from tests.candidates_helpers import Shown, clear_keys, exa_tavily_fixture, ids, set_keys  # noqa: F401  (fixture)
+from tests.candidates_helpers import Shown, exa_tavily_fixture, ids  # noqa: F401  (fixture)
 from web_router import RouteDecision, RouteRequest, WebRouter
 from web_router.exceptions import ConfigurationError
 from web_router.providers._pinning import pinned_request
 from web_router.registry import get_provider_class
 from web_router.routing.candidates import build_candidates
+from web_router.routing.decider_router import DeciderRouter
 from web_router.types import SearchRequest
 
 CHAIN = {"auto": {"chain": {"search": ["exa", "tavily"]}}}
 SEARCH = {"search": SearchRequest(query="q")}
 COMBINED = "search:exa:exa-deep-lite+fast"
+
+
+class Deciding:
+    """A decider that asks for a mode of its own."""
+
+    extra_modes: ClassVar[dict[str, list[str]]] = {"exa": ["exa-lite+fast"]}
+
+    def decide(self, question: Any) -> Any:
+        raise AssertionError("never asked here")
 
 
 class Asking(Shown):
@@ -54,9 +64,10 @@ def test_extra_modes_follow_the_offered_ones_each_once_however_written(keys: Any
 def test_a_mode_the_backend_refuses_or_does_not_have_is_dropped_with_why_and_another_backends_is_passed_over(
     keys: Any,
 ) -> None:
-    extra = {"exa": ["exa-nope", "exa-instant+exa-fast"], "brave": ["brave-extra-snippets"]}
+    extra = {"exa": ("exa-nope", "exa-instant+exa-fast"), "brave": ["brave-extra-snippets"], "tavily": ["tavily-fast"]}
     found = build_candidates(WebRouter(provider_config=CHAIN), SEARCH, extra_modes=extra)
-    assert ids(found) == ["search:exa", "search:tavily"]
+    assert ids(found) == ["search:exa", "search:tavily", "search:tavily:tavily-fast"], "each backend takes its own"
+    assert set(found.dropped) == {"search:exa:exa-nope", "search:exa:exa-instant+exa-fast"}
     assert "no mode part 'exa-nope'" in found.dropped["search:exa:exa-nope"]
     assert "refuses this mode" in found.dropped["search:exa:exa-instant+exa-fast"]
 
@@ -67,6 +78,17 @@ def test_an_attempt_may_name_a_mode_the_router_asked_for(keys: Any) -> None:
         decision = wr.plan("q", tool="search").decision
     assert decision.merged[0] == COMBINED
     assert list(decision.ignored) == ["search:exa:exa-deep+fast"], "one it did not ask for is still no candidate"
+
+
+def test_a_search_call_and_a_decider_router_are_shown_them_and_the_callers_false_turns_them_off(keys: Any) -> None:
+    router = Asking({"exa": ("exa-deep-lite+fast",)})
+    with WebRouter(provider_config=CHAIN, router=router) as wr:
+        req, _ = wr._route_request(wr.get_provider("auto"), SEARCH["search"], None)
+    assert COMBINED in [c.id for c in req.candidates], "search() builds its candidates apart from plan()"
+    assert DeciderRouter(Deciding()).extra_modes == {"exa": ["exa-lite+fast"]}
+    with WebRouter(provider_config=CHAIN, router=router, route_modes=False) as wr:
+        wr.plan("q", tool="search")
+    assert router.ids == ["search:exa", "search:tavily"]
 
 
 @pytest.mark.parametrize("extra", [["exa-fast"], {"exa": "exa-fast"}, {"exa": [1]}, {1: ["exa-fast"]}, 1])

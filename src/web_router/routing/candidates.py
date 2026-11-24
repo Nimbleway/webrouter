@@ -137,7 +137,7 @@ def build_candidates(
     """
     if provider is not None and provider_name(provider) != PROVIDER_AUTO:
         return CandidateSet()
-    found = Found()
+    found, asked = Found(), extra_modes or {}
     effort: EffortChoice | None = None
     for tool, request in requests.items():
         eligible, unbuilt = eligible_members(router, tool, request)
@@ -147,7 +147,6 @@ def build_candidates(
             unbuilt |= {name: MSG_DROPPED_REFUSES_EFFORT.format(effort=chosen.effort) for name, _ in eligible}
             eligible = taken
         found.priced[tool] = request
-        asked = extra_modes or {}
         expand = partial(mode_requests, router, tool, request, offered=modes, extra=asked) if modes or asked else None
         price_members(tool, request, eligible, budget, found, expand)
         costed, _ = cost_route(getattr(router, AUTO_GETTERS[tool])(PROVIDER_AUTO), tool, request, budget)

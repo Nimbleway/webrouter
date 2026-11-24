@@ -79,7 +79,7 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
         with self._built(router, router_config) as attached:
             self._route_tools = checked_route_tools(None, attached) if callers is None else callers
             self._route_modes = checked_route_modes(None, attached) if modes is None else modes
-            self._extra_modes = checked_extra_modes(attached)
+            self._extra_modes = {} if modes is False else checked_extra_modes(attached)
             self._router = None if attached is None else AttachedRouter(attached, fail_on_error=fail_on_router_error)
             floor = getattr(attached, ROUTER_URL_POLICY_ATTR, None) if url_policy is None else url_policy
             self._router_url_check = url_check(floor)

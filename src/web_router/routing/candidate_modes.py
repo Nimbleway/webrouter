@@ -1,11 +1,11 @@
 """Candidates per vendor mode, for :mod:`web_router.routing.candidates`, when the router opts in with ``route_modes``
 or names modes of its own with ``extra_modes``.
 
-Experimental. Each search member's ``offers`` (:func:`~web_router.providers._modes.offers`) become candidates of
-their own, such as ``search:exa:exa-instant``, right after their backend's, so a mode keeps its backend's place in
-the static order and in the cost order. A mode is held to the request as pinning it would be: one the member
-refuses -- a ``search_depth`` the caller set that it overwrites, a ``provider_options`` key its wire writes -- is
-dropped with why, never raised. Each is priced on its own request, so a budget prices and drops it as it does a
+Experimental. With ``route_modes``, each search member's ``offers`` (:func:`~web_router.providers._modes.offers`)
+become candidates of their own, such as ``search:exa:exa-instant``, right after their backend's, so a mode keeps its
+backend's place in the static order and in the cost order. A mode is held to the request as pinning it would be: one
+the member refuses -- a ``search_depth`` the caller set that it overwrites, a ``provider_options`` key its wire writes
+-- is dropped with why, never raised. Each is priced on its own request, so a budget prices and drops it as it does a
 backend. Nothing is cached: what a mode accepts and what it costs depend on the request.
 """
 
@@ -52,7 +52,6 @@ def mode_requests(
     if default is None:  # no payload to merge a mode into, or the request fails for this backend in any mode
         return []
     entries: list[ModeEntry] = []
-    seen: set[str] = set()
     for wanted in (*(offers(owner) if offered else ()), *extra.get(name, ())):
         try:
             moded = pinned_request(owner, request, wanted)
@@ -63,8 +62,7 @@ def mode_requests(
         except WebRouterError as exc:  # the backend's own refusal: named by class, since its text may quote the query
             entries.append((wanted, MSG_DROPPED_REFUSES_MODE.format(why=type(exc).__name__)))
             continue
-        if moded.mode and payload != default and moded.mode not in seen:
-            seen.add(moded.mode)
+        if moded.mode and payload != default:  # one named twice is placed once, by the candidate builder
             entries.append((moded.mode, moded))
     return entries
 

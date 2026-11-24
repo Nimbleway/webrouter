@@ -29,7 +29,8 @@ shown backends only."""
 ROUTER_EXTRA_MODES_ATTR = "extra_modes"
 """The attribute, on a router function or object, that names vendor modes it is shown beyond the ones a backend
 offers: per search backend, mode ids such as ``parallel-turbo+fast``, a tier at a depth. Each becomes a candidate
-when the backend accepts it for the call, whatever ``route_modes`` says."""
+when the backend accepts it for the call, whatever the router's own ``route_modes`` says; a caller's
+``route_modes=False`` turns them off too."""
 
 ROUTER_THREAD_NAME = "web-router-router"
 """The name of the worker thread a sync router runs on, and of the loop thread an async one runs on from sync code."""

@@ -82,6 +82,7 @@ def checked_extra_modes(router: object) -> dict[str, tuple[str, ...]]:
 
 
 def _names(name: object, ids: object) -> bool:
+    """Whether one ``extra_modes`` entry is a backend name with a list or tuple of mode ids."""
     return isinstance(name, str) and isinstance(ids, list | tuple) and all(isinstance(mode, str) for mode in ids)
 
 
