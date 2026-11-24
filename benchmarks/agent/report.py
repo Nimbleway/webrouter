@@ -1205,13 +1205,13 @@ def _describe(arm: str, text: dict[str, str], setup: dict[str, Any]) -> str:
         vendor = arm.removeprefix(DIRECT)
         return (
             f"`{vendor}`'s own REST API as two plain tools, search and page read, its JSON returned as it comes "
-            "back -- no web-router, no routing guide; the request is under what each backend was sent"
+            "back -- no web-router, no routing guide; the request is under backend request setup"
         )
     spec = arm.removeprefix("web-router:")
     provider, _, extra = spec.partition(":")
     tools = f"web-router `web_router_search` + `web_router_extract`, provider `{provider}`"
     if provider.startswith("auto"):
-        tools += " (tries its chain in order, falls back on failure; the order is under what each backend was sent)"
+        tools += " (tries its chain in order, falls back on failure; the order is under backend request setup)"
     return tools + (", no routing guide" if extra == "no-guide" else ", with `routing_guide()` in the system prompt")
 
 

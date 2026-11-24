@@ -114,8 +114,8 @@ request. Neither the key nor anything derived from it is written to
 server to attach; its endpoints and fields come from web-router's own WebIQ
 provider, so the two arms call the same API. The request is fixed to
 what the vendor's docs show for a model to read — WebIQ's `passage` search and
-markdown Browse at its own 10,000-character default — and recorded under what
-each backend was sent; the model picks only the query or the URL. The calls run
+markdown Browse at its own 10,000-character default — and recorded under
+Backend request setup; the model picks only the query or the URL. The calls run
 on this machine, so the vendor's key goes only to the vendor, as web-router's
 does, and never to the platform or the results; an error body the vendor sends
 back reaches the model with the key masked. A refused read of an answer-key page
