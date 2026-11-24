@@ -302,7 +302,7 @@ from web_router import WebRouter
 router = WebRouter(router="data-driven")
 plan = router.plan("compare the pricing plans of the top 5 CRM tools")
 plan.tool             # "research", with a research backend configured
-plan.decision.reason  # "data-driven 0.1.1: research for verb=analyze, url_target=none"
+plan.decision.reason  # "data-driven 0.1.2: research for verb=analyze, url_target=none"
 ```
 
 It reads five things in the prompt, each with a regular expression:
@@ -396,14 +396,16 @@ Read the numbers for what they are:
 The tables ship as a versioned release, apart from the
 library's own version: `src/web_router/data/data_driven/manifest.json` names the
 version, and every decision's `reason` starts with it. The version changes only
-when newly trained or newly measured tables ship. A golden file of two thousand requests, with
+when newly trained or newly measured tables ship. Release `0.1.2` holds tool
+table `0.1.1`, whose own version the manifest keeps beside it, and the first
+provider table. A golden file of two thousand requests, with
 the features and method the training code gave each one, is replayed in the
 tests, so the shipped expressions cannot drift from the ones the table was
 trained with.
 
 ### Trained on
 
-The training owner reports these sources for release `0.1.1`, and the release's
+The training owner reports these sources for tool table `0.1.1`, and the release's
 manifest lists them under `tool_table.sources`. Counts describe requests used,
 not each dataset's size. The trainers assigned the method labels; the source
 datasets do not supply those labels. The shipped table contains aggregate
@@ -429,7 +431,7 @@ DeepResearch Bench's were fetched from `main` and frozen on 2026-11-08, and the
 manifest records a SHA-256 for each file: a freeze date and a checksum, not a
 dataset revision.
 
-Release `0.1.1` was retrained without three sources an earlier, unreleased
+Tool table `0.1.1` was retrained without three sources an earlier, unreleased
 table used, because their terms for derived data were unclear: NQ-Open
 (CC-BY-SA-3.0, share-alike), WideSearch (no licence text) and a FreshQA mirror
 that states no licence. The most common method of every row is unchanged,

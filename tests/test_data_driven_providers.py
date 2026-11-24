@@ -22,7 +22,7 @@ SPEED_LINE += ["exa:exa-deep-lite+fast"]
 KNEE_FIRST = [COST_LINE[2], COST_LINE[3], COST_LINE[1], COST_LINE[0]]
 """Best first, after the knee: Parallel's advanced tier overlaps Exa's deep-lite and costs less."""
 BEST_FIRST = "by measured quality, the cheapest of the best first"
-ROW = "data-driven 0.1.1: search for verb=question, url_target=none, plural=no, kw_research=no, ui_action=no"
+ROW = "data-driven 0.1.2: search for verb=question, url_target=none, plural=no, kw_research=no, ui_action=no"
 
 
 @pytest.fixture
@@ -98,7 +98,7 @@ def test_backends_are_ordered_only_when_search_is_the_method_that_runs() -> None
 
 def test_the_reason_says_when_search_runs_because_the_first_method_has_no_backend() -> None:
     router, tail = DataDrivenRouter(), f"search backends {BEST_FIRST}, by the 2026-11-23 measures"
-    row = "data-driven 0.1.1: research for verb=analyze, url_target=none"
+    row = "data-driven 0.1.2: research for verb=analyze, url_target=none"
     decision = router.route(RouteRequest(prompt=RESEARCHY, candidates=MEASURED, deadline_s=1))
     assert decision.reason == f"{row}; research has no backend here, so search runs; {tail}"
     one = router.route(RouteRequest(prompt=RESEARCHY, candidates=MEASURED[:1], deadline_s=1))

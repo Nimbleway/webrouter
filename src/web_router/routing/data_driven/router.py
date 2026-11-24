@@ -61,7 +61,7 @@ class DataDrivenRouter:
 
     @property
     def version(self) -> str:
-        """The trained release this router decides with, such as ``0.1.1``."""
+        """The trained release this router decides with, such as ``0.1.2``."""
         return self.table.version
 
     def route(self, req: RouteRequest) -> RouteDecision:

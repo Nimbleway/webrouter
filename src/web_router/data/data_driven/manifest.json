@@ -1,7 +1,7 @@
 {
   "_about": "The data-driven router's release: one version for its data files and the features they were trained with. Written by `make data-driven-router`; do not edit by hand.",
   "router": "data-driven",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "schema": 1,
   "built": "2026-11-24",
   "tool_table": {
