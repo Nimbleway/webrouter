@@ -24,10 +24,12 @@ import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 
 from scripts.trained_prompts import prompts
 from web_router.constants_trained import TRAINED_DATA_DIR, TRAINED_MANIFEST_FILE, TRAINED_ROUTER_NAME, TRAINED_SCHEMA
+from web_router.routing.trained.table import ToolTable, checked_table
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT.joinpath("src", "web_router", *TRAINED_DATA_DIR)
@@ -49,17 +51,20 @@ def golden_rows(source: Path) -> list[list[Any]]:
     return rows
 
 
-def write_release(source: Path, version: str) -> None:
+def write_release(source: Path, version: str, *, destination: Path | None = None) -> None:
     """Copy the table and write the manifest that names it."""
     table = (source / SOURCE_TABLE).read_bytes()
     data = json.loads(table)
+    if data["version"] != version:
+        raise ValueError("the requested release version must match the delivered table version")
     requests = data["tables"][0][""][-1]
     provenance = {name: data[name] for name in ("version", "trained_at", "sources")}
     counts = [entry["examples"] for entry in provenance["sources"]]
     if any(type(count) is not int or count < 0 for count in counts) or sum(counts) != requests:
         raise ValueError("source examples must be non-negative integers summing to the table's request count")
-    DATA.mkdir(parents=True, exist_ok=True)
-    (DATA / TABLE_FILE).write_bytes(table)
+    destination = DATA if destination is None else destination
+    destination.mkdir(parents=True, exist_ok=True)
+    (destination / TABLE_FILE).write_bytes(table)
     manifest = {
         "_about": "The trained router's release: one version for its data files and the features they were "
         "trained with. Written by `make trained-router`; do not edit by hand.",
@@ -74,16 +79,17 @@ def write_release(source: Path, version: str) -> None:
             **provenance,
         },
     }
-    (DATA / TRAINED_MANIFEST_FILE).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    (destination / TRAINED_MANIFEST_FILE).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
-def differences(rows: list[list[Any]]) -> list[str]:
+def differences(rows: list[list[Any]], *, table: ToolTable | None = None) -> list[str]:
     """Where web-router's own features or table disagree with the training code, one line each."""
     from web_router.routing.trained.features import featurize
     from web_router.routing.trained.table import shipped_table
 
-    shipped_table.cache_clear()
-    table = shipped_table()
+    if table is None:
+        shipped_table.cache_clear()
+        table = shipped_table()
     out = []
     for prompt, values, tool in rows:
         counts = table.row(prompt).counts
@@ -93,17 +99,33 @@ def differences(rows: list[list[Any]]) -> list[str]:
     return out
 
 
+def import_release(source: Path, version: str, rows: list[list[Any]]) -> list[str]:
+    """Stage and compare every output before replacing any file in the existing release."""
+    with TemporaryDirectory(dir=DATA.parent) as temporary:
+        staged = Path(temporary)
+        write_release(source, version, destination=staged)
+        lines = "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
+        golden = staged / GOLDEN.name
+        golden.write_bytes(gzip.compress(lines.encode("utf-8"), mtime=0))
+        data = json.loads((staged / TABLE_FILE).read_bytes())
+        wrong = differences(rows, table=checked_table(version, data))
+        if wrong:
+            return wrong
+        DATA.mkdir(parents=True, exist_ok=True)
+        GOLDEN.parent.mkdir(parents=True, exist_ok=True)
+        for name in (TABLE_FILE, TRAINED_MANIFEST_FILE):
+            (staged / name).replace(DATA / name)
+        golden.replace(GOLDEN)
+    return []
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--source", type=Path, required=True, help="the delivered folder holding webrouter/")
     parser.add_argument("--version", required=True, help="the release's version, such as 0.2.0")
     args = parser.parse_args()
     rows = golden_rows(args.source.resolve())
-    write_release(args.source.resolve(), args.version)
-    GOLDEN.parent.mkdir(parents=True, exist_ok=True)
-    lines = "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
-    GOLDEN.write_bytes(gzip.compress(lines.encode("utf-8"), mtime=0))
-    wrong = differences(rows)
+    wrong = import_release(args.source.resolve(), args.version, rows)
     for line in wrong[:SHOWN]:
         print(line, file=sys.stderr)
     print(f"trained router {args.version}: {len(rows)} golden requests, {len(wrong)} differences")

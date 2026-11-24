@@ -66,7 +66,8 @@ def _read(name: str, *, sha256: str | None = None) -> Any:
     return json.loads(content)
 
 
-def _checked(version: str, data: Mapping[str, Any]) -> ToolTable:
+def checked_table(version: str, data: Mapping[str, Any]) -> ToolTable:
+    """Validate a table before using it, including an importer checking a staged release."""
     features, labels, tables = data["features"], data["labels"], data["tables"]
     min_count = data["min_count"]
     rows = [row for table in tables for row in table.values()]
@@ -91,4 +92,4 @@ def shipped_table() -> ToolTable:
     if manifest.get("schema") != TRAINED_SCHEMA:
         raise ConfigurationError(MSG_TRAINED_SCHEMA.format(got=manifest.get("schema"), want=TRAINED_SCHEMA))
     table = manifest["tool_table"]
-    return _checked(manifest["version"], _read(table["file"], sha256=table["sha256"]))
+    return checked_table(manifest["version"], _read(table["file"], sha256=table["sha256"]))

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -18,6 +19,9 @@ def _delivery(tmp_path: Path, counts: list[Any]) -> tuple[Path, dict[str, Any]]:
     table.parent.mkdir(parents=True)
     data = {
         "version": "0.1.0",
+        "features": [],
+        "labels": ["search"],
+        "min_count": 1,
         "trained_at": "2026-11-24",
         "sources": [
             {"name": str(index), "version": "v1", "url": None, "license": "own", "examples": count}
@@ -45,24 +49,72 @@ def test_import_preserves_delivered_metadata_and_bytes(tmp_path: Path, monkeypat
     }
 
 
-@pytest.mark.parametrize("counts", [[1, 1], [True, 2], [-1, 4], [1.5, 1.5], ["1", 2]])
-def test_bad_source_counts_leave_existing_release_untouched(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, counts: list[Any]
-) -> None:
-    source, _ = _delivery(tmp_path, counts)
+def _installed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Path, Path]:
     output = tmp_path / "output"
     output.mkdir()
-    table = output / importer.TABLE_FILE
-    manifest = output / importer.TRAINED_MANIFEST_FILE
+    table, manifest = output / importer.TABLE_FILE, output / importer.TRAINED_MANIFEST_FILE
     table.write_bytes(b"existing table")
     manifest.write_bytes(b"existing manifest")
     golden = tmp_path / "golden.gz"
     golden.write_bytes(b"existing golden")
     monkeypatch.setattr(importer, "DATA", output)
     monkeypatch.setattr(importer, "GOLDEN", golden)
+    return table, manifest, golden
+
+
+def _assert_unchanged(files: tuple[Path, Path, Path]) -> None:
+    assert tuple(path.read_bytes() for path in files) == (b"existing table", b"existing manifest", b"existing golden")
+
+
+@pytest.mark.parametrize("counts", [[1, 1], [True, 2], [-1, 4], [1.5, 1.5], ["1", 2]])
+def test_bad_source_counts_leave_existing_release_untouched(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, counts: list[Any]
+) -> None:
+    source, _ = _delivery(tmp_path, counts)
+    files = _installed(tmp_path, monkeypatch)
     monkeypatch.setattr(importer, "golden_rows", lambda source: [])
     monkeypatch.setattr(importer.sys, "argv", ["trained-router", "--source", str(source), "--version", "0.1.0"])
     with pytest.raises(ValueError, match="source examples"):
         importer.main()
-    assert (table.read_bytes(), manifest.read_bytes()) == (b"existing table", b"existing manifest")
-    assert golden.read_bytes() == b"existing golden"
+    _assert_unchanged(files)
+
+
+def test_a_conflicting_version_cannot_replace_the_release(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    source, _ = _delivery(tmp_path, [1, 2])
+    files = _installed(tmp_path, monkeypatch)
+    with pytest.raises(ValueError, match="version must match"):
+        importer.import_release(source, "0.2.0", [])
+    _assert_unchanged(files)
+
+
+def test_a_failed_golden_write_cannot_replace_the_release(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    source, _ = _delivery(tmp_path, [1, 2])
+    files = _installed(tmp_path, monkeypatch)
+    write_bytes = Path.write_bytes
+
+    def fail_staged_golden(path: Path, content: bytes) -> int:
+        if path.name == files[2].name and path != files[2]:
+            raise OSError("golden write failed")
+        return write_bytes(path, content)
+
+    monkeypatch.setattr(Path, "write_bytes", fail_staged_golden)
+    with pytest.raises(OSError, match="golden write failed"):
+        importer.import_release(source, "0.1.0", [])
+    _assert_unchanged(files)
+
+
+def test_different_training_outputs_cannot_replace_the_release(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    source, _ = _delivery(tmp_path, [1, 2])
+    files = _installed(tmp_path, monkeypatch)
+    assert len(importer.import_release(source, "0.1.0", [["weather", [], "research"]])) == 1
+    _assert_unchanged(files)
+
+
+def test_a_matching_staged_release_publishes_the_replay(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    source, _ = _delivery(tmp_path, [1, 2])
+    table, manifest, golden = _installed(tmp_path, monkeypatch)
+    rows = [["weather", [], "search"]]
+    assert importer.import_release(source, "0.1.0", rows) == []
+    assert table.read_bytes() == (source / importer.SOURCE_TABLE).read_bytes()
+    assert json.loads(manifest.read_bytes())["version"] == "0.1.0"
+    assert [json.loads(line) for line in gzip.decompress(golden.read_bytes()).splitlines()] == rows

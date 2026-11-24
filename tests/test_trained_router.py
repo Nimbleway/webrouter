@@ -112,7 +112,7 @@ def test_a_request_matching_no_frequent_row_gets_the_overall_reason(monkeypatch:
 def test_a_table_this_version_cannot_use_is_refused(change: dict[str, Any], why: str) -> None:
     data = {"features": ["verb"], "labels": ["search"], "min_count": 1, "tables": [{"": [1, 1]}, {}], **change}
     with pytest.raises(ConfigurationError, match=why):
-        table_module._checked("1.0.0", data)
+        table_module.checked_table("1.0.0", data)
 
 
 def test_a_manifest_with_another_schema_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
