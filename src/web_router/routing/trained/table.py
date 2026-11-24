@@ -7,6 +7,7 @@ times is passed over for the row one feature shorter, down to the empty key, whi
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -57,15 +58,20 @@ class ToolTable:
         return Row((), dict(zip(self.labels, self.tables[0][""], strict=False)))
 
 
-def _read(name: str) -> Any:
+def _read(name: str, *, sha256: str | None = None) -> Any:
     folder = resources.files("web_router").joinpath(*TRAINED_DATA_DIR)
-    return json.loads((folder / name).read_text(encoding="utf-8"))
+    content = (folder / name).read_bytes()
+    if sha256 is not None and hashlib.sha256(content).hexdigest() != sha256:
+        raise ConfigurationError(MSG_TRAINED_TABLE.format(why="its checksum does not match the manifest"))
+    return json.loads(content)
 
 
 def _checked(version: str, data: Mapping[str, Any]) -> ToolTable:
     features, labels, tables = data["features"], data["labels"], data["tables"]
+    min_count = data["min_count"]
     rows = [row for table in tables for row in table.values()]
     checks = (
+        (type(min_count) is not int or min_count <= 0, "min_count must be a positive integer"),
         (set(features) - set(FEATURES), "it names features this version cannot compute"),
         (set(labels) - set(get_args(ToolName)), "it names methods web-router does not route"),
         (len(tables) != len(features) + 1, "it needs one table per key length"),
@@ -75,7 +81,7 @@ def _checked(version: str, data: Mapping[str, Any]) -> ToolTable:
     for problem, why in checks:
         if problem:
             raise ConfigurationError(MSG_TRAINED_TABLE.format(why=why))
-    return ToolTable(version, tuple(features), tuple(labels), int(data["min_count"]), tuple(tables))
+    return ToolTable(version, tuple(features), tuple(labels), min_count, tuple(tables))
 
 
 @lru_cache(maxsize=1)
@@ -84,4 +90,5 @@ def shipped_table() -> ToolTable:
     manifest = _read(TRAINED_MANIFEST_FILE)
     if manifest.get("schema") != TRAINED_SCHEMA:
         raise ConfigurationError(MSG_TRAINED_SCHEMA.format(got=manifest.get("schema"), want=TRAINED_SCHEMA))
-    return _checked(manifest["version"], _read(manifest["tool_table"]["file"]))
+    table = manifest["tool_table"]
+    return _checked(manifest["version"], _read(table["file"], sha256=table["sha256"]))
