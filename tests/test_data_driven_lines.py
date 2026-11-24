@@ -47,6 +47,12 @@ def test_the_knee_is_the_cheapest_point_whose_interval_overlaps_the_bests() -> N
     assert ranked((), None) == ranked((), "cheap") == ranked((), "fast") == []
 
 
+@pytest.mark.parametrize(("quality", "first"), [(76.0, "search:e"), (75.99, "search:d")])
+def test_intervals_that_just_touch_overlap(quality: float, first: str) -> None:
+    touching = Point("search:e", quality, 2.0, 9.0, 1.0)  # the best is 80 with 2: the gap of 4 is the two intervals
+    assert ranked((BEST, touching), None)[0].id == first
+
+
 def _req(*candidates: Candidate) -> RouteRequest:
     return RouteRequest(prompt="q", candidates=candidates, deadline_s=1.0)
 
@@ -61,9 +67,17 @@ def test_attempts_are_the_shown_measured_points_that_fit_the_time_limit() -> Non
     )
     assert search_attempts(_req(*shown), POINTS, "cheap") == ["search:a", "search:d"], "an unmeasured b is passed over"
     timed = RouteRequest(prompt="q", candidates=shown, deadline_s=1.0, budget=Budget(time_limit_s=2.0))
-    assert search_attempts(timed, POINTS, "cheap") == ["search:d"], "a's median of 3 s is over the limit, d's is at it"
+    within = RouteRequest(
+        prompt="q",
+        candidates=(*shown, Candidate(tool="search", provider="e")),
+        deadline_s=1.0,
+        budget=Budget(time_limit_s=2.0),
+    )
+    assert search_attempts(within, POINTS, "cheap") == ["search:e", "search:d"], "a's median of 3 s is over the limit"
+    assert search_attempts(timed, POINTS, "cheap") is None, "d alone fits, and one is no ranking"
 
 
 def test_no_attempts_when_the_call_was_shown_none_of_the_points() -> None:
     assert search_attempts(_req(Candidate(tool="search", provider="zzz")), POINTS, None) is None
     assert search_attempts(_req(Candidate(tool="research", provider="a")), POINTS, None) is None
+    assert search_attempts(_req(Candidate(tool="search", provider="a")), POINTS, None) is None, "one is no ranking"

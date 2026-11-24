@@ -34,6 +34,7 @@ SINGLE_TIER = "base"
 WHY_NO_BACKEND = "web-router has no search backend of this name"
 WHY_NO_MODE = "no mode of this backend sends the request the row was measured with"
 WHY_ID_DIFFERS = "the candidate {id} does not send the request the row was measured with"
+WHY_ID_NOT_SHOWN = "the id {id} is not one a router is shown: it is not the candidate's own spelling"
 FIELDS = ("quality", "ci95", "usd_per_1k", "p50_s")
 
 
@@ -59,10 +60,25 @@ def measured_mode(provider: Any, effort: str | None, depth: str = MEASURED_DEPTH
     return False, None
 
 
-def claimed_id(provider: Any, name: str, claimed: str, effort: str | None, depth: str) -> bool:
-    """Whether the candidate the delivery names for a row is ``name``'s and sends the measured request."""
+def _canonical(provider: Any, mode: str) -> str | None:
+    """The mode a call is shown ``mode`` under: none when it sends what the backend's default sends."""
+    if not mode or _sent(provider, mode) == _sent(provider, None):
+        return None
+    return str(pinned_request(provider, SearchRequest(**MEASURED), mode).mode)
+
+
+def claimed_id(provider: Any, name: str, claimed: str, effort: str | None, depth: str) -> str | None:
+    """Why the candidate the delivery names for a row cannot ship; ``None`` when it can.
+
+    It has to be ``name``'s, send the measured request, and be spelled as the id a call is shown: a router's
+    attempt naming any other spelling is not a candidate, so the row would never be tried.
+    """
     backend, mode = split_pin(claimed)
-    return backend == name and _sent(provider, mode or None) == _wanted(provider, depth, effort)
+    if backend != name or _sent(provider, mode or None) != _wanted(provider, depth, effort):
+        return WHY_ID_DIFFERS.format(id=claimed)
+    if claimed != candidate_id("search", name, _canonical(provider, mode)):
+        return WHY_ID_NOT_SHOWN.format(id=claimed)
+    return None
 
 
 def _placed(row: dict[str, Any]) -> tuple[str | None, str | None]:
@@ -75,8 +91,8 @@ def _placed(row: dict[str, Any]) -> tuple[str | None, str | None]:
     try:
         provider = get_provider_class(name)(api_key="unused")
         if "id" in call:
-            kept = claimed_id(provider, name, call["id"], effort, depth)
-            return (call["id"], None) if kept else (None, WHY_ID_DIFFERS.format(id=call["id"]))
+            why = claimed_id(provider, name, call["id"], effort, depth)
+            return (call["id"], None) if why is None else (None, why)
         found, mode = measured_mode(provider, effort, depth)
     except ProviderNotInstalledError:
         raise  # a backend this environment cannot build says nothing about the row: install every extra
@@ -93,7 +109,7 @@ def provider_table(lookup: dict[str, Any]) -> dict[str, Any]:
         if cid is None:
             left_out.append({"arm": row["arm"], "why": why})
         else:
-            kept.append({"id": cid, "arm": row["arm"], **{field: row[field] for field in FIELDS}})
+            kept.append({"id": cid, "arm": row["arm"], **{field: row.get(field) for field in FIELDS}})
     about = "Written by `make data-driven-router`; do not edit by hand."
     head = {"_about": about, "source": lookup["source"], "judge": lookup["judge"], "measured": lookup["version"]}
     return {**head, "search": kept, "left_out": left_out}

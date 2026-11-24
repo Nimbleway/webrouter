@@ -11,6 +11,11 @@ from typing import Any
 import pytest
 
 from scripts import data_driven_router as importer
+from scripts.data_driven_manifest import PROVIDER_FILE
+from tests.data_driven_lookup_helpers import lookup as lookup_table
+from tests.data_driven_lookup_helpers import row
+
+LOOKUP = lookup_table(row("brave"))
 
 
 def _delivery(tmp_path: Path, counts: list[Any]) -> tuple[Path, dict[str, Any]]:
@@ -120,14 +125,18 @@ def test_a_matching_staged_release_publishes_the_replay(tmp_path: Path, monkeypa
     assert [json.loads(line) for line in gzip.decompress(golden.read_bytes()).splitlines()] == rows
 
 
-@pytest.mark.parametrize("existing", [True, False])
+@pytest.mark.parametrize(("existing", "with_lookup"), [(True, False), (False, False), (True, True), (False, True)])
 def test_a_failed_replacement_rolls_back_publication(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, existing: bool
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, existing: bool, with_lookup: bool
 ) -> None:
     source, _ = _delivery(tmp_path, [1, 2])
     files = _installed(tmp_path, monkeypatch)
+    provider_table = files[0].parent / PROVIDER_FILE
+    provider_table.write_bytes(b"existing providers")
+    lookup = tmp_path / "lookup.json"
+    lookup.write_text(json.dumps(LOOKUP), encoding="utf-8")
     if not existing:
-        for path in files:
+        for path in (*files, provider_table):
             path.unlink()
     replace = Path.replace
 
@@ -138,8 +147,9 @@ def test_a_failed_replacement_rolls_back_publication(
 
     monkeypatch.setattr(Path, "replace", fail_golden_replacement)
     with pytest.raises(OSError, match="golden replacement failed"):
-        importer.import_release(source, "0.1.0", [["weather", [], "search"]])
+        importer.import_release(source, "0.1.0", [["weather", [], "search"]], lookup if with_lookup else None)
     if existing:
         _assert_unchanged(files)
+        assert provider_table.read_bytes() == b"existing providers"
     else:
-        assert not any(path.exists() for path in files)
+        assert not any(path.exists() for path in (*files, provider_table))

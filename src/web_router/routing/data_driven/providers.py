@@ -8,15 +8,26 @@ the candidates on the library's price list before the router sees them.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import math
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
 
-from web_router.constants_data_driven import DATA_DRIVEN_MANIFEST_FILE, MSG_DATA_DRIVEN_PROVIDERS
+from web_router.constants_data_driven import (
+    DATA_DRIVEN_MANIFEST_FILE,
+    DATA_DRIVEN_SEARCH_ID,
+    MSG_DATA_DRIVEN_POINT,
+    MSG_DATA_DRIVEN_POINT_ID,
+    MSG_DATA_DRIVEN_PROVIDERS,
+    MSG_DATA_DRIVEN_PROVIDERS_READ,
+)
 from web_router.exceptions import ConfigurationError
 from web_router.providers._pinning import split_pin
 from web_router.routing.data_driven.table import read_release
+
+MEASURES = ("quality", "ci95", "usd_per_1k", "p50_s")
+"""A row's four measures, in a :class:`Point`'s order."""
 
 
 @dataclass(frozen=True)
@@ -49,23 +60,37 @@ class ProviderTable:
 
 
 def _measure(value: object) -> bool:
-    return type(value) in (int, float) and value >= 0  # type: ignore[operator]
+    """Whether ``value`` is a measure: a finite number of 0 or more, never a bool."""
+    return type(value) in (int, float) and math.isfinite(value) and value >= 0  # type: ignore[arg-type, operator]
 
 
-def _point(row: Mapping[str, Any]) -> Point:
-    numbers = [row.get(name) for name in ("quality", "ci95", "usd_per_1k", "p50_s")]
-    if not isinstance(row.get("id"), str) or not all(_measure(number) for number in numbers):
-        why = f"the row {dict(row)!r} needs an id and four measures"
-        raise ConfigurationError(MSG_DATA_DRIVEN_PROVIDERS.format(why=why))
-    quality, ci95, usd_per_1k, p50_s = (float(number) for number in numbers if number is not None)
-    return Point(row["id"], quality, ci95, usd_per_1k, p50_s)
+def checked_point(row: Mapping[str, Any]) -> Point:
+    """One row as a :class:`Point`: a search candidate's id with its four measures, each a finite number."""
+    cid: object = row.get("id")
+    numbers: list[Any] = [row.get(name) for name in MEASURES]
+    if not isinstance(cid, str) or not cid.startswith(DATA_DRIVEN_SEARCH_ID) or not all(map(_measure, numbers)):
+        raise ConfigurationError(MSG_DATA_DRIVEN_PROVIDERS.format(why=MSG_DATA_DRIVEN_POINT.format(row=dict(row))))
+    return Point(cid, *(float(number) for number in numbers))
+
+
+def checked_points(rows: Iterable[Mapping[str, Any]]) -> tuple[Point, ...]:
+    """Every row as a :class:`Point`, an id named twice refused: an importer checks a staged table with this too."""
+    points = tuple(checked_point(row) for row in rows)
+    ids = [point.id for point in points]
+    if repeated := sorted({cid for cid in ids if ids.count(cid) > 1}):
+        raise ConfigurationError(MSG_DATA_DRIVEN_PROVIDERS.format(why=MSG_DATA_DRIVEN_POINT_ID.format(ids=repeated)))
+    return points
 
 
 @lru_cache(maxsize=1)
 def shipped_providers() -> ProviderTable:
     """The provider table of the release this package ships, checked once; empty when the release names none."""
-    named = read_release(DATA_DRIVEN_MANIFEST_FILE).get("provider_table")
-    if named is None:
-        return ProviderTable()
-    data = read_release(named["file"], sha256=named["sha256"])
-    return ProviderTable(str(data["measured"]), tuple(_point(row) for row in data["search"]))
+    try:
+        named = read_release(DATA_DRIVEN_MANIFEST_FILE).get("provider_table")
+        if named is None:
+            return ProviderTable()
+        data = read_release(named["file"], sha256=named["sha256"], message=MSG_DATA_DRIVEN_PROVIDERS)
+        return ProviderTable(str(data["measured"]), checked_points(data["search"]))
+    except (KeyError, TypeError, AttributeError, ValueError, OSError) as exc:
+        why = MSG_DATA_DRIVEN_PROVIDERS_READ.format(error=type(exc).__name__)
+        raise ConfigurationError(MSG_DATA_DRIVEN_PROVIDERS.format(why=why)) from exc

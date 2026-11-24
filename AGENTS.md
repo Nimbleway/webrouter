@@ -326,7 +326,7 @@ src/web_router/
 │   │                   check before dispatch (no DNS, no redirects)
 │   ├── rules.py        rules(): the built-in keyless router, URL to extract, else search
 │   ├── preferred.py    PreferredRouter: the built-in router ordering every call by cost, p90 or scores
-│   ├── data_driven/    DataDrivenRouter, the built-in router picking the method from a trained table:
+│   ├── data_driven/    DataDrivenRouter, the built-in router ranking methods and providers from bundled data:
 │   │                   patterns.py and features.py read the prompt (patterns.py is copied from the
 │   │                   training code, never edited by hand), table.py reads data/data_driven/,
 │   │                   providers.py the measured search candidates and lines.py their order

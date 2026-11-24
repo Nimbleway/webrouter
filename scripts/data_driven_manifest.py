@@ -9,11 +9,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 from scripts.data_driven_providers import provider_table
 from web_router.constants_data_driven import DATA_DRIVEN_MANIFEST_FILE
+from web_router.routing.data_driven.providers import checked_points
 
 TABLE_FILE = "tool_table.json"
 PROVIDER_FILE = "provider_table.json"
@@ -21,9 +23,12 @@ PROVIDER_ENTRY = "provider_table"
 
 MSG_SOURCE_COUNTS = "source examples must be non-negative integers summing to the table's request count"
 MSG_VERSION = (
-    "the requested release version must match the delivered table version; another version is taken only with a "
-    "lookup table and a tool table unchanged from the shipped one"
+    "the requested release version must match the delivered table version; another is taken only while the tool "
+    "table is unchanged from the shipped one: the shipped release's own, or a higher one with a lookup table"
 )
+MSG_VERSION_FORM = "a release version is three numbers, x.y.z; got {got!r}"
+MSG_VERSION_HIGHER = "a lookup table alone takes a version higher than the shipped release's {shipped!r}; got {got!r}"
+VERSION_FORM = re.compile(r"(\d+)\.(\d+)\.(\d+)")
 
 
 def shipped(folder: Path) -> dict[str, Any]:
@@ -46,18 +51,39 @@ def tool_entry(table: bytes) -> dict[str, Any]:
     return {"file": TABLE_FILE, "sha256": hashlib.sha256(table).hexdigest(), "requests": requests, **provenance}
 
 
+def _numbers(version: object) -> tuple[int, int, int] | None:
+    """``version`` as its three numbers, ``x.y.z``; ``None`` for anything else."""
+    found = VERSION_FORM.fullmatch(version) if isinstance(version, str) else None
+    return None if found is None else (int(found[1]), int(found[2]), int(found[3]))
+
+
 def check_version(entry: dict[str, Any], version: str, before: dict[str, Any], lookup: bool) -> None:
-    """Refuse a release version other than the delivered table's, unless only the provider table is refreshed."""
-    if entry["version"] == version:
-        return
+    """Refuse a release version this import may not take.
+
+    It may take the delivered table's own. While the tool table is the shipped one, byte for byte, it may also
+    keep the shipped release's version (no lookup table: nothing moves back), or with a lookup table take a
+    higher one than the shipped release's (the provider table alone is refreshed). A lookup table never takes
+    a release back: not even to the table's own version, once a higher one shipped.
+    """
+    asked, released = _numbers(version), _numbers(before.get("version"))
+    if asked is None:
+        raise ValueError(MSG_VERSION_FORM.format(got=version))
     unchanged = (before.get("tool_table") or {}).get("sha256") == entry["sha256"]
-    if not (lookup and unchanged):
+    own = entry["version"] == version
+    higher = released is not None and asked > released
+    if lookup and unchanged and not higher and (not own or (released is not None and asked < released)):
+        raise ValueError(MSG_VERSION_HIGHER.format(got=version, shipped=before.get("version")))
+    if not own and (not unchanged or (not lookup and before.get("version") != version)):
         raise ValueError(MSG_VERSION)
 
 
 def provider_entry(lookup: Path, destination: Path) -> dict[str, Any]:
-    """Build the provider table from ``lookup`` into ``destination`` and return the manifest's entry for it."""
+    """Build the provider table from ``lookup`` into ``destination`` and return the manifest's entry for it.
+
+    The rows are checked as the router will check them, so a table it would refuse is never written.
+    """
     providers = provider_table(json.loads(lookup.read_text(encoding="utf-8")))
+    checked_points(providers["search"])
     content = (json.dumps(providers, indent=2) + "\n").encode("utf-8")
     (destination / PROVIDER_FILE).write_bytes(content)
     return {"file": PROVIDER_FILE, "sha256": hashlib.sha256(content).hexdigest(), "measured": providers["measured"]}

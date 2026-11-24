@@ -8,12 +8,10 @@ import pytest
 
 from tests.candidates_helpers import clear_keys, set_keys
 from web_router import Budget, RouteRequest, WebRouter
-from web_router.constants_data_driven import DATA_DRIVEN_MANIFEST_FILE
 from web_router.exceptions import ConfigurationError
 from web_router.routing.contract import Candidate
 from web_router.routing.data_driven import DataDrivenRouter
-from web_router.routing.data_driven import providers as providers_module
-from web_router.routing.data_driven.providers import ProviderTable, shipped_providers
+from web_router.routing.data_driven.providers import shipped_providers
 from web_router.types import SearchRequest
 
 KEYED = ("exa", "parallel", "keenable", "you", "nimble", "tavily", "brave")
@@ -23,6 +21,8 @@ SPEED_LINE = ["keenable:keenable-realtime+fast", "keenable:keenable-pro+fast", "
 SPEED_LINE += ["exa:exa-deep-lite+fast"]
 KNEE_FIRST = [COST_LINE[2], COST_LINE[3], COST_LINE[1], COST_LINE[0]]
 """Best first, after the knee: Parallel's advanced tier overlaps Exa's deep-lite and costs less."""
+BEST_FIRST = "by measured quality, the cheapest of the best first"
+ROW = "data-driven 0.1.1: search for verb=question, url_target=none, plural=no, kw_research=no, ui_action=no"
 
 
 @pytest.fixture
@@ -53,10 +53,9 @@ def test_plan_tries_the_measured_search_backends_in_the_preferences_order(
     with WebRouter(router="data-driven", router_config=config) as router:
         decision = router.plan("who won the 2022 world cup").decision
     assert decision.merged[: len(first)] == [f"search:{entry}" for entry in first]
-    order = {"cheap": "cheapest first", "fast": "fastest first"}.get(config.get("prefer"), "the cheapest of the best")
+    order = {"cheap": "cheapest first", "fast": "fastest first"}.get(config.get("prefer"), BEST_FIRST)
     assert decision.prefer == config.get("prefer")
-    assert f"search backends {order}" in decision.reason.replace("by measured quality, ", "")
-    assert decision.reason.endswith("by the 2026-11-23 measures")
+    assert decision.reason == f"{ROW}; search backends {order}, by the 2026-11-23 measures"
 
 
 def test_a_cost_cap_drops_what_the_price_list_says_does_not_fit_and_the_rest_keep_their_order(keyed: None) -> None:
@@ -66,10 +65,11 @@ def test_a_cost_cap_drops_what_the_price_list_says_does_not_fit_and_the_rest_kee
     assert not any(entry.startswith("search:exa:") for entry in merged)
 
 
-def test_a_callers_route_modes_false_leaves_only_the_rows_at_a_backends_default(keyed: None) -> None:
+def test_a_callers_route_modes_false_leaves_one_row_which_is_no_ranking(keyed: None) -> None:
     with WebRouter(router="data-driven", route_modes=False) as router:
-        merged = router.plan("who won the 2022 world cup").decision.merged
-    assert merged[0] == "search:brave" and not any(entry.count(":") == 2 for entry in merged)
+        decision = router.plan("who won the 2022 world cup").decision
+    assert decision.reason == ROW, "only Brave's row is at a default, so the router ranks no backends"
+    assert decision.merged[0] != "search:brave" and not any(entry.count(":") == 2 for entry in decision.merged)
 
 
 def test_a_pinned_search_is_ordered_and_another_method_is_left_alone(keyed: None) -> None:
@@ -77,10 +77,6 @@ def test_a_pinned_search_is_ordered_and_another_method_is_left_alone(keyed: None
         req, _ = router._route_request(router.get_provider("auto"), SearchRequest(query="who won the cup"), None)
     assert req.pinned_tool == "search"
     assert DataDrivenRouter().route(req).attempts == [f"search:{entry}" for entry in KNEE_FIRST]
-    research = RouteRequest(
-        prompt="q", candidates=(Candidate(tool="research", provider="parallel"),), deadline_s=1, pinned_tool="research"
-    )
-    assert DataDrivenRouter().route(research).attempts is None
 
 
 MEASURED = tuple(Candidate(tool="search", provider=name, mode="fast") for name in ("you", "nimble"))
@@ -100,6 +96,15 @@ def test_backends_are_ordered_only_when_search_is_the_method_that_runs() -> None
     assert attempts(*MEASURED, research, pinned="research") is None
 
 
+def test_the_reason_says_when_search_runs_because_the_first_method_has_no_backend() -> None:
+    router, tail = DataDrivenRouter(), f"search backends {BEST_FIRST}, by the 2026-11-23 measures"
+    row = "data-driven 0.1.1: research for verb=analyze, url_target=none"
+    decision = router.route(RouteRequest(prompt=RESEARCHY, candidates=MEASURED, deadline_s=1))
+    assert decision.reason == f"{row}; research has no backend here, so search runs; {tail}"
+    pinned = RouteRequest(prompt=RESEARCHY, candidates=MEASURED, deadline_s=1, pinned_tool="search")
+    assert router.route(pinned).reason == f"{row}; {tail}", "a pinned search is the caller's choice, not a fallback"
+
+
 def test_with_no_measured_backend_shown_it_ranks_methods_only() -> None:
     shown = (Candidate(tool="search", provider="first"), Candidate(tool="search", provider="exa", measured=False))
     decision = DataDrivenRouter().route(RouteRequest(prompt="who won the cup", candidates=shown, deadline_s=1))
@@ -113,38 +118,3 @@ def test_a_request_s_own_preference_is_used_when_the_router_has_none() -> None:
     assert DataDrivenRouter(prefer="cheap").route(request).prefer == "cheap"
     with pytest.raises(ConfigurationError, match="prefer takes"):
         DataDrivenRouter(prefer="balanced")  # type: ignore[arg-type]
-
-
-@pytest.mark.parametrize("row", [{"id": 1}, {"id": "search:a", "quality": "high"}, {"id": "search:a", "quality": -1}])
-def test_a_row_without_an_id_and_four_measures_is_refused(row: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
-    full = {"quality": 1, "ci95": 1, "usd_per_1k": 1, "p50_s": 1} | row
-    named = {"provider_table": {"file": "provider_table.json", "sha256": None}}
-    files = {"manifest.json": named, "provider_table.json": {"measured": "v", "search": [full]}}
-    monkeypatch.setattr(providers_module, "read_release", lambda name, **_: files[name])
-    shipped_providers.cache_clear()
-    try:
-        with pytest.raises(ConfigurationError, match="needs an id and four measures"):
-            shipped_providers()
-        files["manifest.json"] = {}
-        shipped_providers.cache_clear()
-        assert shipped_providers() == ProviderTable(), "a release that names no provider table ranks no backends"
-    finally:
-        shipped_providers.cache_clear()
-
-
-def test_a_provider_table_that_is_not_the_one_the_manifest_names_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
-    real = providers_module.read_release
-
-    def altered(name: str, **kwargs: Any) -> Any:
-        data = real(name, **kwargs)
-        if name == DATA_DRIVEN_MANIFEST_FILE:
-            data["provider_table"]["sha256"] = "0" * 64
-        return data
-
-    monkeypatch.setattr(providers_module, "read_release", altered)
-    shipped_providers.cache_clear()
-    try:
-        with pytest.raises(ConfigurationError, match="checksum does not match"):
-            shipped_providers()
-    finally:
-        shipped_providers.cache_clear()

@@ -66,12 +66,13 @@ class ToolTable:
         return Row((), dict(zip(self.labels, self.tables[0][""], strict=False)))
 
 
-def read_release(name: str, *, sha256: str | None = None) -> Any:
-    """One JSON file of the shipped release, refused when ``sha256`` is given and is not its checksum."""
+def read_release(name: str, *, sha256: str | None = None, message: str = MSG_DATA_DRIVEN_TABLE) -> Any:
+    """One JSON file of the shipped release, refused with ``message`` when ``sha256`` is given and is not its
+    checksum."""
     folder = resources.files("web_router").joinpath(*DATA_DRIVEN_DATA_DIR)
     content = (folder / name).read_bytes()
     if sha256 is not None and hashlib.sha256(content).hexdigest() != sha256:
-        raise ConfigurationError(MSG_DATA_DRIVEN_TABLE.format(why=MSG_DATA_DRIVEN_CHECKSUM))
+        raise ConfigurationError(message.format(why=MSG_DATA_DRIVEN_CHECKSUM))
     return json.loads(content)
 
 

@@ -47,13 +47,14 @@ def ranked(points: Sequence[Point], prefer: Prefer | None) -> list[Point]:
 
 
 def search_attempts(req: RouteRequest, points: Sequence[Point], prefer: Prefer | None) -> list[str] | None:
-    """The measured search candidates the call was shown, in ``prefer``'s order; ``None`` when it was shown none.
+    """The measured search candidates the call was shown, in ``prefer``'s order; ``None`` with fewer than two.
 
-    A candidate with ``measured`` false, a keyless tier or one with its own options, is not the backend a row
-    measured, so it is passed over. So is a point whose median latency is over the budget's time limit: the
-    price list holds no latency for a tier at a depth, so the budget's own filter does not see it.
+    One measured candidate alone is no ranking: putting it first would only move it ahead of ``auto``'s order, so
+    that order stays. A candidate with ``measured`` false, a keyless tier or one with its own options, is not the
+    backend a row measured, so it is passed over. So is a point whose median latency is over the budget's time
+    limit: the price list holds no latency for a tier at a depth, so the budget's own filter does not see it.
     """
     shown = {c.id for c in req.candidates if c.measured}
     limit = req.budget.time_limit_s if req.budget is not None else None
     fits = [point for point in points if point.id in shown and (limit is None or point.p50_s <= limit)]
-    return [point.id for point in ranked(fits, prefer)] or None
+    return [point.id for point in ranked(fits, prefer)] if len(fits) > 1 else None

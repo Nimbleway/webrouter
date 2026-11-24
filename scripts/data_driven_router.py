@@ -10,7 +10,7 @@ and ``artifacts/router1.json``. This script
 3. with ``LOOKUP``, the delivered lookup table, writes ``provider_table.json``: each search row web-router can
    run as measured, by candidate id (:mod:`scripts.data_driven_providers`), named in the manifest by checksum.
    Without it the shipped provider table stays. ``VERSION`` is the delivered table's own; to refresh the provider
-   table alone, pass the shipped ``SOURCE`` again with ``LOOKUP`` and the next version;
+   table alone, pass the shipped ``SOURCE`` again with ``LOOKUP`` and a higher version;
 4. replays the golden file against web-router's own features and table, and exits non-zero with the first
    differences when they disagree: then ``routing/data_driven/patterns.py`` no longer matches the training code
    and has to be updated from it.

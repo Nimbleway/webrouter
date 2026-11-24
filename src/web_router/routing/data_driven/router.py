@@ -21,6 +21,7 @@ from web_router.constants_data_driven import (
     DATA_DRIVEN_REASON,
     DATA_DRIVEN_REASON_BACKENDS,
     DATA_DRIVEN_REASON_LAST_RESORT,
+    DATA_DRIVEN_REASON_NO_BACKEND,
     DATA_DRIVEN_REASON_OVERALL,
     DATA_DRIVEN_ROUTER_NAME,
     MSG_DATA_DRIVEN_BROWSE,
@@ -74,6 +75,8 @@ class DataDrivenRouter:
         attempts = search_attempts(req, self.providers.search, prefer) if runs == "search" else None
         if attempts is None:
             return RouteDecision(tools=tools, confidence=share, reason=reason)
+        if req.pinned_tool is None and tools[0] != runs:  # the row's first method has nothing to run on
+            reason = DATA_DRIVEN_REASON_NO_BACKEND.format(reason=reason, tool=tools[0])
         order = DATA_DRIVEN_ORDERS.get(prefer, DATA_DRIVEN_ORDERS[None])
         reason = DATA_DRIVEN_REASON_BACKENDS.format(reason=reason, order=order, measured=self.providers.measured)
         return RouteDecision(tools=tools, attempts=attempts, confidence=share, reason=reason, prefer=prefer)
