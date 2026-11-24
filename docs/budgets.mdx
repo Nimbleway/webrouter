@@ -43,7 +43,7 @@ Each attempt is charged its estimate when it starts, and settled when it ends:
 | Answers on a backend's keyless tier (Nimble, Tavily, Firecrawl, Keenable with no key) | $0, though the keyed price is checked before the call | $0, `keyless` | its estimate |
 | Fails after the request may have reached the backend: a timeout, a 5xx, an answer that could not be read | its estimate | not counted | its estimate |
 | Fails with a 404 or 410: the page is gone, which a fetch backend may bill | its estimate | not counted | its estimate |
-| Is refused before the backend did any work: any other 4xx, a connection never made, a missing key | nothing | not counted | $0 |
+| Is refused before the backend did any work: any other 4xx, a connection never made, a missing key, an option the backend does not map | nothing | not counted | $0 |
 | Is skipped because it does not fit the budget | nothing | not counted | a hop with the reason |
 
 The check before each attempt uses its estimate, so a stated cost above the

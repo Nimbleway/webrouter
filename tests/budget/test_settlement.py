@@ -13,7 +13,7 @@ import pytest
 from tests.budget.conftest import Chain, Table, call, scoped
 from web_router import Budget, WebRouter
 from web_router.constants_cost import COST_REPORTED
-from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError
 from web_router.routing.attempts import Attempt
 from web_router.routing.ledger import Ledger
 from web_router.types import SearchRequest
@@ -70,6 +70,25 @@ def test_a_named_backend_that_never_started_is_charged_nothing(chain: Chain, pri
     with WebRouter().budget(SHARED) as shared, pytest.raises(ProviderError):
         shared.search("q", provider="first")
     assert (shared.status().spent_usd, shared.status().reserved_usd) == (0.0, 0.0)
+
+
+@pytest.mark.parametrize("tool", ["answer"], indirect=True)  # auto passes a member's own refusal over on answer
+def test_a_member_refusing_an_option_is_charged_nothing_so_the_next_fits(chain: Chain, priced: Table) -> None:
+    chain.raises["first"] = UnsupportedParameterError("first", ["recency"])
+    priced.update(first=(0.04, None), second=(0.04, None))
+    response = call(chain, Budget(max_cost_usd=0.06))
+    assert chain.called == ["first", "second"], "first sent nothing, so its estimate does not crowd out second"
+    assert [attempt.est_cost_usd for attempt in response.decision.attempts] == [0.0, 0.04]
+
+
+@pytest.mark.parametrize("tool", ["answer"], indirect=True)
+def test_a_refusal_naming_another_backend_leaves_the_member_charged(chain: Chain, priced: Table) -> None:
+    chain.raises["first"] = UnsupportedParameterError("inner", ["recency"])  # from a call first made itself
+    priced.update(first=(0.04, None), second=(0.04, None))
+    with WebRouter().budget(SHARED) as shared:
+        scoped(chain, shared)
+    assert chain.called == ["first", "second"]
+    assert shared.status().spent_usd == pytest.approx(0.08)
 
 
 @pytest.mark.parametrize("tool", ["search", "answer"], indirect=True)  # the fakes that can state a cost
