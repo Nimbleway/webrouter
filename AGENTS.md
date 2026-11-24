@@ -280,7 +280,7 @@ src/web_router/
 │   │                   the budget's scope around it
 │   ├── route_tools.py  the tools that ask the router: the caller's route_tools, else
 │   │                   the router's own, else all five; read once; route_modes likewise;
-│   │                   prefer checked
+│   │                   a router's extra_modes and prefer checked
 │   ├── router_owner.py a router built by name: kept to close with the routers, or closed if refused
 │   ├── router_setup.py RouterSetup: the attached router, the tools it is asked about, its
 │   │                   modes, the caller's prefer, and the RouteRequest a routed call shows it
@@ -297,7 +297,8 @@ src/web_router/
 │   ├── candidates_priced.py one method's members priced, timed, and dropped when the
 │   │                   budget leaves them out
 │   ├── candidate_modes.py mode_requests(): a member's vendor modes as candidates, each
-│   │                   on its own request, refused ones dropped (route_modes)
+│   │                   on its own request, refused ones dropped (route_modes), and the
+│   │                   ones a router asks for by id (extra_modes)
 │   ├── request_modes.py backends_only() for a router that did not opt in to modes;
 │   │                   within(): a remote request held to 64 candidates
 │   ├── effort_call.py  choose_effort(): the one research effort a call sends, chosen

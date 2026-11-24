@@ -116,6 +116,7 @@ def build_candidates(
     budget: Budget | None = None,
     provider: str | Provider | None = None,
     modes: bool = False,
+    extra_modes: Mapping[str, Sequence[str]] | None = None,
 ) -> CandidateSet:
     """Every (tool, provider) ``router`` can serve ``requests`` with, within ``budget``.
 
@@ -131,6 +132,8 @@ def build_candidates(
         provider: The backend the caller named. One other than ``auto``
             leaves nothing for a router to choose, so there are no candidates.
         modes: Follow each backend with a candidate per vendor mode it offers (:mod:`.candidate_modes`).
+        extra_modes: Per search backend, more vendor modes to follow it with, such as a tier at a depth
+            (``parallel-turbo+fast``): the ones the router's ``extra_modes`` asks for.
     """
     if provider is not None and provider_name(provider) != PROVIDER_AUTO:
         return CandidateSet()
@@ -144,7 +147,8 @@ def build_candidates(
             unbuilt |= {name: MSG_DROPPED_REFUSES_EFFORT.format(effort=chosen.effort) for name, _ in eligible}
             eligible = taken
         found.priced[tool] = request
-        expand = partial(mode_requests, router, tool, request) if modes else None
+        asked = extra_modes or {}
+        expand = partial(mode_requests, router, tool, request, offered=modes, extra=asked) if modes or asked else None
         price_members(tool, request, eligible, budget, found, expand)
         costed, _ = cost_route(getattr(router, AUTO_GETTERS[tool])(PROVIDER_AUTO), tool, request, budget)
         if costed is not None:
