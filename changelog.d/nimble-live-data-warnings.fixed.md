@@ -1,0 +1,1 @@
+Nimble live data runs now keep the warnings Nimble reports on a successful run, such as an option it ignored, in `LiveDataResponse.extra["warnings"]` and, when a format was asked for, on `document.warnings`, instead of only in `raw`.

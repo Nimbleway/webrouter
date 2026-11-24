@@ -46,12 +46,13 @@ _SOURCE_METADATA_MAPPED = frozenset({"description", "domain", "entity_type"})
 def to_response(provider: str, request: LiveDataRequest, payload: dict[str, Any]) -> LiveDataResponse:
     status = payload.get("status")
     data = payload.get("data") or {}
+    warnings = [str(warning) for warning in payload.get("warnings") or []]
 
     # As for an extract: a block or a fatal fetch error is a 200 whose
     # `status` says so, and a record cannot have been parsed from nothing.
     if status != NIMBLE_LIVE_DATA_SUCCESS_STATUS:
         detail = MSG_LIVE_DATA_BAD_STATUS.format(source=request.source, status=status)
-        raise ProviderError(provider, "; ".join([detail, *(payload.get("warnings") or [])]))
+        raise ProviderError(provider, "; ".join([detail, *warnings]))
 
     # The envelope says `success` whenever the fetch completed, a 404 page
     # included, and the template then parses the error page. What it
@@ -59,10 +60,10 @@ def to_response(provider: str, request: LiveDataRequest, payload: dict[str, Any]
     status_code = _as_int(payload.get("status_code"))
     if status_code is not None and status_code >= NIMBLE_LIVE_DATA_FAILED_STATUS_FLOOR:
         detail = MSG_LIVE_DATA_PAGE_FAILED.format(source=request.source, status=status_code)
-        raise ProviderError(provider, "; ".join([detail, *(payload.get("warnings") or [])]))
+        raise ProviderError(provider, "; ".join([detail, *warnings]))
 
     record = _record(provider, request, data.get("parsing"))
-    document = _document(request, payload, data)
+    document = _document(request, payload, data, warnings)
 
     return LiveDataResponse(
         provider=provider,
@@ -79,6 +80,7 @@ def to_response(provider: str, request: LiveDataRequest, payload: dict[str, Any]
             {
                 "metadata": payload.get("metadata"),
                 "pagination": payload.get("pagination"),
+                "warnings": warnings or None,
                 **{k: v for k, v in data.items() if k not in ("parsing", *NIMBLE_EXTRACT_FORMATS.values())},
             }
         ),
@@ -115,7 +117,9 @@ def _record(provider: str, request: LiveDataRequest, parsing: Any) -> dict[str, 
     return dict(parsing)
 
 
-def _document(request: LiveDataRequest, payload: dict[str, Any], data: dict[str, Any]) -> ExtractedDocument | None:
+def _document(
+    request: LiveDataRequest, payload: dict[str, Any], data: dict[str, Any], warnings: list[str]
+) -> ExtractedDocument | None:
     """The page beside the record, only when a format asked for it."""
     if request.format is None:
         return None
@@ -124,6 +128,7 @@ def _document(request: LiveDataRequest, payload: dict[str, Any], data: dict[str,
         content=data.get(NIMBLE_EXTRACT_FORMATS[request.format]) or "",
         format=request.format,
         status_code=_as_int(payload.get("status_code")),
+        warnings=warnings,
     )
 
 

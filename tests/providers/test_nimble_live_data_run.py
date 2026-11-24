@@ -119,3 +119,16 @@ def test_pagination_and_unmapped_data_land_in_extra(provider: NimbleLiveDataProv
 
     assert response.extra["pagination"] == {"next_page_params": {"page": 2}}
     assert response.extra["links"] == ["https://books.example/"]
+
+
+def test_nimbles_warnings_on_a_successful_run_are_kept(provider: NimbleLiveDataProvider) -> None:
+    """Nimble can run a template and still say it ignored part of the request, as it does for render beside driver."""
+    payload = _run_payload(RECORD, warnings=["render is ignored because driver is configured"])
+    payload["data"]["markdown"] = "# A Light in the Attic"
+
+    bare = to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
+    paged = to_response(provider.name, LiveDataRequest(source=TEMPLATE, format="markdown"), payload)
+
+    assert bare.extra["warnings"] == ["render is ignored because driver is configured"]
+    assert paged.document is not None
+    assert paged.document.warnings == ["render is ignored because driver is configured"]
