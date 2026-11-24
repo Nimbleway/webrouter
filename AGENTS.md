@@ -323,6 +323,7 @@ src/web_router/
 │   ├── merge_urls.py   a router's words with every URL cut to its scheme and host
 │   ├── url_policy.py   url_policy: the URLs a plan or a router may send, a hostname
 │   │                   check before dispatch (no DNS, no redirects)
+│   ├── rules.py        deprecated rules router, retained for one release with its original behavior
 │   ├── preferred.py    PreferredRouter: the built-in router ordering every call by cost, p90 or scores
 │   ├── data_driven/    DataDrivenRouter, the built-in router picking the method from a trained table:
 │   │                   patterns.py and features.py read the prompt (patterns.py is copied from the

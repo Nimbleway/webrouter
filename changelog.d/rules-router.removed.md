@@ -1,1 +1,0 @@
-The built-in `rules` router is removed: `router="rules"`, `WEB_ROUTER_MCP_ROUTER=rules` and `web_router.routing.rules` no longer exist. The default `data-driven` router replaces it; `examples/router_rules.py` is a rules router to copy.

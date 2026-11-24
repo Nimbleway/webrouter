@@ -283,9 +283,9 @@ benchmarks and 1,078 synthetic requests, all labelled by the trainers. It is
 experimental, needs no key, calls nothing and answers in microseconds. It is
 the default: only `plan()` and `run()` ask it, and it ranks no backends.
 
-It replaced the earlier `rules` router, which read a prompt with a URL,
-researched one asking in so many words for a report or a comparison, and
-searched everything else. Against that, expect three differences:
+It replaces `rules` as the default. That deprecated router reads a prompt with a URL,
+researches one asking in so many words for a report or a comparison, and
+searches everything else. Against that, expect three differences:
 
 - **A URL does not always mean extract.** "Summarize https://..." is ranked as
   research, with extract after it. Pass `tool="extract"`, or call `extract()`,
@@ -298,9 +298,11 @@ searched everything else. Against that, expect three differences:
   research backend is configured. Research is billed per run and takes a
   minute or more, so pass a `budget`, or `tool="search"` to keep a call to a
   search.
-- **`router="rules"` is gone.** `router=None` gives a plain search plan, and
+- **`router="rules"` is deprecated.** It keeps its old behavior for one release and warns when built;
+  it is removed in the following release. The same applies to `WEB_ROUTER_MCP_ROUTER=rules`.
+  Use the default `data-driven`, `router=None` for a plain search plan, or use
   [`examples/router_rules.py`](https://github.com/Nimbleway/webrouter/blob/main/examples/router_rules.py)
-  is a rules router to copy.
+  as a starting point for a custom router.
 
 ```python
 from web_router import WebRouter

@@ -9,7 +9,6 @@ import pytest
 from tests.plan_helpers import called_fixture  # noqa: F401  (fixture)
 from tests.routing_helpers import MEMBERS, wr
 from web_router import AsyncWebRouter, WebRouter
-from web_router.exceptions import ConfigurationError
 from web_router.routing.registry import available_routers
 
 
@@ -25,10 +24,24 @@ def test_the_routers_attach_data_driven_by_default_and_none_attaches_nothing(cls
             router.close() if cls is WebRouter else asyncio.run(router.aclose())
 
 
-def test_the_removed_rules_router_is_refused_by_name() -> None:
-    assert "rules" not in available_routers()
-    with pytest.raises(ConfigurationError, match=r"names no registered router.*data-driven"):
-        WebRouter(router="rules")
+@pytest.mark.usefixtures("called")
+def test_the_deprecated_rules_router_warns_once_and_keeps_its_behavior() -> None:
+    assert "rules" in available_routers()
+    with (
+        pytest.warns(
+            DeprecationWarning, match="rules.*one release.*following release.*data-driven.*router=None"
+        ) as seen,
+        WebRouter(router="rules", provider_config={"auto": {"chain": list(MEMBERS)}}) as router,
+    ):
+        for prompt, tool in [
+            ("why is the sky blue", "search"),
+            ("compare https://doi.org/10.1038/nphys1170 and heat pumps", "extract"),
+            ("compare heat pumps and gas boilers", "research"),
+            ("What is market research?", "search"),
+        ]:
+            plan = router.plan(prompt)
+            assert (plan.tool, plan.decision.router) == (tool, "rules")
+    assert len(seen) == 1, "warn when built, not on each plan"
 
 
 def _default(cls: type = WebRouter) -> WebRouter:

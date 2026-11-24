@@ -830,7 +830,7 @@ order, on `tools-effort-60` and `simpleqa-300-v2`. The LLM router is
 toy-trained pipeline; remote is the built-in `remote` router asking
 `examples/router_remote_server.py` on loopback, then the same behind a
 simulated 40 ms round trip. The run cost about $0.10. Its `rules` row is the
-built-in rules router of that version, since removed; the `data-driven` router that
+built-in rules router of that version, now deprecated; the `data-driven` router that
 replaced it as the default has not been timed in a recorded run.
 
 | Tool | First backend in `auto` | p50 s | p90 s |
