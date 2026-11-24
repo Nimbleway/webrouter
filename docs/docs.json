@@ -48,53 +48,70 @@
     }
   },
   "navigation": {
-    "groups": [
+    "tabs": [
       {
-        "group": "Get started",
-        "pages": [
-          "index",
-          "quickstart",
-          "how-it-works",
-          "providers"
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "index",
+              "quickstart",
+              "free-web-access",
+              "how-it-works",
+              "providers"
+            ]
+          },
+          {
+            "group": "Methods",
+            "pages": [
+              "search",
+              "extract",
+              "answer",
+              "research",
+              "live-data",
+              "vendors",
+              "browser"
+            ]
+          },
+          {
+            "group": "Agents and routing",
+            "pages": [
+              "mcp-server",
+              "cli",
+              "integrations",
+              "agent-prompt",
+              "budgets",
+              "smart-routing",
+              "vendor-modes"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "production",
+              "benchmarks",
+              "custom-providers"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "configuration",
+              "errors"
+            ]
+          }
         ]
       },
       {
-        "group": "Methods",
-        "pages": [
-          "search",
-          "extract",
-          "answer",
-          "research",
-          "live-data",
-          "browser"
-        ]
-      },
-      {
-        "group": "Agents and routing",
-        "pages": [
-          "mcp-server",
-          "cli",
-          "integrations",
-          "agent-prompt",
-          "budgets",
-          "smart-routing",
-          "vendor-modes"
-        ]
-      },
-      {
-        "group": "Guides",
-        "pages": [
-          "production",
-          "benchmarks",
-          "vendors",
-          "custom-providers"
-        ]
-      },
-      {
-        "group": "Reference",
-        "pages": [
-          "configuration",
-          "errors"
+        "tab": "Web Catalog",
+        "groups": [
+          {
+            "group": "Web Catalog",
+            "pages": [
+              "data-apis"
+            ]
+          }
         ]
       }
     ]

@@ -806,7 +806,7 @@ EVALS_JUDGE_MODEL = "gpt-4o"
 
 EVALS_JUDGE_TEMPERATURE = 0.0
 
-EVALS_FIXED_TEMPERATURE_MODELS: tuple[str, ...] = ("gpt-5",)
+EVALS_FIXED_TEMPERATURE_MODELS: tuple[str, ...] = ("gpt-5", "gpt-6")
 """Model id prefixes that reject any temperature but their default -- it is left out of the request for them."""
 
 EVALS_JUDGE_TIMEOUT = 120.0
@@ -2837,7 +2837,7 @@ MSG_EVALS_NEEDS_PYARROW = (
     "uv sync --extra {extra} in your web-router clone, or make setup for every extra"
 )
 
-MSG_EVALS_JUDGE_FAILED = "the judge could not {step} the answer: {error}"
+MSG_EVALS_JUDGE_FAILED = "the judge failed at {step}: {error}"
 
 MSG_EVALS_JUDGE_STOPPED = "the reply stopped on {stop_reason!r} before it was finished, so it holds no answer to read"
 

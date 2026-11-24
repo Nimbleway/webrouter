@@ -82,6 +82,13 @@ CANDIDATE_MODE_KEY = "mode"
 """A candidate's vendor mode on the wire: left out when it has none, as every candidate of a router shown backends
 only."""
 
+CANDIDATE_MEASURED_KEY = "measured"
+"""A candidate's ``measured`` on the wire: sent only when ``False``, for a keyless tier or a member with options."""
+
+PREFER_KEY = "prefer"
+"""``prefer`` on the wire, in a request or a decision: left out when unset. A request's value this version does not
+know reads as unset, so a later value never makes a service refuse the call."""
+
 WIRE_MAX_NAMES = 64
 """The most entries a decision may hold in one list or mapping: ``tools``, one method's ``providers``,
 ``exclude``, or one method's ``params``. Past it, the decision is refused."""

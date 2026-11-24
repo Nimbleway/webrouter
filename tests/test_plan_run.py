@@ -28,6 +28,13 @@ def test_with_no_router_the_plan_is_search_on_the_static_order() -> None:
 
 
 @pytest.mark.usefixtures("called")
+def test_preferred_keeps_a_url_prompt_on_search() -> None:
+    with _wr(router="preferred", router_config={"prefer": "cheap"}) as router:
+        plan = router.plan("read https://example.com/pricing")
+        assert plan.tool == "search"
+
+
+@pytest.mark.usefixtures("called")
 @pytest.mark.parametrize("tool", list(PARAMS))
 def test_with_no_router_a_pinned_tool_is_planned_with_its_params(tool: str) -> None:
     plan = _wr().plan(PROMPT, tool=tool)

@@ -4,7 +4,7 @@ dynamic = ["version"]
 description = "WebRouter is an open source standard that connects your agent to the web"
 readme = "README.md"
 license = "Apache-2.0"
-license-files = ["LICENSE", "src/web_router/evals/prompts/LICENSE-simple-evals"]
+license-files = ["LICENSE", "NOTICE", "src/web_router/evals/prompts/LICENSE-simple-evals"]
 requires-python = ">=3.11"
 authors = [
     { name = "Nimble" },
@@ -129,6 +129,13 @@ evals = [
     "anthropic>=1.8,<3",
     # SealQA is published as Parquet; read only inside Dataset.sealqa().
     "pyarrow>=15",
+]
+# The LiteLLM judge (`--judge litellm:<model>`): one SDK that reaches most model
+# providers, for a judge on a model neither built-in judge serves. Large, so
+# apart from `evals`, and pinned exactly: an upgrade is a reviewed change.
+evals-litellm = [
+    "webrouter[evals]",
+    "litellm==1.110.2",
 ]
 # Not a method either: LangChain tools over search and extract, for an agent
 # built on LangChain rather than one that speaks MCP. langchain-core is all the

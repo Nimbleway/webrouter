@@ -140,10 +140,6 @@ class BrowserSessions:
         self._sessions: dict[str, _Session] = {}
         self._ended: OrderedDict[str, str] = OrderedDict()
         self._opening = 0
-        # Every value that opens a session this server ever held. Kept after a
-        # session ends: a backend can recycle a port, and an old URL is still
-        # not the model's to see.
-        self._secrets: set[str] = set()
 
     def __len__(self) -> int:
         return len(self._sessions)
@@ -187,7 +183,6 @@ class BrowserSessions:
             raise BrowserToolError(MCP_MSG_BROWSER_OPEN_TIMED_OUT.format(timeout=timeout))
         session_id = MCP_BROWSER_SESSION_ID_TEMPLATE.format(token=secrets.token_urlsafe(MCP_BROWSER_SESSION_ID_BYTES))
         try:
-            self._remember_secrets(handle)
             guard = NavigationGuard(NavigationPolicy.for_session(handle.cdp_url))
             self._sessions[session_id] = _Session(session_id, handle, guard, self._clock())
             handle.on_connect(guard.install)
@@ -226,10 +221,11 @@ class BrowserSessions:
                 try:
                     result = await action(session.handle)
                 except PageClosedError as exc:
+                    error = self._translated(exc, tool, session_id)  # scrub before the session's values leave
                     self._end(session_id, MCP_BROWSER_END_LOST)
                     with anyio.CancelScope(shield=True):
                         await _release_quietly(session.handle)
-                    raise self._translated(exc, tool, session_id) from None
+                    raise error from None
                 except BrowserActionError as exc:
                     # A navigation the route aborted fails as one; the refusal is the truer answer.
                     raise (await self._settled(session, tool) or self._translated(exc, tool, session_id)) from None
@@ -244,10 +240,7 @@ class BrowserSessions:
             session.last_used = self._clock()
 
     async def close(self, session_id: str, reason: str) -> str | None:
-        """Release ``session_id``. Returns ``None``, or why it had already ended if it had.
-
-        Waits for an action in flight on the session to finish first, so a
-        release never pulls the page out from under a click.
+        """Release ``session_id`` once any action in flight on it finishes; ``None``, or why it had already ended.
 
         Raises:
             ValueError: for an id this server never handed out.
@@ -257,12 +250,15 @@ class BrowserSessions:
             if session_id in self._ended:
                 return self._ended[session_id]
             raise ValueError(self._unknown_message(session_id))
-        self._end(session_id, reason)
         async with session.lock:
+            if self._sessions.get(session_id) is not session:  # another close ended it while this one waited
+                return self._ended.get(session_id)
+            extra = frozenset(self._open_secrets | self._handle_secrets(session.handle))  # survives _end() for waiters
+            self._end(session_id, reason)
             try:
                 await session.handle.release()
             except WebRouterError as exc:
-                raise BrowserToolError(self.scrub_text(str(exc))) from None
+                raise BrowserToolError(self.scrub_text(str(exc), extra)) from None
         return None
 
     async def reap(self) -> list[str]:
@@ -303,20 +299,24 @@ class BrowserSessions:
             for session in sessions:
                 group.start_soon(_release_quietly, session.handle)
 
-    def scrub(self, value: Any) -> tuple[Any, int]:
+    @property
+    def _open_secrets(self) -> set[str]:
+        # Gathered from the open sessions, so a session's own values leave with it.
+        return {value for session in self._sessions.values() for value in self._handle_secrets(session.handle)}
+
+    def scrub(self, value: Any, extra: frozenset[str] = frozenset()) -> tuple[Any, int]:
         """``value`` with every session value this server holds, and every browser-session URL, redacted.
 
-        Literal first -- the CDP URL, its query, the backend's session id and
-        live-view URL, wherever they appear -- then :func:`~web_router.mcp.shaping.redact`
-        for the ones only a pattern can find.
+        Literal first -- the CDP URL, its query, backend id and live-view URL, wherever they
+        appear -- then :func:`~web_router.mcp.shaping.redact` for the ones only a pattern finds.
         """
-        literal, literal_count = _replace_literals(value, sorted(self._secrets, key=len, reverse=True))
+        literal, literal_count = _replace_literals(value, sorted(self._open_secrets | extra, key=len, reverse=True))
         redacted, count = redact(literal)
         return redacted, literal_count + count
 
-    def scrub_text(self, text: str) -> str:
+    def scrub_text(self, text: str, extra: frozenset[str] = frozenset()) -> str:
         """A message, scrubbed, with a note saying so when anything was taken out."""
-        cleaned, count = self.scrub(text)
+        cleaned, count = self.scrub(text, extra)
         return str(cleaned) + redaction_note(count)
 
     def _get(self, session_id: str) -> _Session:
@@ -341,13 +341,12 @@ class BrowserSessions:
             return None
         return BrowserToolError(self.scrub_text(MCP_MSG_BROWSER_URL_REFUSED.format(tool=tool, reason=reason)))
 
-    def _remember_secrets(self, handle: AsyncBrowserHandle) -> None:
+    def _handle_secrets(self, handle: AsyncBrowserHandle) -> set[str]:
         cdp_url = handle.cdp_url
-        # The control URL is read from the session, never asked for: the server
-        # does not fetch one, but a backend that returns it on open puts it here.
+        # The control URL is read from the session: only a backend returning it on open puts it here.
         control_url = handle.session.control_url.get_secret_value() if handle.session.control_url else ""
         candidates = [cdp_url, urlsplit(cdp_url).query, handle.session_id, handle.live_view_url or "", control_url]
-        self._secrets.update(value for value in candidates if len(value) >= MCP_BROWSER_SECRET_MIN_CHARS)
+        return {value for value in candidates if len(value) >= MCP_BROWSER_SECRET_MIN_CHARS}
 
     def _translated(self, exc: BrowserActionError, tool: str, session_id: str) -> BrowserToolError:
         template = next(

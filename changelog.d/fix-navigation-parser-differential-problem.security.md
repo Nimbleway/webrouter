@@ -1,0 +1,1 @@
+The MCP browser now refuses a URL whose authority a browser could read differently from the guard (a backslash, @ or % there), such as http://169.254.169.254\@example.com/. A space in a URL's path or query no longer gets it refused.

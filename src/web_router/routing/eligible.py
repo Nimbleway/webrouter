@@ -27,7 +27,8 @@ from web_router.exceptions import (
     UnsupportedFormatError,
     UnsupportedParameterError,
 )
-from web_router.routing.contract import Plan, ToolName, candidate_id
+from web_router.routing.contract import ToolName, candidate_id
+from web_router.routing.plan_type import Plan
 from web_router.types import NormalizedRequest
 
 _NO_MEMBER_LEFT = (UnsupportedParameterError, UnsupportedFormatError, MissingParameterError, NoAnswerProviderError)

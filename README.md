@@ -95,7 +95,7 @@ names every variable and where to get it, and fill in the ones you hold.
 | [`live_data`](https://docs.webrouter.net/live-data) | A vendor's ready-made scraper for one site, returning records | No |
 | [`open_browser`](https://docs.webrouter.net/browser) | A browser session you drive, local or in the cloud | Yes (`local`) |
 | [`browse`](https://docs.webrouter.net/browser) | A task handed to a hosted browser agent | No |
-| [`call_vendor`](https://docs.webrouter.net/vendors) | A vendor's own API (Google Ads, Datadog, ...) with your credentials | No |
+| [`call_data_api`](https://docs.webrouter.net/vendors) | A data API: a vendor's own API (Google Ads, Datadog, ...) with your credentials | No |
 
 ```python
 with WebRouter() as router:
@@ -157,9 +157,9 @@ lists each method's order and how it is generated.
 ## Budgets and cost control
 
 ```python
-from web_router import Budget, WebRouter, prices
+from web_router import Budget, PreferredRouter, WebRouter, prices
 
-router = WebRouter(router="cheapest_first")  # free backends first, then the cheapest paid ones
+router = WebRouter(router=PreferredRouter("cheap"))  # free backends first, then the cheapest paid ones
 log = router.log_spend("spend.jsonl")  # from here on, every answered call is logged
 response = router.answer("...", budget=Budget(max_cost_usd=0.01, time_limit_s=10))
 response.provider, response.cost_usd, response.cost_source, response.elapsed_s
@@ -174,7 +174,8 @@ prices.estimate("tavily", "search")  # 0.008: list price of one request
 ```
 
 Every response carries `cost_usd`: the backend's own figure where it states
-one (`cost_source="reported"`), else an estimate. Unless a router ranks the
+one (`cost_source="reported"`), `0` for a call on a backend's keyless tier
+(`cost_source="keyless"`), else an estimate. Unless a router ranks the
 backends itself (the default `rules` router does not), a cost cap makes `auto`
 try the cheaper of the backends that score alike first.
 
@@ -234,7 +235,7 @@ There is no WebRouter service in between, and nothing to sign up for.
   left for a method, the free tiers listed in
   [Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials).
   Name a provider to keep a call on that backend alone.
-- **Beyond the backends:** `call_vendor` reaches the vendor API you name, with
+- **Beyond the backends:** `call_data_api` reaches the vendor API you name, with
   that vendor's credentials; `WEB_ROUTER_MCP_ROUTER=remote` sends a prompt to
   the router service at the URL you set; and `evaluate()` downloads the
   question set you pick and calls the judge model you configure.
@@ -280,7 +281,7 @@ SealQA or your own CSV) with an LLM judge. See
 | [Providers](https://docs.webrouter.net/providers) | [Research](https://docs.webrouter.net/research) | [Adding a provider](https://docs.webrouter.net/custom-providers) |
 | [Configuration](https://docs.webrouter.net/configuration) | [Live data](https://docs.webrouter.net/live-data) | [MCP server](https://docs.webrouter.net/mcp-server) |
 | [Errors](https://docs.webrouter.net/errors) | [Browser](https://docs.webrouter.net/browser) | [Examples](https://github.com/Nimbleway/webrouter/tree/main/examples) |
-| | [Vendor data](https://docs.webrouter.net/vendors) | [Changelog](https://github.com/Nimbleway/webrouter/blob/main/CHANGELOG.md) |
+| | [Data APIs](https://docs.webrouter.net/vendors) | [Changelog](https://github.com/Nimbleway/webrouter/blob/main/CHANGELOG.md) |
 
 ## Contributing
 
@@ -309,6 +310,7 @@ make check    # lint, typecheck and the offline unit tests; no keys needed
 
 [Apache License 2.0](LICENSE). The SimpleQA grader prompt vendored at
 `src/web_router/evals/prompts/` keeps its own MIT license, in
-`LICENSE-simple-evals` beside it.
+`LICENSE-simple-evals` beside it. [`NOTICE`](NOTICE) carries the attribution
+for the data-driven router's table.
 
 <!-- mcp-name: io.github.Nimbleway/webrouter -->

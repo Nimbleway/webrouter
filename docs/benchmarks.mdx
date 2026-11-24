@@ -147,6 +147,31 @@ built on GPT and `gpt-4o` would be grading its own family:
 `router.evaluate(dataset, judge=AnthropicJudge())`. Its report reads
 `anthropic:claude-sonnet-5-5`, and its figures compare only with that judge's.
 
+`LiteLLMJudge` puts the judge on any model [LiteLLM](https://docs.litellm.ai/)
+reaches — DeepInfra, Gemini, Bedrock, a local Ollama — named as LiteLLM names
+it, with that provider's own key. It comes with the `evals-litellm` extra, which
+pins one LiteLLM release, and its import reads no `.env` and fetches nothing:
+
+```python
+from web_router.evals import LiteLLMJudge
+
+report = router.evaluate(dataset, judge=LiteLLMJudge("gemini/gemini-3.1-flash-lite"))  # reads GEMINI_API_KEY
+```
+
+Every judge can also be named in one string, the one its report records:
+`judge_from("openai:gpt-6-luna")`, `judge_from("anthropic")`,
+`judge_from("litellm:deepinfra/<org>/<model>")`, or `judge_from("my_pkg.judges:MyJudge")`
+for a `Judge` subclass of your own, built with no arguments. The benchmark
+scripts take the same string as `--judge`. A judge pointed at another endpoint
+with `base_url` is built in code, not named, and adds the host to its label —
+`openai:glm-5@models.example.com` — so its figures never combine with the
+vendor's own.
+
+The default stays `gpt-4o` so new figures compare with published ones. Pass
+`judge_from("openai:gpt-6-luna")` to grade on another model, knowing its figures
+compare only with its own. The judge leaves the `gpt-6` and `gpt-5` families
+at their default temperature.
+
 `Dataset.simpleqa()` downloads the test set from `openai/simple-evals` (pass
 `path=` for a local copy); `limit` samples with `random.Random(seed)` exactly as
 `simple-evals` does, so `limit=500` with the default seed is the same 500
@@ -187,7 +212,11 @@ report = router.evaluate(dataset, judge=MyJudge())
 
 `evaluate()` calls the judge's `check()` before the first search, so override
 it to raise on a setup that cannot work — the built-in judges raise there on a
-missing SDK or key.
+missing SDK or key. A subclass of a built-in judge that sets no `name`
+of its own is labelled by its class (`GradingFails(openai):gpt-4o`), since it may
+grade differently; set `name` to the parent's only when it grades exactly as
+the parent does. Claude models may reply with a thinking block before the text:
+read the reply's text blocks, not its first block.
 
 Two things about the knobs. A `Dataset` is a model, so loop over
 `dataset.questions`, not the dataset itself. And `search_depth` and

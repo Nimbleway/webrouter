@@ -32,6 +32,7 @@ from typing import Any
 
 from web_router._urls import host_of
 from web_router.client import AsyncWebRouter
+from web_router.constants_data_driven import DATA_DRIVEN_ROUTER_NAME
 from web_router.constants_mcp import (
     ENV_MCP_MAX_COST_USD,
     ENV_MCP_ROUTER,
@@ -160,7 +161,7 @@ class McpRouting:
 
     def _runs(self) -> dict[str, str]:
         """Where the router runs, and for one that is not the library's own, a note on what it may send."""
-        if self.router_name in (RULES_ROUTER_NAME, MCP_ROUTER_OFF):
+        if self.router_name in (RULES_ROUTER_NAME, DATA_DRIVEN_ROUTER_NAME, MCP_ROUTER_OFF):
             return {"router_runs": MCP_ROUTER_IN_PROCESS}
         if not isinstance(self.router, str):
             return {"router_runs": MCP_ROUTER_OPERATOR, "router_note": MCP_ROUTER_OPERATOR_NOTE}

@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup install sync lock requirements format lint typecheck test test-integration test-browser cov contracts prices vendors latency chains efforts shape-baseline check build clean
+.PHONY: help setup install sync lock requirements format lint typecheck test test-integration test-browser cov contracts oxylabs-classic prices vendors docs-site docs-preview latency chains efforts data-driven-router changelog shape-baseline check build clean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -48,6 +48,15 @@ contracts: ## Regenerate the committed contracts; PROVIDER=search/brave starts a
 vendors: ## Regenerate VENDORS.md and the vendor section of .env.example from src/web_router/data/vendors
 	uv run python -m scripts.vendors
 
+docs-site: ## Build the docs site into build/docs-site/docs: docs/ plus the Data APIs pages generated from the catalog
+	uv run python -m scripts.data_api_docs
+
+docs-preview: docs-site ## Build the docs site and serve it locally with Mintlify
+	cd build/docs-site/docs && npx --yes mint@4.3.49 dev
+
+oxylabs-classic: ## Regenerate src/web_router/data/oxylabs_classic_sources.json from Oxylabs' docs (network)
+	uv run python -m scripts.oxylabs_classic
+
 prices: ## Regenerate PRICING.md's price tables from src/web_router/data/prices.json
 	uv run python -m scripts.prices
 
@@ -59,6 +68,12 @@ chains: ## Regenerate src/web_router/data/chains.json, the default auto orders, 
 
 efforts: ## Regenerate src/web_router/data/efforts.json, the research effort table, from the frozen results
 	uv run --all-extras python benchmarks/providers/efforts.py
+
+data-driven-router: ## Import a data-driven router release: SOURCE=<delivered folder> VERSION=0.2.0
+	uv run python -m scripts.data_driven_router --source $(SOURCE) --version $(VERSION)
+
+changelog: ## Move the changelog.d/ fragments under [Unreleased] in CHANGELOG.md (at release)
+	uv run python -m scripts.changelog
 
 shape-baseline: ## Rewrite tests/shape_baseline.json after a grandfathered file shrank; it refuses new or grown entries
 	uv run python -m scripts.shape

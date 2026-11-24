@@ -6,7 +6,7 @@ Given its own inputs (a product id, a URL, a search term) it fetches the site
 *now* and answers with structured records shaped by its output schema. That
 is the rule a backend joins under: it fetches on request. Data a vendor
 collected earlier and serves from storage is a vendor's own API, reached
-through :meth:`~web_router.WebRouter.call_vendor`, never through here.
+through :meth:`~web_router.WebRouter.call_data_api`, never through here.
 
 Kept out of :mod:`web_router.types`, which is at its size limit. The names
 these types had when the method was ``run_template`` are kept as deprecated

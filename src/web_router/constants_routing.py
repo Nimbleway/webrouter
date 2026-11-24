@@ -49,6 +49,6 @@ PROMPT_PARAMS = frozenset({"query", "task"})
 MSG_BUDGET_VALUE = "Budget({name}=...) takes a finite number of 0 or more, or None for no cap; got {value!r}."
 
 CHEAPEST_ROUTER_NAME = "cheapest_first"
-"""The built-in router that orders every call's backends by estimated cost, the free ones first."""
-
-CHEAPEST_REASON = "cheapest estimate first"
+MSG_CHEAPEST_DEPRECATED = (
+    'cheapest_first is deprecated and will be removed in the following release; use PreferredRouter("cheap") instead.'
+)

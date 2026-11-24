@@ -14,6 +14,7 @@ from typing import get_args
 
 import pytest
 
+from tests.live_data_env_helpers import clear_live_data_credentials
 from web_router import AsyncWebRouter, WebRouter
 from web_router.constants_live_data import LIVE_DATA_ENV_BY_PROVIDER
 from web_router.exceptions import UnsupportedFormatError
@@ -78,11 +79,21 @@ def test_every_provider_declares_where_its_credentials_come_from() -> None:
 
 def test_there_is_no_keyless_tier_and_no_auto(monkeypatch: pytest.MonkeyPatch) -> None:
     """A run fetches on the backend's account, and a template's name belongs to one vendor: nothing to route."""
-    for env_var in ENV_VARS:
-        monkeypatch.delenv(env_var, raising=False)
+    clear_live_data_credentials(monkeypatch)
 
     assert configured_live_data_providers() == []
     assert "auto" not in available_live_data_providers()
+
+
+def test_clearing_the_credentials_clears_every_set_of_each_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Oxylabs' username and password configure it on their own, so a test that clears keys must clear them too."""
+    for env_var in ("OXYLABS_USERNAME", "OXYLABS_PASSWORD"):
+        monkeypatch.setenv(env_var, "test-key")
+    assert "oxylabs" in configured_live_data_providers()
+
+    clear_live_data_credentials(monkeypatch)
+
+    assert configured_live_data_providers() == []
 
 
 @pytest.mark.parametrize("method", ["live_data_sources", "live_data_source", "live_data"])

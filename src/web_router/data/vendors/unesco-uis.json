@@ -28,12 +28,14 @@
         "indicator": {
           "in": "query",
           "type": "array",
-          "description": "Indicator ids; alone, returns every geo unit's data for them."
+          "description": "Indicator ids; alone, returns every geo unit's data for them.",
+          "example": ["CR.1"]
         },
         "geoUnit": {
           "in": "query",
           "type": "array",
-          "description": "Country or region ids; alone, returns every indicator for them."
+          "description": "Country or region ids; alone, returns every indicator for them.",
+          "example": ["BRA"]
         },
         "geoUnitType": {
           "in": "query",

@@ -7,6 +7,7 @@ routers, with prices and p90s the test sets.
 from __future__ import annotations
 
 import re
+from typing import Any
 
 import pytest
 
@@ -72,11 +73,14 @@ def test_every_attempt_runs_under_the_per_call_deadline_set_to_the_time_limit(
 
 
 @pytest.mark.parametrize("tool", JOBS, indirect=True)
-def test_a_job_waits_no_longer_than_the_time_left_and_hands_back_its_handle(chain: Chain, priced: Table) -> None:
+def test_a_job_waits_no_longer_than_the_time_left_and_hands_back_its_handle(
+    chain: Chain, priced: Table, clock: Any
+) -> None:
     chain.stalls.add("first")
     with pytest.raises(TIMEOUT_ERROR[chain.tool.name]) as raised:
         call(chain, Budget(time_limit_s=0.2), timeout=600)
     assert raised.value.timeout == pytest.approx(0.2)
+    assert clock.now == pytest.approx(0.2), "polling consumes the budget without wall-clock scheduling races"
     assert raised.value.job_id.startswith("first"), "the handle names the job, to poll or cancel"
     assert chain.called == ["first"], "a run that started is never followed by a second"
 

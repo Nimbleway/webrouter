@@ -14,7 +14,7 @@ import pytest
 from tests.budget.conftest import Chain, Table, acall, call
 from web_router import Budget, BudgetExceededError, DecisionHop, WebRouter
 from web_router.constants_budget import SKIP_OVER_COST, SKIP_PRICE_UNKNOWN, SKIP_ROUTE_REFUSED, SKIPPED
-from web_router.exceptions import ConfigurationError, ProviderError, WebRouterError
+from web_router.exceptions import ProviderError, WebRouterError
 from web_router.routing.attempts import CallRoute, call_route
 
 CAP = Budget(max_cost_usd=0.01)
@@ -45,13 +45,14 @@ async def test_an_async_call_skips_what_does_not_fit_as_a_sync_one_does(chain: C
     assert response.decision.estimated_cost_usd == 0.005
 
 
-def test_a_failed_attempt_is_charged_its_estimate(chain: Chain, priced: Table) -> None:
-    chain.raises["first"] = ConfigurationError("first holds no key")  # fails before anything starts
+@pytest.mark.parametrize("tool", ["search", "extract", "answer"], indirect=True)  # a job chain stops on it
+def test_a_failed_attempt_that_may_have_billed_is_charged_its_estimate(chain: Chain, priced: Table) -> None:
+    chain.raises["first"] = ProviderError("first", "read timed out")  # the backend may have acted on it
     priced.update(first=(0.006, None), second=(0.006, None), third=(0.0, None))
     response = call(chain, CAP)
     assert chain.called == ["first", "third"], "second no longer fits once first's estimate is spent"
     assert response.decision.hops == [
-        DecisionHop(id=_ids(chain, "first")[0], error="ConfigurationError"),  # its class, never its message
+        DecisionHop(id=_ids(chain, "first")[0], error="ProviderError"),  # its class, never its message
         DecisionHop(id=_ids(chain, "second")[0], error=_over("$0.006", "$0.004")),
     ]
     assert [attempt.id for attempt in response.decision.attempts] == _ids(chain, "first", "third")

@@ -67,6 +67,8 @@ class Asker(Protocol):
 class MeteredJudge(OpenAIJudge):
     """The published sets' judge -- same model, temperature and prompts -- reporting what each call cost."""
 
+    name = OpenAIJudge.name  # grades exactly as OpenAIJudge, so it keeps its label and its figures combine
+
     async def ask(self, system: str, user: str) -> tuple[str, float | None]:
         """The model's reply, and its cost at list price on the tokens OpenAI reports (``None`` if it reports none)."""
         response = await self._acreate(system, user)

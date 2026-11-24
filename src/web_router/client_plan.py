@@ -34,15 +34,17 @@ from web_router.providers._deadline import call_deadline
 from web_router.routing.attempts import CallRoute, in_route
 from web_router.routing.budget import budget_scope, recorded
 from web_router.routing.candidates import REQUEST_OF, CandidateSet, base_params, build_candidates, default_requests
-from web_router.routing.contract import Budget, Plan, RouteRequest, ToolName
+from web_router.routing.contract import Budget, RouteRequest, ToolName
 from web_router.routing.decide import decided, router_set
 from web_router.routing.eligible import budget_dropped
 from web_router.routing.invoke import RouterOutcome
 from web_router.routing.metered import metered
+from web_router.routing.plan_type import Plan
 from web_router.routing.pool import limited
 from web_router.routing.record import stamp
 from web_router.routing.request_modes import runnable
-from web_router.routing.routed import AsyncRouted, RouterSetup, SyncRouted
+from web_router.routing.routed import AsyncRouted, SyncRouted
+from web_router.routing.router_setup import RouterSetup
 from web_router.types import (
     BrowseResponse,
     ExtractRequest,
@@ -72,12 +74,11 @@ class _Planner(RouterSetup):
             requests["extract"] = ExtractRequest(urls=[ONE_PAGE_URL])
         if tool is not None:
             requests = {tool: requests[tool]} if tool in requests else {}
-        found = build_candidates(self, requests, budget=budget, modes=self._route_modes)
-        deadline = 0.0 if self._router is None else self._router.deadline(budget)
+        found = build_candidates(self, requests, budget=budget, modes=self._route_modes, extra_modes=self._extra_modes)
         req = RouteRequest(
             prompt=prompt,
             candidates=found.candidates,
-            deadline_s=deadline,
+            deadline_s=0.0 if self._router is None else self._router.deadline(budget),
             urls=tuple(kept),
             budget=budget,
             pinned_tool=tool,
@@ -155,8 +156,7 @@ class SyncPlan(_Planner, SyncRouted):
                 supplied one: a plan ``run`` could not execute.
         """
         parts = self._plan_request(prompt, budget, tool, self._screen(prompt))
-        req = parts[0]
-        outcome = self._router.call(req) if self._router is not None and self._asks(req) else None
+        outcome = self._router.call(parts[0]) if self._router is not None and self._asks(parts[0]) else None
         return self._planned(parts, outcome)
 
     def run(self, plan: Plan | str, *, budget: Budget | None = None, tool: ToolName | None = None) -> RunResponse:
@@ -179,8 +179,7 @@ class AsyncPlan(_Planner, AsyncRouted):
     async def plan(self, prompt: str, *, budget: Budget | None = None, tool: ToolName | None = None) -> Plan:
         """As :meth:`SyncPlan.plan`, asking the router without blocking the event loop."""
         parts = self._plan_request(prompt, budget, tool, await asyncio.to_thread(self._screen, prompt))
-        req = parts[0]
-        outcome = await self._router.acall(req) if self._router is not None and self._asks(req) else None
+        outcome = await self._router.acall(parts[0]) if self._router is not None and self._asks(parts[0]) else None
         return self._planned(parts, outcome)
 
     async def run(self, plan: Plan | str, *, budget: Budget | None = None, tool: ToolName | None = None) -> RunResponse:

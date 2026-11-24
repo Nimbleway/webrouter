@@ -72,6 +72,9 @@
     "mode": {
       "keenable-realtime": {
         "body.mode": "realtime"
+      },
+      "keenable-pro": {
+        "body.mode": "pro"
       }
     }
   },
@@ -94,7 +97,8 @@
     "include_domains": "live: tests/providers/test_keenable.py::test_live_keyless_options_shape_the_results",
     "recency": "live: tests/providers/test_keenable.py::test_live_keyless_effort_and_recency_reach_keenable",
     "effort": "live: tests/providers/test_keenable.py::test_live_keyless_effort_and_recency_reach_keenable (keyed on 2026-11-09: all four levels answered)",
-    "mode.keenable-realtime": "docs: https://docs.keenable.ai/api-reference/search"
+    "mode.keenable-realtime": "docs: https://docs.keenable.ai/api-reference/search",
+    "mode.keenable-pro": "docs: https://docs.keenable.ai/api-reference/search (mode=pro, which effort high and max send, answered keyed on 2026-11-09)"
   },
   "vendor_options": {
     "acquired_after": {

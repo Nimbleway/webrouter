@@ -14,6 +14,7 @@ from web_router.modes import Content, Flag, Tier
 
 EXA_TIERS: Mapping[str, Tier] = {
     "exa-instant": Tier(wire={"type": "instant"}, does="Exa's instant search, its fastest"),
+    "exa-lite": Tier(wire={"type": "lite"}, does="Exa's lite search, the type effort low sends"),
     "exa-fast": Tier(wire={"type": "fast"}, does="Exa's fast search, quicker than its default auto"),
     "exa-deep-lite": Tier(wire={"type": "deep-lite"}, does="Exa's lighter deep search"),
     "exa-deep": Tier(wire={"type": "deep"}, does="Exa's deep search, slower and more thorough"),
@@ -54,9 +55,11 @@ PERPLEXITY_TIERS: Mapping[str, Tier] = {
 }
 
 KEENABLE_TIERS: Mapping[str, Tier] = {
-    "keenable-realtime": Tier(wire={"mode": "realtime"}, does="Keenable's realtime search, its fastest")
+    "keenable-realtime": Tier(wire={"mode": "realtime"}, does="Keenable's realtime search, its fastest"),
+    "keenable-pro": Tier(wire={"mode": "pro"}, does="Keenable's pro search, its default, named outright"),
 }
-"""Keenable's fastest mode; unset, a search runs in ``pro``."""
+"""Keenable's two modes; unset, a search runs in ``pro``, which ``keenable-pro`` sends by name: the default tier,
+so a router is not offered it beside the backend itself."""
 
 YOU_CONTENTS: Mapping[str, Content] = {
     "you-full-page-cache": Content(

@@ -11,5 +11,5 @@ from web_router.mcp.routing import ROUTING_TOOLS
 from web_router.mcp.vendor_tools import TOOLS as VENDOR_TOOLS
 
 SESSION_TOOLS = {**ROUTING_TOOLS, **VENDOR_TOOLS}
-"""Every session-level tool by name: ``web_run`` and the budget tools, then ``vendors``, ``vendor_endpoint`` and
-``call_vendor``."""
+"""Every session-level tool by name: ``web_run`` and the budget tools, then ``data_apis``, ``data_api_endpoint`` and
+``call_data_api``."""

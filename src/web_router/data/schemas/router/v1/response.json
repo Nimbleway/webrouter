@@ -152,6 +152,24 @@
       "default": null,
       "description": "Why, in a few words, for the decision record.",
       "title": "Reason"
+    },
+    "prefer": {
+      "anyOf": [
+        {
+          "enum": [
+            "cheap",
+            "fast",
+            "accurate"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The preference the router ranked by, for the decision record; ``None`` for none. Sent only when set.",
+      "title": "Prefer"
     }
   },
   "title": "web-router RouteDecision, wire schema v1",

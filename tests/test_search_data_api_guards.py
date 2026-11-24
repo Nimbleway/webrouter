@@ -68,7 +68,7 @@ class _VaultDown:
 def test_a_credentials_source_that_throws_keeps_the_paid_web_results(
     fake_provider: Any, caplog: pytest.LogCaptureFixture
 ) -> None:
-    with caplog.at_level(logging.WARNING), WebRouter("fake", vendor_credentials=_VaultDown()) as router:
+    with caplog.at_level(logging.WARNING), WebRouter("fake", data_api_credentials=_VaultDown()) as router:
         response = router.search("datadog monitors")
     assert response.urls == ["https://example.com"]
     assert response.data_apis == []

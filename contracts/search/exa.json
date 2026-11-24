@@ -89,6 +89,9 @@
       "exa-instant": {
         "body.type": "instant"
       },
+      "exa-lite": {
+        "body.type": "lite"
+      },
       "exa-fast": {
         "body.type": "fast"
       },
@@ -112,6 +115,7 @@
   ],
   "offers": [
     "exa-instant",
+    "exa-lite",
     "exa-fast",
     "exa-deep-lite",
     "exa-deep",
@@ -133,6 +137,7 @@
     "search_depth": "live: 2026-11-09 search-options check: fast at most 3,000 characters and deep past 3,000; one lite highlight ran to 995 against the 500 cap, so lite is cut to a snippet in the provider (re-checked keyless on exa-mcp: at most 500)",
     "effort": "live: 2026-11-09 search-options check: low with every filter, high (deep-lite) and max (deep) answered",
     "mode.exa-instant": "docs: https://exa.ai/docs/reference/search",
+    "mode.exa-lite": "live: 2026-11-09 search-options check: type=lite, which effort low sends, answered with every filter",
     "mode.exa-fast": "docs: https://exa.ai/docs/reference/search",
     "mode.exa-deep-lite": "docs: https://exa.ai/docs/reference/search",
     "mode.exa-deep": "docs: https://exa.ai/docs/reference/search",

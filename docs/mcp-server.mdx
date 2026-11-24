@@ -22,10 +22,79 @@ Docker: see [Serve over HTTP for a team](#serve-over-http-for-a-team).
 Installing and adding keys are the next two sections; the rest of this page is
 reference.
 
-## Install, with no credentials at all
+## Install in one line, with no credentials at all
 
-The default `auto` chain falls back to backends that need no key, so the first
-run needs nothing but a clone and [uv](https://docs.astral.sh/uv/):
+The one prerequisite is [uv](https://docs.astral.sh/uv/getting-started/installation/).
+There is nothing to clone and no key to add: `uvx` fetches the server from PyPI
+and runs it, and the default `auto` chain falls back to backends that need no
+key. Pick your client:
+
+<Tabs>
+  <Tab title="Claude Code">
+    ```bash
+    claude mcp add --scope user web-router -- uvx --from "webrouter[mcp]" web-router-mcp
+    ```
+
+    `--scope user` makes it available in every project. Leave it out to add it
+    to the current project only.
+  </Tab>
+  <Tab title="Codex">
+    ```bash
+    codex mcp add web-router -- uvx --from "webrouter[mcp]" web-router-mcp
+    ```
+
+    Or add it to `~/.codex/config.toml` by hand:
+
+    ```toml
+    [mcp_servers.web-router]
+    command = "uvx"
+    args = ["--from", "webrouter[mcp]", "web-router-mcp"]
+    ```
+  </Tab>
+  <Tab title="Cursor, Claude Desktop and others">
+    Add this block, then restart the client. Cursor keeps it in
+    `~/.cursor/mcp.json` (or a project's `.cursor/mcp.json`); Claude Desktop in
+    `claude_desktop_config.json` (Settings > Developer > Edit Config).
+
+    ```json
+    {
+      "mcpServers": {
+        "web-router": {
+          "command": "uvx",
+          "args": ["--from", "webrouter[mcp]", "web-router-mcp"]
+        }
+      }
+    }
+    ```
+
+    A client started from the desktop often has no shell `PATH`, so it may not
+    find `uvx`: put the output of `which uvx` in `command` instead.
+  </Tab>
+</Tabs>
+
+That is a working `search` and a working `extract` with no account, no key and
+no signup — the keyless backends listed in
+[Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials).
+To check it, ask your agent to search the web for something recent and say
+which provider answered.
+
+To see what the server found, ask the model to read the
+`web-router://capabilities` resource: the backends configured per method, where
+the keys came from, and `unlock`, the keys that would add more.
+
+`webrouter[mcp]` brings every tool, the `browser_*` ones included; the `local`
+browser drives the Chrome or Chromium on your machine.
+[`WEB_ROUTER_MCP_TOOLS`](#serving-fewer-tools-web_router_mcp_tools) trims the
+list for a client that does not need them all.
+
+To install it rather than run it through `uvx`, `pip install "webrouter[mcp]"`
+(or `"webrouter[all]"`) puts `web-router-mcp` on your `PATH`; register that
+command with your client instead. An install without the `mcp` extra has the
+command too; it prints the line that installs the extra and exits.
+
+### From a clone, for contributors
+
+To run the server from a checkout of this repo, so your changes take effect:
 
 ```bash
 git clone https://github.com/Nimbleway/webrouter.git
@@ -33,53 +102,20 @@ cd webrouter && make setup
 uv run web-router-mcp    # a check that it starts: it waits silently for a client; Ctrl-C stops it
 ```
 
-Without a clone, install it from PyPI: `pip install "webrouter[all]"` (or
-`"webrouter[mcp]"` for the server alone) puts `web-router-mcp` on your `PATH`,
-and `uvx --from "webrouter[mcp]" web-router-mcp` runs it with no install at all.
-An install without the `mcp` extra has the command too; it prints the line
-that installs the extra and exits.
+Inside the clone, Claude Code needs nothing more: the committed `.mcp.json`
+starts the server, and you approve it once. To use your clone from every
+project, register it with its absolute path:
 
-That is a working `search` and a working `extract` with no account, no key and
-no signup — the keyless backends listed in
-[Working with no credentials](https://docs.webrouter.net/providers#working-with-no-credentials). Then
-register it with your client, using the absolute path of your clone:
+```bash
+claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --all-extras web-router-mcp
+```
 
-- **Inside the clone**, Claude Code needs nothing: the committed `.mcp.json`
-  starts the server, and you approve it once.
-- **Claude Code, from every project**: register it once at user scope.
-
-  ```bash
-  claude mcp add --scope user web-router -- uv run --project /path/to/webrouter --all-extras web-router-mcp
-  ```
-
-- **Claude Desktop, Cursor and other clients configured by file**: add this
-  block. Claude Desktop keeps it in `claude_desktop_config.json` (Settings >
-  Developer > Edit Config); Cursor in `~/.cursor/mcp.json`, or a project's
-  `.cursor/mcp.json`. Then restart the client.
-
-  ```json
-  {
-    "mcpServers": {
-      "web-router": {
-        "command": "uv",
-        "args": ["run", "--project", "/path/to/webrouter", "--all-extras", "web-router-mcp"]
-      }
-    }
-  }
-  ```
-
-  A client started from the desktop often has no shell `PATH`, so it may not
-  find `uv`: put the output of `which uv` in `command` instead.
-
+For a client configured by file, the block's `command` is `uv` and its `args`
+are `["run", "--project", "/path/to/webrouter", "--all-extras", "web-router-mcp"]`.
 `--project` points uv at your clone and keeps the working directory your client
 chose. `--all-extras` turns on every tool, the `browser_*` ones included, and
 lets a fresh clone start before `make setup` has run; `make setup` also
-installs the Chromium the `local` browser drives. Without Playwright the server
-does not list the browser tools at all.
-
-To see what the server found, ask the model to read the
-`web-router://capabilities` resource: the backends configured per method, where
-the keys came from, and `unlock`, the keys that would add more.
+installs the Chromium the `local` browser drives.
 
 ## Then add whichever keys you have
 
@@ -88,9 +124,13 @@ reads wherever it starts. On macOS:
 
 ```bash
 mkdir -p "$HOME/Library/Application Support/web-router"
-cp .env.example "$HOME/Library/Application Support/web-router/.env"
+curl -fsSL https://raw.githubusercontent.com/Nimbleway/webrouter/main/.env.example \
+  -o "$HOME/Library/Application Support/web-router/.env"
 chmod 600 "$HOME/Library/Application Support/web-router/.env"
 ```
+
+[`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example) names every variable and
+where to get it; in a clone, `cp .env.example` does the same.
 
 On Linux the directory is `~/.config/web-router` (or
 `$XDG_CONFIG_HOME/web-router`), on Windows `%APPDATA%\web-router`. Fill in the
@@ -123,7 +163,7 @@ than silently skipped. With no file anywhere the server starts keyless.
 To use a `.env` you already keep elsewhere, name it in `WEB_ROUTER_ENV_FILE`:
 
 ```bash
-claude mcp add --scope user web-router -e WEB_ROUTER_ENV_FILE="$HOME/work/.env" -- uv run --project /path/to/webrouter --all-extras web-router-mcp
+claude mcp add --scope user web-router -e WEB_ROUTER_ENV_FILE="$HOME/work/.env" -- uvx --from "webrouter[mcp]" web-router-mcp
 ```
 
 For a client configured by file, the variable goes in the block's `env`:
@@ -200,27 +240,27 @@ model, not a control. What the server enforces is narrower: it never returns a
 key, a configured key's value is masked wherever it shows up in an error or a
 `fetch_raw` payload, the browser opens only http(s) pages and never its own
 debugging endpoint or a cloud metadata address
-([Where the browser may go](#where-the-browser-may-go)), `call_vendor` cannot change data without
-`WEB_ROUTER_ALLOW_VENDOR_WRITES`, and redirects are never followed with a key
+([Where the browser may go](#where-the-browser-may-go)), `call_data_api` cannot change data without
+`WEB_ROUTER_ALLOW_DATA_API_WRITES`, and redirects are never followed with a key
 attached.
 
 What it cannot stop on its own is one server holding all three of: private
-data (`call_vendor` reads your vendor accounts), untrusted input (every page
+data (`call_data_api` reads your vendor accounts), untrusted input (every page
 it reads), and a way out (a `search` query, or a URL `browser_goto` opens,
 carries whatever the model puts in it). A model steered by a page could read
 your data with one tool and send it out with the next. When the model will
 read pages you do not trust, give it less:
 
 - **Serve only the tools the task needs.** `WEB_ROUTER_MCP_TOOLS=search,extract,fetch_raw`
-  leaves out the browser, the vendor tools and `load_env`; see
+  leaves out the browser, the data API tools and `load_env`; see
   [Serving fewer tools](#serving-fewer-tools-web_router_mcp_tools).
 - **Cap what one connection spends.** Set `WEB_ROUTER_MCP_MAX_COST_USD` (and
   `WEB_ROUTER_MCP_TIME_LIMIT_S`); with billed keys and no ceiling, the server
   says so on stderr at startup.
-- **Keep `call_vendor` and `load_env` in a second server.** Register web-router
+- **Keep `call_data_api` and `load_env` in a second server.** Register web-router
   twice, under two names: one for browsing, with
   `WEB_ROUTER_MCP_TOOLS=search,extract,fetch_raw,browser_*`, and one for your
-  own accounts, with `WEB_ROUTER_MCP_TOOLS=vendors,vendor_endpoint,call_vendor`,
+  own accounts, with `WEB_ROUTER_MCP_TOOLS=data_apis,data_api_endpoint,call_data_api`,
   enabled only when you need it.
 - **Decide where keys may come from.** Three switches, each read from the
   real environment only, each defaulting to the behaviour described above:
@@ -297,9 +337,9 @@ the client's `env` block or a file the server already read takes a restart.
 | `web_run` | Hand a request in words to web-router's router, which picks the method and backends and runs it; `dry_run` returns the plan only. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). | as the method it picks |
 | `budget_start` | Open a task budget, in dollars and seconds, that every billed tool then spends from. | instant |
 | `budget_status` | What the budget has spent, reserved and left. | instant, and free |
-| `vendors` | Find a vendor API to call with the user's own account: with `query` ("google ads spend by campaign"), matching endpoints best first; without, the vendors in the catalog. Each row says whether its credentials are set here, and which variables to set when not. | instant, and free |
-| `vendor_endpoint` | Describe one vendor endpoint: every input and where it goes, the notes a caller gets wrong without (units, paging), and the credentials it needs. | instant, and free |
-| `call_vendor` | Call a vendor's API with the user's credentials -- a catalog `endpoint` with its `params`, or a raw `vendor` + `method` + `path` -- and get the vendor's own JSON back. Writes are refused unless the server was started with `WEB_ROUTER_ALLOW_VENDOR_WRITES=1` **and** the call passes `allow_writes: true`. | as long as the vendor takes; billed by the vendor, if at all |
+| `data_apis` | Find a data API to call with the user's own account: with `query` ("google ads spend by campaign"), matching endpoints best first; without, the vendors in the catalog. Each row says whether its credentials are set here, and which variables to set when not. | instant, and free |
+| `data_api_endpoint` | Describe one data API endpoint: every input and where it goes, the notes a caller gets wrong without (units, paging), and the credentials it needs. | instant, and free |
+| `call_data_api` | Call a data API with the user's credentials -- a catalog `endpoint` with its `params`, or a raw `vendor` + `method` + `path` -- and get the vendor's own JSON back. Writes are refused unless the server was started with `WEB_ROUTER_ALLOW_DATA_API_WRITES=1` **and** the call passes `allow_writes: true`. | as long as the vendor takes; billed by the vendor, if at all |
 | `browser_open` | Open a browser session and get a `session_id` for the tools below. | a few seconds; **a cloud backend bills per minute until it is closed**, `local` is free |
 | `browser_goto` | Load a URL in the session. | as long as the page takes |
 | `browser_snapshot` | The page's accessibility tree, each element tagged `[ref=eN]` to act on. | about a second |
@@ -374,6 +414,9 @@ environment -- once, when the server starts:
   a comparison or an in-depth analysis runs `research`, billed per run, or
   `search` when no research backend is configured; anything else is searched.
   `WEB_ROUTER_MCP_ROUTER=rules` names it;
+- `WEB_ROUTER_MCP_ROUTER=data-driven` names the built-in
+  [data-driven router](https://docs.webrouter.net/smart-routing#the-data-driven-router), which ranks web methods from
+  bundled data without a routing model call. It needs no key and sends the prompt nowhere;
 - `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` names a router in a module you
   installed -- any form `router=` takes on the library. It is imported before
   any `.env` file loads, so code that runs at import sees only the server's own
@@ -799,7 +842,7 @@ So a shaped result:
   cut search snippet or citation carries only the marker;
 - keeps what the call cost and how long it took, as the library's response
   carries them: `elapsed_s` (seconds, to two decimals), `cost_usd` and
-  `cost_source` (`reported` by the backend or `estimated` from list prices) on
+  `cost_source` (`reported` by the backend, `estimated` from list prices, or `keyless` for a free tier's $0) on
   a search, extract, answer, research or browse result — a finished
   `research_status` or `browse_status` included — and left out when unknown.
   No cut ever touches them;
@@ -911,7 +954,7 @@ the cloud browsers are.
 | `WEB_ROUTER_MCP_LOAD_ENV`, `WEB_ROUTER_MCP_REMEMBERED_ENV`, `WEB_ROUTER_MCP_CWD_ENV` | `remember` (`off` under HTTP), `anywhere`, `on` | Where keys may come from: what `load_env` may do, where a remembered `.env` is read, and whether the working directory's is. See [Using this safely with untrusted pages](#using-this-safely-with-untrusted-pages). |
 | `WEB_ROUTER_MCP_PRIVATE_URLS` | `on` (`off` under HTTP) | Whether the browser tools may open loopback and private-network addresses. See [Where the browser may go](#where-the-browser-may-go). Read from the real environment only. |
 | `WEB_ROUTER_MCP_TOKEN` | unset | Under `--transport http`, the bearer token every request must carry; required on any host but `127.0.0.1`, `localhost` and `::1`. See [Serve over HTTP for a team](#serve-over-http-for-a-team). Read from the real environment only. |
-| `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value falls back to the default rather than stopping the server. |
+| `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value, or one of zero or less, falls back to the default rather than stopping the server. |
 | `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](#where-the-browser-may-go). |
 | `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, `remote`, another built-in router such as `fallback`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
 | `WEB_ROUTER_MCP_ROUTER_CONFIG` | unset | With `WEB_ROUTER_MCP_ROUTER` naming a built-in router (or any name registered with `register_router` in the server's process, an override of a built-in name included), its `router_config` as a JSON object; each `api_key_env` in it is read once at startup and handed to the router as `api_key`, so a router's factory gets `api_key`, never `api_key_env`. Anything but a JSON object, or a value set beside no built-in router, stops the server from starting. Read from the real environment only. |
@@ -919,7 +962,28 @@ the cloud browsers are.
 | `WEB_ROUTER_REMOTE_ROUTER_API_KEY` | unset | The bearer key sent to that service, never logged or shown. Read from the real environment only -- no `.env` file and no `load_env` call sets it. |
 | `WEB_ROUTER_MCP_MAX_COST_USD` | unset | The ceiling on what one connection may spend, in US dollars at estimated list prices. An empty value stops the server from starting. |
 | `WEB_ROUTER_MCP_TIME_LIMIT_S` | unset | The ceiling on how long one connection may run billed calls, in seconds from its start. An empty value stops the server from starting. |
-| `WEB_ROUTER_ALLOW_VENDOR_WRITES` | unset | `1` lets `call_vendor` send calls that change data on a vendor (a budget change, a deleted monitor), and only those the model marks `allow_writes: true`. Off by default: the model can read your vendor accounts but not change them. |
+| `WEB_ROUTER_ALLOW_DATA_API_WRITES` | unset | `1` lets `call_data_api` send calls that change data on a vendor (a budget change, a deleted monitor), and only those the model marks `allow_writes: true`. Off by default: the model can read your vendor accounts but not change them. The old name `WEB_ROUTER_ALLOW_VENDOR_WRITES` still works, with a deprecation warning. |
 | `WEB_ROUTER_VENDOR_CATALOG` | unset | A directory of extra vendor files, read after the shipped ones; one named for a shipped vendor replaces it. |
 
 Everything else it reads is a provider or vendor credential, and belongs to the provider or vendor. `load_env` takes every variable a vendor's catalog file lists, settings such as `DD_SITE` included.
+
+## Remove it
+
+Removing the server takes one command or one edit, and touches nothing else in
+your client's configuration:
+
+| Client | Remove it with |
+| --- | --- |
+| Claude Code | `claude mcp remove web-router`, with `--scope user` if you added it at user scope |
+| Codex | `codex mcp remove web-router`, or delete the `[mcp_servers.web-router]` table from `~/.codex/config.toml` |
+| Cursor, Claude Desktop and other clients configured by file | delete the `web-router` entry under `mcpServers`, then restart the client |
+
+The server keeps nothing else, with two exceptions you may want to remove too:
+
+- **Your keys file and remembered path.** The user config directory (on macOS
+  `~/Library/Application Support/web-router`, on Linux `~/.config/web-router`,
+  on Windows `%APPDATA%\web-router`) holds the `.env` you created and the
+  `env-path` that `load_env` records with `remember: true`. Delete the
+  directory to forget both.
+- **The package.** `uvx` keeps a cached copy: `uv cache clean webrouter`
+  removes it. A `pip install` is removed with `pip uninstall webrouter`.

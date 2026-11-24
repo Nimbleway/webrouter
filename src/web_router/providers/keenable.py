@@ -35,6 +35,7 @@ from web_router.constants_keenable import (
     MSG_KEENABLE_ONE_SITE,
 )
 from web_router.constants_mode_parts import KEENABLE_TIERS
+from web_router.providers._cost import keyless_cost
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._search_text import as_snippet
 from web_router.providers._utils import best_text, build_payload, mapped
@@ -61,6 +62,7 @@ class KeenableProvider(_KeenableKeyless, HttpSearchProvider):
 
     name: ClassVar[str] = PROVIDER_KEENABLE
     tiers = KEENABLE_TIERS
+    default_tier = "keenable-pro"
     supported_parameters: ClassVar[frozenset[str]] = KEENABLE_SEARCH_PARAMETERS
     depth_levels = frozenset(KEENABLE_SNIPPET_CHARS)
     refusal_reasons: ClassVar[dict[str, str]] = {"include_domains": MSG_KEENABLE_ONE_SITE}
@@ -99,6 +101,7 @@ class KeenableProvider(_KeenableKeyless, HttpSearchProvider):
             query=request.query,
             results=[self._to_result(hit) for hit in payload.get("results") or []],
             raw=payload,
+            **keyless_cost(self),
         )
 
     @staticmethod
