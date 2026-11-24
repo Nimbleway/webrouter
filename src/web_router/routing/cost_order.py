@@ -3,7 +3,7 @@
 With a budget that caps cost, a call on ``auto`` tries its members in this
 order rather than the static one, unless a router ranks that method's backends
 itself: with no router asked, and on a plan whose router picks the method
-alone, as the default ``rules`` does (the candidates carry it for
+alone, as the default ``data-driven`` does (the candidates carry it for
 :mod:`.decide`). The rule is the one
 ``make chains`` ranks the static order by (``data/chains.json``): best
 measured accuracy first, and the members within the method's noise floor of

@@ -6,7 +6,7 @@ icon: "route"
 
 Everything in this section is experimental: any name in it may change before
 1.0, except budgets, which are stable and covered in [Cost and budgets](/budgets).
-The default router, `rules`, is asked by `plan()` and `run()` alone: with no
+The default router, `data-driven`, is asked by `plan()` and `run()` alone: with no
 budget, `search()`, `extract()` and every other method you call run as they
 would with no router. `router=None` attaches none.
 
@@ -107,9 +107,10 @@ the network and the hour: rerun the script for your own router.
 
 `plan(prompt, budget=, tool=)` runs nothing. It returns a `Plan`: the method
 (`tool`), its options (`params`), the backends in order (`providers`) and the
-decision record. With the default `rules` router a prompt with a URL is read,
-one asking for a report, a comparison or an in-depth analysis researched
-(billed per run: pass a `budget`), and anything else searched; with
+decision record. The default `data-driven` router picks the method the prompt's
+wording was most often served by in its training requests: a search, a read of
+the page the prompt names, or research (billed per run: pass a `budget`). With
+no research backend configured, the row's next method runs. With
 `router=None` it is a search. `tool` pins a method either way.
 `run(plan)` calls that method on `auto` in that order and returns its own
 response: a `SearchResponse`, `ExtractResponse`, `AnswerResponse`,
@@ -150,13 +151,13 @@ the lowest estimated cost first ($0 first), `fast` the lowest p90 latency, and
 `accurate` the highest accuracy score the router holds. A backend with no
 estimate or score goes last, and ties keep the default order. It orders and
 never caps: a `Budget` still caps, and a backend with no known price never runs
-under a cost cap. The default `rules` router takes no preference.
+under a cost cap. The default `data-driven` router takes no preference.
 
 The built-in `preferred` router sorts each method's backends by its
 preference, with no model and no key. It orders backends without choosing a
 method: `plan()` and `run()` default to search even when the prompt contains a
 URL. Set `tool="extract"` to read that URL, or call `extract()` directly; a
-method you name is kept. The `rules` router chooses extract for a URL instead.
+method you name is kept. The default `data-driven` router chooses the method instead.
 
 ```python
 from web_router import PreferredRouter, WebRouter
@@ -254,14 +255,10 @@ results against the static order. The default search and answer orders come
 from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/README.md#route-eval-replaying-a-router).
 
-The library ships two keyless routers. `router="data-driven"` ranks web
-methods from bundled data without a routing model call: see
-[The data-driven router](/smart-routing#the-data-driven-router). The other, `rules`, is attached unless you pass
-`router=` (`router="rules"` names it, `router=None` attaches none): a prompt
-with a URL is extracted; one asking in so many words for a report, a comparison
-or an in-depth analysis is researched, or searched when no research backend is
-configured; anything else is searched. It reads English phrases, never single
-words like "why" or "list", and never picks `browse` or `answer`. It ranks no
+The library ships one keyless router, `data-driven`, attached unless you pass
+`router=` (`router="data-driven"` names it, `router=None` attaches none). It ranks
+web methods from bundled data without a routing model call: see
+[The data-driven router](/smart-routing#the-data-driven-router). It ranks no
 backends, so under a cost cap they run cheapest first. It also ships
 three model routers,
 `router="llm"`, `router="systemone"` and `router="gemini"`: see
@@ -283,14 +280,27 @@ sets: see [the MCP guide](/mcp-server#routing-and-budgets-web_run-budget_start-b
 `router="data-driven"` ranks web methods from bundled data without a routing
 model call. The data is a table built from 1,600 requests from public
 benchmarks and 1,078 synthetic requests, all labelled by the trainers. It is
-experimental, needs no key, calls nothing and answers in microseconds. Like
-`rules`, only `plan()` and `run()` ask it, and it ranks no backends.
+experimental, needs no key, calls nothing and answers in microseconds. It is
+the default: only `plan()` and `run()` ask it, and it ranks no backends.
 
-Try `data-driven` when you want method rankings from training counts, including
-`browse` when you opt in. `rules` chooses extract for a URL, research for a
-research request, and search otherwise. The data-driven router has not yet been
-measured against `rules` on held-out labelled requests; there is no measured
-accuracy advantage to recommend switching for.
+It replaced the earlier `rules` router, which read a prompt with a URL,
+researched one asking in so many words for a report or a comparison, and
+searched everything else. Against that, expect three differences:
+
+- **A URL does not always mean extract.** "Summarize https://..." is ranked as
+  research, with extract after it. Pass `tool="extract"`, or call `extract()`,
+  to read a page whatever the wording.
+- **Research is picked far more often**, and for simple questions too. A
+  research word is enough ("compare", "why", "how does", "trends", "overview",
+  "report"), and so is an ask for many items ("list of ...", "which teams ...")
+  or a leading "write", "explain", "summarize", "describe" or "review". "Why is
+  the sky blue" and "list of US presidents" are planned as research when a
+  research backend is configured. Research is billed per run and takes a
+  minute or more, so pass a `budget`, or `tool="search"` to keep a call to a
+  search.
+- **`router="rules"` is gone.** `router=None` gives a plain search plan, and
+  [`examples/router_rules.py`](https://github.com/Nimbleway/webrouter/blob/main/examples/router_rules.py)
+  is a rules router to copy.
 
 ```python
 from web_router import WebRouter
@@ -509,7 +519,7 @@ field may be left out or `null`):
 
 [`examples/router_remote_server.py`](https://github.com/Nimbleway/webrouter/blob/main/examples/router_remote_server.py) is a
 reference service in the standard library: the wire format around the
-built-in rules router, to run beside your code or port. It binds 127.0.0.1
+built-in data-driven router, to run beside your code or port. It binds 127.0.0.1
 (any other host needs the key), answers only a `Host` naming it, checks the bearer key in constant time and
 caps a request at 1 MB.
 

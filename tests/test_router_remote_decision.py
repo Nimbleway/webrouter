@@ -50,7 +50,11 @@ def test_unknown_decision_fields_are_ignored() -> None:
 
     with running(extended) as server:
         plan = WebRouter(router="remote", router_config=config(server)).plan(URL_PROMPT)
-    assert plan.tool == "extract" and plan.decision.reason == "the prompt names a URL"
+    assert plan.tool == "extract"
+    assert (
+        plan.decision.reason
+        == "data-driven 0.1.1: extract for verb=other, url_target=page, plural=no, kw_research=no, ui_action=no"
+    )
 
 
 def test_a_long_reason_is_cut_short() -> None:

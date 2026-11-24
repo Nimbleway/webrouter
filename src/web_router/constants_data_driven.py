@@ -38,6 +38,7 @@ MSG_DATA_DRIVEN_SCHEMA = (
 
 MSG_DATA_DRIVEN_TABLE = "the data-driven router's tool table is not usable: {why}."
 
+MSG_DATA_DRIVEN_UNREADABLE = "its release files could not be read ({error}); router=None runs without it"
 MSG_DATA_DRIVEN_ROW_TOTAL = "a row's total must equal the sum of its method counts"
 MSG_DATA_DRIVEN_CHECKSUM = "its checksum does not match the manifest"
 MSG_DATA_DRIVEN_MIN_COUNT = "min_count must be a positive integer"

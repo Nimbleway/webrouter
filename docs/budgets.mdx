@@ -170,7 +170,7 @@ too, `auto` or a named backend, with or without a `budget=` of its own. A thread
 
 With a cost cap, `auto` tries search's and answer's backends in cost order
 among those the benchmark cannot tell apart, unless a router ranks them itself.
-The default `rules` router picks only the method, so `plan()`, `run()` and the
+The default `data-driven` router picks only the method, so `plan()`, `run()` and the
 MCP server's `web_run` keep this order too. The default order is
 ranked by measured accuracy, and backends within the method's noise floor of
 each other -- a gap smaller than a rerun's spread -- form one tier. Under a cost

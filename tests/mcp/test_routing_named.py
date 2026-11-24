@@ -11,6 +11,7 @@ from web_router.constants_mcp import ENV_MCP_ROUTER
 from web_router.constants_mcp_router import ENV_MCP_ROUTER_CONFIG
 from web_router.exceptions import ConfigurationError
 from web_router.mcp.routing_config import McpRouting
+from web_router.routing.registry import register_router, unregister_router
 
 SECRET = "s3cret-router-key"
 
@@ -90,3 +91,20 @@ def test_the_data_driven_router_runs_in_process_and_carries_no_note_about_a_mode
     section = McpRouting.from_environ(named("data-driven", {"browse": True})).capabilities(None)
     assert (section["router"], section["router_runs"]) == ("data-driven", "in_process")
     assert "router_note" not in section
+
+
+def test_a_router_registered_over_the_built_in_name_is_not_reported_as_in_process() -> None:
+    register_router("data-driven", lambda **config: lambda req: None)
+    try:
+        section = McpRouting.from_environ({}).capabilities(None)
+    finally:
+        unregister_router("data-driven")
+    assert (section["router"], section["router_runs"]) == ("data-driven", "built_in") and "model" in section[
+        "router_note"
+    ]
+    assert McpRouting.from_environ({}).capabilities(None)["router_runs"] == "in_process"
+
+
+def test_a_removed_or_unknown_router_name_stops_the_server_and_lists_the_known_ones() -> None:
+    with pytest.raises(ConfigurationError, match=r"names no router.*Known: .*data-driven"):
+        McpRouting.from_environ({ENV_MCP_ROUTER: "rules"})

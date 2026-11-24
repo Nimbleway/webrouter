@@ -3,7 +3,8 @@
 Experimental. It needs no key and calls nothing: five regular expressions read the prompt
 (:mod:`.features`), and the shipped table (:mod:`.table`) says which method the training requests with those
 values were served by. It ranks the methods of that row, most common first, and ranks no backends: they run
-in ``auto``'s order. Like ``rules`` it declares ``route_tools=()``, so only
+in ``auto``'s order. It is the routers' default, attached unless ``router=`` says otherwise, and it declares
+``route_tools=()``, so only
 :meth:`~web_router.WebRouter.plan` and :meth:`~web_router.WebRouter.run` ask it.
 
 Two methods are held back. ``browse`` is ranked only by a router built with ``browse=True``: a browser agent

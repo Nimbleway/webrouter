@@ -29,6 +29,7 @@ from web_router.constants_data_driven import (
     MSG_DATA_DRIVEN_SCHEMA,
     MSG_DATA_DRIVEN_TABLE,
     MSG_DATA_DRIVEN_TABLE_DEPTH,
+    MSG_DATA_DRIVEN_UNREADABLE,
 )
 from web_router.exceptions import ConfigurationError
 from web_router.routing.contract import ToolName
@@ -98,8 +99,13 @@ def checked_table(version: str, data: Mapping[str, Any]) -> ToolTable:
 @lru_cache(maxsize=1)
 def shipped_table() -> ToolTable:
     """The tool table of the release this package ships, checked once."""
-    manifest = _read(DATA_DRIVEN_MANIFEST_FILE)
-    if manifest.get("schema") != DATA_DRIVEN_SCHEMA:
-        raise ConfigurationError(MSG_DATA_DRIVEN_SCHEMA.format(got=manifest.get("schema"), want=DATA_DRIVEN_SCHEMA))
-    table = manifest["tool_table"]
-    return checked_table(manifest["version"], _read(table["file"], sha256=table["sha256"]))
+    try:
+        manifest = _read(DATA_DRIVEN_MANIFEST_FILE)
+        if manifest.get("schema") != DATA_DRIVEN_SCHEMA:
+            raise ConfigurationError(MSG_DATA_DRIVEN_SCHEMA.format(got=manifest.get("schema"), want=DATA_DRIVEN_SCHEMA))
+        table = manifest["tool_table"]
+        return checked_table(manifest["version"], _read(table["file"], sha256=table["sha256"]))
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        # The default router reads these on every construction: a stripped or damaged install says so plainly.
+        why = MSG_DATA_DRIVEN_UNREADABLE.format(error=type(exc).__name__)
+        raise ConfigurationError(MSG_DATA_DRIVEN_TABLE.format(why=why)) from exc
