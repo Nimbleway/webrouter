@@ -5,7 +5,9 @@ Through the public routers, on the fake chain of :mod:`tests.budget.conftest`, w
 
 from __future__ import annotations
 
+import asyncio
 import math
+from contextlib import suppress
 from typing import Any
 
 import httpx
@@ -13,7 +15,7 @@ import pytest
 
 from tests.budget.conftest import Chain, Table, call, scoped
 from tests.conftest import FakeProvider
-from web_router import Budget, WebRouter
+from web_router import AsyncWebRouter, Budget, WebRouter
 from web_router.constants_cost import COST_REPORTED
 from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError, WebRouterError
 from web_router.exceptions_typed import InvalidParameterError
@@ -104,6 +106,44 @@ def test_a_refusal_raised_again_in_a_later_call_is_charged_nothing_there(chain: 
     chain.called.clear()
     call(chain, Budget(max_cost_usd=0.06))
     assert chain.called == ["first", "second"], "an earlier call's note does not make it a nested refusal here"
+
+
+async def test_a_call_running_at_once_never_frees_a_charge_a_nested_refusal_kept(priced: Table) -> None:
+    router, refusal, depth = AsyncWebRouter(), UnsupportedParameterError("wrapper", ["recency"]), []
+    nested_refused, other_refused = asyncio.Event(), asyncio.Event()
+
+    async def wrapper(self: Any, search: SearchRequest) -> SearchResponse:
+        if depth:
+            raise refusal
+        depth.append(1)
+        try:
+            await router.search("inner", provider="wrapper")
+        except UnsupportedParameterError:
+            nested_refused.set()
+            await other_refused.wait()  # meanwhile another call raises the same kept refusal
+            raise
+        return FakeProvider._respond(self, search)
+
+    async def other(self: Any, search: SearchRequest) -> SearchResponse:
+        await nested_refused.wait()
+        raise refusal
+
+    async def run_other() -> None:
+        with suppress(UnsupportedParameterError):
+            await router.search("q", provider="other")
+        other_refused.set()
+
+    register_provider("wrapper", type("Wrapper", (FakeProvider,), {"name": "wrapper", "_asearch": wrapper}))
+    register_provider("other", type("Other", (FakeProvider,), {"name": "other", "_asearch": other}))
+    priced.update(wrapper=(0.02, None), other=(0.01, None))
+    try:
+        async with router.budget(SHARED) as shared:
+            outcomes = await asyncio.gather(router.search("q", provider="wrapper"), run_other(), return_exceptions=True)
+    finally:
+        unregister_provider("wrapper")
+        unregister_provider("other")
+    assert isinstance(outcomes[0], UnsupportedParameterError)
+    assert shared.status().spent_usd == pytest.approx(0.02), "only the two attempts that sent nothing refunded"
 
 
 class _Unhashable(ProviderError):

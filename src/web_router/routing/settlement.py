@@ -24,6 +24,7 @@ attempt's estimate there is ``0``, as nothing ran.
 from __future__ import annotations
 
 import math
+from contextvars import ContextVar, Token
 from typing import TypeGuard
 from weakref import WeakKeyDictionary
 
@@ -40,8 +41,20 @@ from web_router.types_errors import TARGET_GONE_STATUSES
 _REFUSED_BEFORE_SENDING = (UnsupportedParameterError, InvalidParameterError)
 """An option the backend does not map, and a value it cannot take (a mode clash on ``auto`` search)."""
 
-_LEFT: WeakKeyDictionary[BaseException, tuple[Ledger, ...]] = WeakKeyDictionary()
-"""The ledgers in force, outermost first, when each error last left a call that was not one of them."""
+_Notes = WeakKeyDictionary[BaseException, tuple[Ledger, ...]]
+
+_LEFT: ContextVar[_Notes | None] = ContextVar("web_router_refusals_left", default=None)
+"""For the outermost budgeted call in flight here: the ledgers in force, outermost first, when each refusal last
+left a call that was not one of them. One map per outermost call, so calls running at once never share notes."""
+
+
+def open_notes() -> Token[_Notes | None]:
+    """Start the outermost call's own notes; :func:`close_notes` ends them with the call."""
+    return _LEFT.set(WeakKeyDictionary())
+
+
+def close_notes(token: Token[_Notes | None]) -> None:
+    _LEFT.reset(token)
 
 
 def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> None:
@@ -83,13 +96,17 @@ def left_call(ledger: Ledger, exc: BaseException) -> None:
     is replaced rather than kept. Only a refusal is noted, and only one that can be a key: a provider's own error
     class may define ``__eq__`` without ``__hash__``, and the note must never replace that error with a TypeError.
     """
-    if isinstance(exc, _REFUSED_BEFORE_SENDING) and _keyable(exc) and not _among(ledger, _LEFT.get(exc, ())):
-        _LEFT[exc] = LEDGERS.get()
+    notes = _LEFT.get()
+    if notes is None or not isinstance(exc, _REFUSED_BEFORE_SENDING) or not _keyable(exc):
+        return
+    if not _among(ledger, notes.get(exc, ())):
+        notes[exc] = LEDGERS.get()
 
 
 def _from_nested(exc: BaseException, ledger: Ledger) -> bool:
     """Whether ``exc`` already left a call nested in the one ``ledger`` holds; one that cannot be noted never did."""
-    chain = _LEFT.get(exc, ()) if _keyable(exc) else ()
+    notes = _LEFT.get()
+    chain = notes.get(exc, ()) if notes is not None and _keyable(exc) else ()
     return _among(ledger, chain) and chain[-1] is not ledger
 
 

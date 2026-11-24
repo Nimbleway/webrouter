@@ -53,7 +53,7 @@ from web_router.routing.contract import Budget, ToolName, candidate_id
 from web_router.routing.ledger import Ledger
 from web_router.routing.pool import PoolChain, chain_in_force
 from web_router.routing.record import prompt_of, stamp
-from web_router.routing.settlement import left_call, refund_unstarted, settle_reported
+from web_router.routing.settlement import close_notes, left_call, open_notes, refund_unstarted, settle_reported
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
 
@@ -110,11 +110,14 @@ def budget_scope(
         return
     ledger = Ledger(budget, _with_enclosing(pool, held), stamp=stamp(prompt_of(tool, request)[0]))
     token = LEDGERS.set((*held, ledger))
+    notes = None if held else open_notes()
     try:
         with _held(ledger, held, tool, backend, request) as call:
             yield call
     finally:
         LEDGERS.reset(token)
+        if notes is not None:
+            close_notes(notes)
         reserved = ledger.close()
         if ledger.pool is not None:
             ledger.pool.settle(reserved)
