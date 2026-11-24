@@ -1,6 +1,6 @@
 """A router's ``extra_modes``: vendor modes it asks to be shown beyond the ones a backend offers.
 
-Offline: the members are read from their classes and the shipped price list; nothing is sent.
+Offline: the members are read from their classes and the shipped price list; remote requests use a mock transport.
 """
 
 from __future__ import annotations
@@ -10,12 +10,14 @@ from typing import Any, ClassVar
 import pytest
 
 from tests.candidates_helpers import Shown, exa_tavily_fixture, ids  # noqa: F401  (fixture)
-from web_router import RouteDecision, RouteRequest, WebRouter
+from tests.decider_helpers import respond, serve
+from web_router import AsyncWebRouter, RouteDecision, RouteRequest, WebRouter
 from web_router.exceptions import ConfigurationError
 from web_router.providers._pinning import pinned_request
 from web_router.registry import get_provider_class
 from web_router.routing.candidates import build_candidates
 from web_router.routing.decider_router import DeciderRouter
+from web_router.routing.remote import RemoteRouter
 from web_router.types import SearchRequest
 
 CHAIN = {"auto": {"chain": {"search": ["exa", "tavily"]}}}
@@ -89,6 +91,20 @@ def test_a_search_call_and_a_decider_router_are_shown_them_and_the_callers_false
     with WebRouter(provider_config=CHAIN, router=router, route_modes=False) as wr:
         wr.plan("q", tool="search")
     assert router.ids == ["search:exa", "search:tavily"]
+
+
+async def test_remote_extra_modes_still_need_the_remotes_explicit_opt_in(keys: Any) -> None:
+    class AskingRemote(RemoteRouter):
+        extra_modes: ClassVar[dict[str, list[str]]] = {"exa": ["exa-deep-lite+fast"]}
+
+    server = serve(keys, lambda _: respond({"schema": 1}))
+    remote = AskingRemote(url="https://router.example.com/route", route_modes=False)
+    try:
+        async with AsyncWebRouter(provider_config=CHAIN, router=remote) as wr:
+            await wr.plan("q", tool="search")
+    finally:
+        await remote.aclose()
+    assert [c["id"] for c in server.body()["candidates"]] == ["search:exa", "search:tavily"]
 
 
 @pytest.mark.parametrize("extra", [["exa-fast"], {"exa": "exa-fast"}, {"exa": [1]}, {1: ["exa-fast"]}, 1])
