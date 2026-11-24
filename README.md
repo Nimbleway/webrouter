@@ -176,7 +176,7 @@ prices.estimate("tavily", "search")  # 0.008: list price of one request
 Every response carries `cost_usd`: the backend's own figure where it states
 one (`cost_source="reported"`), `0` for a call on a backend's keyless tier
 (`cost_source="keyless"`), else an estimate. Unless a router ranks the
-backends itself (the default `rules` router does not), a cost cap makes `auto`
+backends itself (the default `data-driven` router does not), a cost cap makes `auto`
 try the cheaper of the backends that score alike first.
 
 Each attempt is checked against what is left before it starts, so parallel
@@ -310,6 +310,7 @@ make check    # lint, typecheck and the offline unit tests; no keys needed
 
 [Apache License 2.0](LICENSE). The SimpleQA grader prompt vendored at
 `src/web_router/evals/prompts/` keeps its own MIT license, in
-`LICENSE-simple-evals` beside it.
+`LICENSE-simple-evals` beside it. [`NOTICE`](NOTICE) carries the attribution
+for the data-driven router's table.
 
 <!-- mcp-name: io.github.Nimbleway/webrouter -->

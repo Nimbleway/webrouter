@@ -17,7 +17,7 @@ ENV_MCP_TIME_LIMIT_S = "WEB_ROUTER_MCP_TIME_LIMIT_S"
 ENV_MCP_ROUTER = "WEB_ROUTER_MCP_ROUTER"
 """``<module>:<attribute>``, the router ``web_run`` plans with; ``remote`` for a router service at
 ``WEB_ROUTER_REMOTE_ROUTER_URL``; another built-in router by name, configured by
-``WEB_ROUTER_MCP_ROUTER_CONFIG``; ``off`` for none. The built-in rules router when unset.
+``WEB_ROUTER_MCP_ROUTER_CONFIG``; ``off`` for none. The built-in ``data-driven`` router when unset.
 
 The three are read once, when the server starts, from the process environment
 only: no ``.env`` file and no ``load_env`` call can set or change them.
@@ -51,7 +51,7 @@ MCP_MSG_URL_REFUSED = (
 """A URL an agent passed that fails :data:`MCP_URL_POLICY`, each named by its scheme and host only."""
 
 MCP_ROUTER_IN_PROCESS = "in_process"
-"""Where ``web_run``'s router runs with the built-in rules router or none: in this process, sending nothing out."""
+"""Where ``web_run``'s router runs with the built-in ``data-driven`` router or none: in this process."""
 
 MCP_ROUTER_OPERATOR = "operator"
 MCP_ROUTER_OPERATOR_NOTE = (
@@ -92,7 +92,10 @@ _MCP_TIME_PROPERTY: dict[str, Any] = {
 }
 
 MCP_WEB_RUN_PROPERTIES: dict[str, dict[str, Any]] = {
-    "prompt": {"type": "string", "description": "What to find or read, in words; a URL in it is read as one to fetch."},
+    "prompt": {
+        "type": "string",
+        "description": "What to find or read; URL requests can select billed research.",
+    },
     "max_cost_usd": {
         **_MCP_COST_PROPERTY,
         "description": "Caps this call, within the session's budget, in US dollars.",
@@ -111,8 +114,9 @@ MCP_BUDGET_START_PROPERTIES: dict[str, dict[str, Any]] = {
 
 MCP_DESC_WEB_RUN = (
     "Hand a request in plain words to web-router's router, which picks the method and backends and runs "
-    "it (by default: a URL is read, a report or comparison researched -- billed, minutes long, so set "
-    "`max_cost_usd` -- anything else searched). Call a tool directly for its options. "
+    "it (by default: search, a read of its URL, or research by wording -- billed, minutes long and picked "
+    "for many how, why or list asks, so set `max_cost_usd`). "
+    "Call a tool directly for its options. "
     "`dry_run=true` returns the plan and bills nothing."
 )
 
@@ -156,7 +160,8 @@ MCP_NO_ARGUMENTS = "no arguments"
 """An argument the tool does not declare -- a typo, a guessed option -- refused rather than dropped."""
 
 MCP_MSG_ROUTER_SPEC = (
-    "{env_var}={value!r} names no router: expected <module>:<attribute>, a built-in router's name, or 'off'."
+    "{env_var}={value!r} names no router: expected <module>:<attribute>, a built-in router's name, or 'off'. "
+    "Known: {known}."
 )
 MCP_MSG_ROUTER_IMPORT = "{env_var}={value!r}: {error}"
 MCP_MSG_REMOTE_URL = "{env_var}=remote needs {url_var}, the router service's https URL, set in the same environment."

@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup install sync lock requirements format lint typecheck test test-integration test-browser cov contracts oxylabs-classic prices vendors docs-site docs-preview latency chains efforts changelog shape-baseline check build clean
+.PHONY: help setup install sync lock requirements format lint typecheck test test-integration test-browser cov contracts oxylabs-classic prices vendors docs-site docs-preview latency chains efforts data-driven-router changelog shape-baseline check build clean
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -68,6 +68,9 @@ chains: ## Regenerate src/web_router/data/chains.json, the default auto orders, 
 
 efforts: ## Regenerate src/web_router/data/efforts.json, the research effort table, from the frozen results
 	uv run --all-extras python benchmarks/providers/efforts.py
+
+data-driven-router: ## Import a data-driven router release: SOURCE=<delivered folder> VERSION=0.2.0
+	uv run python -m scripts.data_driven_router --source $(SOURCE) --version $(VERSION)
 
 changelog: ## Move the changelog.d/ fragments under [Unreleased] in CHANGELOG.md (at release)
 	uv run python -m scripts.changelog

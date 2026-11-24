@@ -63,7 +63,7 @@ def test_the_caller_wins_over_the_router_and_a_router_may_opt_in_itself(keys: An
     assert shown(Shown(route_modes=True), route_modes=False) == ["search:exa", "search:tavily"]
 
 
-@pytest.mark.parametrize("router", ["rules", PreferredRouter("cheap")], ids=["rules", "preferred"])
+@pytest.mark.parametrize("router", ["data-driven", PreferredRouter("cheap")], ids=["data-driven", "preferred"])
 def test_a_built_in_router_is_shown_backends_only_unless_the_caller_asks(keys: Any, router: Any) -> None:
     assert WebRouter(router=router)._route_modes is False
     assert WebRouter(router=router, route_modes=True)._route_modes is True

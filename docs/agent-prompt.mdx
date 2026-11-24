@@ -62,8 +62,11 @@ Choosing a tool:
   with the handle you were given; polling is free.
 - web_run, where it is offered, takes the request in words and lets the
   server's router pick the method and the backends. The built-in router
-  picks search or extract; an operator's router may pick answer, research or
-  browse too, which bill as those tools do. Call a tool yourself when you
+  picks search, extract or research from the request's wording. Research is
+  billed per run and takes minutes, and a simple how, why, compare or list
+  question can be planned as one: call search yourself when a search is what
+  you want, or pass dry_run=true first. An operator's router may pick answer
+  or browse too, which bill as those tools do. Call a tool yourself when you
   know which you want or need its options.
 - data_apis, data_api_endpoint and call_data_api reach one vendor's own API
   (Google Ads, Datadog, ...) with the user's credentials: list with data_apis,

@@ -144,10 +144,9 @@ class DeciderRouter:
         if not callable(self._decide) and not callable(self._adecide):
             raise ConfigurationError(MSG_DECIDER_FORM.format(kind=type(decider).__name__))
         self.decider, self._owns = decider, owns_decider
-        self.timeout_s = _declared_timeout(decider)
-        self.router_name = _decider_name(decider)
-        self.route_tools = getattr(decider, "route_tools", None)
-        self.route_modes = getattr(decider, "route_modes", None)
+        self.timeout_s, self.router_name = _declared_timeout(decider), _decider_name(decider)
+        declared = (getattr(decider, name, None) for name in ("route_tools", "route_modes", "extra_modes"))
+        self.route_tools, self.route_modes, self.extra_modes = declared
         if callable(self._decide) and not inspect.iscoroutinefunction(self._decide):
             self.route = self._route
 
