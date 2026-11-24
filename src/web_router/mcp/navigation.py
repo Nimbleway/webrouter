@@ -119,8 +119,7 @@ class NavigationPolicy:
         if scheme not in allowed:
             return MCP_MSG_BROWSER_REFUSED_SCHEME.format(scheme=scheme or "scheme-less")
         if _ambiguous(url):
-            # urlsplit and a browser read a backslash, @ or % in the authority differently, so the
-            # host judged here may not be the host a browser opens; refused as url_policy does.
+            # A browser may read this authority's host differently (url_policy refuses it too).
             return MSG_URL_AMBIGUOUS
         return self._host_refusal(host, port)
 
