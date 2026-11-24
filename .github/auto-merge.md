@@ -25,8 +25,9 @@ flowchart TD
 ```
 
 The workflow uses `pull_request_target` because it needs repository secrets. It checks out only the
-trusted base SHA and never checks out or executes pull-request code. It also fetches the pull request
-again before every ready transition and pins the auto-merge request with `--match-head-commit`.
+trusted default branch and never checks out or executes pull-request code. It also fetches the pull
+request again before every ready transition and pins the auto-merge request with
+`--match-head-commit`.
 
 The label is accepted only when GitHub records Qodo's bot account, ID `151058649`, as its actor. On a
 draft pull request, that authenticated event records `qodo-ready` success on the exact head without
@@ -40,6 +41,9 @@ The controller runs only when `base == main`. This is the exact stack boundary:
 - a stack parent targets an integration branch, so the controller ignores it and maintainers can
   merge it with a merge commit;
 - the final integration pull request targets `main`, so the controller arms it for squash.
+
+If an armed pull request is retargeted away from `main`, the controller disables its auto-merge
+request before returning it to the integration-branch flow.
 
 ## GitHub App configuration
 
@@ -73,8 +77,8 @@ Keep the existing `CI` check and every review and conversation rule unchanged th
 
 The controller fails closed. A new head posts `qodo-ready` as pending. If arming fails after Qodo
 readiness was recorded, it changes that status to error. A label from any actor other than Qodo also
-leaves the status pending. Stale webhook events and pull requests into any branch other than `main`
-make no changes.
+leaves the status pending. Stale webhook events and pull requests that never targeted `main` make no
+changes; a pull request retargeted away from `main` has auto-merge disabled.
 
 To roll back automation, disable or remove the workflow and remove `qodo-ready` from required checks.
 Existing branch protection continues to block merges that lack CI, approval, or resolved conversations.

@@ -8,7 +8,7 @@ from typing import Literal
 
 QODO_LABEL = "Qodo approved"
 QODO_ACTOR_ID = "151058649"
-DecisionName = Literal["ignore", "reset", "hold", "approve", "ready"]
+DecisionName = Literal["ignore", "reset", "hold", "cleanup", "approve", "ready"]
 
 
 @dataclass(frozen=True)
@@ -29,7 +29,7 @@ def decide(
     qodo_status: str | None = None,
 ) -> Decision:
     head = _nested_string(pull_request, "head", "sha")
-    guard = _guard_event(event_head, head, pull_request)
+    guard = _guard_event(action, event_head, head, pull_request, previous_base)
     if guard:
         return guard
 
@@ -50,12 +50,20 @@ def decide(
     return Decision("hold", head, "current head is not Qodo approved")
 
 
-def _guard_event(event_head: str, head: str, pull_request: dict[str, object]) -> Decision | None:
+def _guard_event(
+    action: str,
+    event_head: str,
+    head: str,
+    pull_request: dict[str, object],
+    previous_base: str | None,
+) -> Decision | None:
     if event_head != head:
         return Decision("ignore", head, "event head is stale")
     if pull_request.get("state") != "open":
         return Decision("ignore", head, "pull request is not open")
     if _nested_string(pull_request, "base", "ref") != "main":
+        if action == "edited" and previous_base == "main":
+            return Decision("cleanup", head, "base changed away from main")
         return Decision("ignore", head, "base is not main")
     return None
 

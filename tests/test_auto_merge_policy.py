@@ -134,6 +134,12 @@ def test_base_change_into_main_resets_state() -> None:
     assert result == Decision("reset", HEAD, "base changed to main")
 
 
+def test_base_change_away_from_main_cleans_up_auto_merge() -> None:
+    result = decide("edited", HEAD, None, pull_request(base="integration/feature"), previous_base="main")
+
+    assert result == Decision("cleanup", HEAD, "base changed away from main")
+
+
 def test_title_edit_is_ignored() -> None:
     result = decide("edited", HEAD, None, pull_request())
 

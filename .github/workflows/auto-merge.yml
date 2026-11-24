@@ -6,7 +6,6 @@ on:
   # Repository secrets are required for fork PRs. Every step below uses trusted
   # base code and passes event data through environment variables.
   pull_request_target: # zizmor: ignore[dangerous-triggers] App credentials; trusted base only.
-    branches: [main]
     types:
       - opened
       - reopened
@@ -27,7 +26,10 @@ concurrency:
 jobs:
   reconcile:
     name: Reconcile auto-merge
-    if: github.repository == 'Nimbleway/webrouter' && github.event.pull_request.base.ref == 'main'
+    if: >-
+      github.repository == 'Nimbleway/webrouter' &&
+      (github.event.pull_request.base.ref == 'main' ||
+      (github.event.action == 'edited' && github.event.changes.base.ref.from == 'main'))
     runs-on: ubuntu-latest
     steps:
       - name: Create the repository-scoped App token
@@ -43,10 +45,9 @@ jobs:
           permission-pull-requests: write
           permission-statuses: write
 
-      - name: Check out trusted policy code
+      - name: Check out trusted default-branch policy code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
 
       - name: Fetch the live pull request
@@ -129,6 +130,17 @@ jobs:
             -f context=qodo-ready \
             -f description="Waiting: $REASON" \
             -f target_url="$RUN_URL"
+
+      - name: Disable auto-merge after leaving main
+        if: steps.policy.outputs.decision == 'cleanup'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [[ "$(gh pr view "$PR" --repo "$REPO" --json autoMergeRequest --jq '.autoMergeRequest != null')" == "true" ]]; then
+            gh pr merge "$PR" --repo "$REPO" --disable-auto
+          fi
 
       - name: Record Qodo approval on the current draft head
         if: steps.policy.outputs.decision == 'approve'
