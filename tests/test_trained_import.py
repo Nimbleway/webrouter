@@ -25,7 +25,7 @@ def _delivery(tmp_path: Path, counts: list[Any]) -> tuple[Path, dict[str, Any]]:
         ],
         "tables": [{"": [3, 3]}],
     }
-    table.write_text(json.dumps(data), encoding="utf-8")
+    table.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     return source, data
 
 
