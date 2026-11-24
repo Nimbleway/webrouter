@@ -6,17 +6,20 @@ Through the public routers, on the fake chain of :mod:`tests.budget.conftest`, w
 from __future__ import annotations
 
 import math
+from typing import Any
 
 import httpx
 import pytest
 
 from tests.budget.conftest import Chain, Table, call, scoped
+from tests.conftest import FakeProvider
 from web_router import Budget, WebRouter
 from web_router.constants_cost import COST_REPORTED
 from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError
+from web_router.registry import register_provider, unregister_provider
 from web_router.routing.attempts import Attempt
 from web_router.routing.ledger import Ledger
-from web_router.types import SearchRequest
+from web_router.types import SearchRequest, SearchResponse
 
 SHARED = Budget(max_cost_usd=0.10)
 _REQUEST = httpx.Request("GET", "https://api.test")
@@ -81,14 +84,24 @@ def test_a_member_refusing_an_option_is_charged_nothing_so_the_next_fits(chain: 
     assert [attempt.est_cost_usd for attempt in response.decision.attempts] == [0.0, 0.04]
 
 
-@pytest.mark.parametrize("tool", ["answer"], indirect=True)
-def test_a_refusal_naming_another_backend_leaves_the_member_charged(chain: Chain, priced: Table) -> None:
-    chain.raises["first"] = UnsupportedParameterError("inner", ["recency"])  # from a call first made itself
-    priced.update(first=(0.04, None), second=(0.04, None))
-    with WebRouter().budget(SHARED) as shared:
-        scoped(chain, shared)
-    assert chain.called == ["first", "second"]
-    assert shared.status().spent_usd == pytest.approx(0.08)
+def test_a_refusal_passed_on_from_a_nested_call_leaves_the_provider_charged(priced: Table) -> None:
+    router, depth = WebRouter(), []
+
+    def wrapper(self: Any, search: SearchRequest) -> SearchResponse:
+        if depth:
+            raise UnsupportedParameterError("wrapper", ["recency"])
+        depth.append(1)
+        router.search("inner", provider="wrapper")  # after work it bills, a nested call refuses; passed on
+        return FakeProvider._respond(self, search)
+
+    register_provider("wrapper", type("Wrapper", (FakeProvider,), {"name": "wrapper", "_search": wrapper}))
+    priced.update(wrapper=(0.02, None))
+    try:
+        with router.budget(SHARED) as shared, pytest.raises(UnsupportedParameterError):
+            router.search("q", provider="wrapper")
+    finally:
+        unregister_provider("wrapper")
+    assert shared.status().spent_usd == pytest.approx(0.02), "only the nested attempt, which sent nothing, refunded"
 
 
 @pytest.mark.parametrize("tool", ["search", "answer"], indirect=True)  # the fakes that can state a cost

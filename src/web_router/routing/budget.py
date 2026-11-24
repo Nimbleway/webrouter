@@ -53,7 +53,7 @@ from web_router.routing.contract import Budget, ToolName, candidate_id
 from web_router.routing.ledger import Ledger
 from web_router.routing.pool import PoolChain, chain_in_force
 from web_router.routing.record import prompt_of, stamp
-from web_router.routing.settlement import refund_unstarted, settle_reported
+from web_router.routing.settlement import left_call, refund_unstarted, settle_reported
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
 
@@ -150,6 +150,7 @@ def _held(
             yield BudgetedCall(backend, ledger)
         except WebRouterError as exc:
             refund_unstarted(ledger, candidate_id(tool, name), exc)  # a named backend's refusal; auto's are noted
+            left_call(ledger, exc)
             # An `auto` chain whose every member the budget skipped ends as one with no backend
             # configured would. Nothing was sent, so that error is no cause: the budget is.
             if ledger.skipped and not ledger.tried and not ledger.sent:

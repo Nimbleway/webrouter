@@ -25,9 +25,9 @@ from __future__ import annotations
 
 import math
 from typing import TypeGuard
+from weakref import WeakKeyDictionary
 
 from web_router.constants_cost import COST_STATED
-from web_router.constants_routing import CANDIDATE_ID_SEPARATOR
 from web_router.exceptions import UnsupportedParameterError, WebRouterError
 from web_router.providers._chain import nothing_started
 from web_router.providers._cooldown import CoolingDownError
@@ -35,6 +35,9 @@ from web_router.routing.attempts import Attempt
 from web_router.routing.budget_hooks import LEDGERS, check_own
 from web_router.routing.ledger import Ledger
 from web_router.types_errors import TARGET_GONE_STATUSES
+
+_LEFT: WeakKeyDictionary[BaseException, Ledger] = WeakKeyDictionary()
+"""The ledger of the first call each error left: the innermost, as it leaves calls inside out."""
 
 
 def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> None:
@@ -44,7 +47,7 @@ def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> 
     the call it was made in: an enclosing call's ledger, told of a nested
     call's failure, leaves its own open attempt as it is.
     """
-    if not isinstance(exc, WebRouterError) or not _never_started(exc, call_id) or not check_own(ledger)():
+    if not isinstance(exc, WebRouterError) or not _never_started(exc, ledger) or not check_own(ledger)():
         return
     attempt = ledger.refund_open(call_id)
     if attempt is not None:
@@ -69,25 +72,24 @@ def _match_enclosing(ledger: Ledger, attempt: Attempt, cost: float, *, refunded:
             enclosing.settle_counted(attempt, cost, refunded=refunded)
 
 
-def _never_started(exc: WebRouterError, call_id: str) -> bool:
-    """Whether ``exc`` proves the attempt ``call_id`` never started: a backend passed over while it cools down,
-    whatever status started the cooldown, ``call_id``'s own backend refusing an option, or what
-    :func:`nothing_started` names but a gone page, which a fetch backend may bill.
+def left_call(ledger: Ledger, exc: BaseException) -> None:
+    """Note that ``exc`` is leaving the call ``ledger`` holds, unless it already left a call nested in it."""
+    _LEFT.setdefault(exc, ledger)
 
-    A refusal counts only when it names ``call_id``'s backend: a registered provider can make a nested call whose
-    refusal reaches here after the provider did billable work of its own.
+
+def _never_started(exc: WebRouterError, ledger: Ledger) -> bool:
+    """Whether ``exc`` proves the attempt never started: a backend passed over while it cools down, whatever status
+    started the cooldown, a backend refusing an option before sending, or what :func:`nothing_started` names but a
+    gone page, which a fetch backend may bill.
+
+    A refusal that already left a call nested in this one is that call's: a registered provider can make one, do
+    billable work of its own, and pass its refusal on -- even a refusal naming the provider itself.
     """
     if isinstance(exc, CoolingDownError):
         return True
     if isinstance(exc, UnsupportedParameterError):
-        return _names_backend(call_id, exc.provider)
+        return _LEFT.get(exc, ledger) is ledger
     return nothing_started(exc) and getattr(exc, "status_code", None) not in TARGET_GONE_STATUSES
-
-
-def _names_backend(call_id: str, provider: str) -> bool:
-    """Whether ``call_id`` (``tool:provider`` or ``tool:provider:mode``) is an attempt on ``provider``."""
-    entry = call_id.partition(CANDIDATE_ID_SEPARATOR)[2]
-    return entry == provider or entry.startswith(f"{provider}{CANDIDATE_ID_SEPARATOR}")
 
 
 def _a_cost(cost: object) -> TypeGuard[float]:
