@@ -1,0 +1,1 @@
+url_policy="public_only" (on by default for the MCP server's extract, browse, live_data and web_run) now resolves a host name and refuses it when any answer is a private, loopback or cloud metadata address, so a public name that points inside the network is no longer sent to a backend.
