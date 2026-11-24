@@ -9,9 +9,9 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
+from scripts import trained_router as importer
 from scripts.trained_prompts import prompts
 from web_router.constants_trained import TRAINED_DATA_DIR, TRAINED_MANIFEST_FILE
-from web_router.routing.trained.features import featurize
 from web_router.routing.trained.table import shipped_table
 
 GOLDEN = Path(__file__).parent / "data" / "trained" / "golden.jsonl.gz"
@@ -23,14 +23,7 @@ def _golden() -> list[list[Any]]:
 
 
 def test_features_and_table_agree_with_the_training_code_on_every_golden_request() -> None:
-    table = shipped_table()
-    wrong = []
-    for prompt, values, tool in _golden():
-        counts = table.row(prompt).counts
-        got = (featurize(prompt, table.features), max(counts, key=counts.__getitem__))
-        if got != (values, tool):
-            wrong.append((prompt, values, tool, got))
-    assert not wrong, f"{len(wrong)} requests differ from training, first: {wrong[0]}"
+    assert not importer.differences(_golden())
 
 
 def test_the_golden_file_covers_every_feature_value_and_every_full_row_of_the_table() -> None:
