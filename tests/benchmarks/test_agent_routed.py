@@ -53,13 +53,15 @@ async def test_the_routed_router_shares_the_other_arms_config_so_an_outage_reach
         assert [name for name, _ in routed.get_provider("auto")._chain] == ["keenable", "nimble"]
 
 
-def test_the_report_names_a_routed_arms_picks_before_autos_order_on_search_alone(run: ModuleType) -> None:
+def test_the_report_distinguishes_per_call_routing_from_static_fallback_on_search_alone(run: ModuleType) -> None:
     import report
 
     chain = {"chain": [{"provider": "perplexity", "body": {}}, {"provider": "nimble", "body": {}}]}
     config = {"search": chain, "extract": chain, **run.routed_record("data-driven")}
-    (_, searched, _), (_, read, _) = report.backend_lines(config)
-    assert searched == "the data-driven router's picks, then auto: perplexity first, then nimble"
+    (_, searched, request), (_, read, plain_request) = report.backend_lines(config)
+    assert searched == "data-driven: per-call picks if available; fallback auto: perplexity first, then nimble"
+    assert request == "per-call routed requests are not recorded"
+    assert plain_request == "{}"
     assert read == "auto: perplexity first, then nimble", "the router is not asked on a page read"
     assert report.backend_lines({"search": chain})[0][1] == "auto: perplexity first, then nimble"
 

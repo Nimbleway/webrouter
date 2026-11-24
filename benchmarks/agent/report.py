@@ -1078,9 +1078,9 @@ def backend_lines(config: dict[str, Any]) -> list[tuple[str, str, str]]:
         chain = [m for m in entry.get("chain") or [] if "skipped" not in m]
         if chain:
             first, rest = chain[0], [m["provider"] for m in chain[1:]]
-            picks = f"the {routed} router's picks, then " if tool == "search" and routed else ""
+            picks = f"{routed}: per-call picks if available; fallback " if tool == "search" and routed else ""
             backend = picks + f"auto: {first['provider']} first" + (f", then {', '.join(rest)}" if rest else "")
-            lines.append((tool, backend, _request(first)))
+            lines.append((tool, backend, "per-call routed requests are not recorded" if picks else _request(first)))
         else:
             lines.append((tool, entry["provider"], _request(entry)))
     lines += [("mcp", entry["provider"], _request(entry)) for entry in config.get("mcp") or []]  # an mcp: arm's servers
@@ -1099,11 +1099,11 @@ def _request(entry: dict[str, Any]) -> str:
 
 
 def _write_backends(w: Callable[[str], None], backends: dict[str, dict[str, Any]]) -> None:
-    w("### What each backend was sent\n")
+    w("### Backend request setup\n")
     w(
-        "The request body each web-router arm's backends received, built by the providers' own translation with "
-        "the model's query or URL as a placeholder. A field that is not here was not sent, so the backend's own "
-        "default decided it — Nimble's search depth, for one. Page reads go to the arm's own backend when it "
+        "Static requests built by the providers' translation; routed search requests vary per call and are not "
+        "recorded here. Described bodies use query or URL placeholders; absent fields use the backend's own "
+        "defaults — Nimble's search depth, for one. Page reads go to the arm's own backend when it "
         "reads pages, else to `auto`, which tries its members in order. An `mcp:` arm's row is its server and the "
         "tools the agent was given: the platform builds that request, and the model picks its arguments.\n"
     )
