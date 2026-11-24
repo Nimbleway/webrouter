@@ -1,4 +1,4 @@
-"""The requests the trained router's golden file is built from: the same list on every run.
+"""The requests the data-driven router's golden file is built from: the same list on every run.
 
 Each request is an opener, a lead word, an ask, a place and a tail, drawn so that every value of every feature
 turns up many times; a few fixed odd ones follow. Add words here, never remove them: a golden file is only as

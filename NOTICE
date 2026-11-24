@@ -3,7 +3,7 @@ Copyright 2026 Nimble
 
 This product includes aggregate statistics derived from third-party datasets.
 
-The trained router's tool table (web_router/data/trained/tool_table.json)
+The data-driven router's tool table (web_router/data/data_driven/tool_table.json)
 holds counts of labelled requests. Part of those requests come from
 Mind2Web-Live by iMean AI
 (https://huggingface.co/datasets/iMeanAI/Mind2Web-Live), licensed under the
@@ -13,4 +13,4 @@ method and reduced to counts; no text of the dataset is included.
 
 The other sources of that table, with their licences, are listed at
 https://docs.webrouter.net/smart-routing#trained-on and in
-web_router/data/trained/manifest.json.
+web_router/data/data_driven/manifest.json.

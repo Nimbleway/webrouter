@@ -254,9 +254,9 @@ results against the static order. The default search and answer orders come
 from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/README.md#route-eval-replaying-a-router).
 
-The library ships two keyless routers. `router="trained"` picks the method
+The library ships two keyless routers. `router="data-driven"` picks the method
 from a table trained on labelled requests: see
-[The trained router](/smart-routing#the-trained-router). The other, `rules`, is attached unless you pass
+[The data-driven router](/smart-routing#the-data-driven-router). The other, `rules`, is attached unless you pass
 `router=` (`router="rules"` names it, `router=None` attaches none): a prompt
 with a URL is extracted; one asking in so many words for a report, a comparison
 or an in-depth analysis is researched, or searched when no research backend is
@@ -278,26 +278,26 @@ MCP server brings the same to an agent with
 `web_run`, `budget_start` and `budget_status`, under a ceiling the operator
 sets: see [the MCP guide](/mcp-server#routing-and-budgets-web_run-budget_start-budget_status).
 
-## The trained router
+## The data-driven router
 
-`router="trained"` picks a request's method from a table built from 1,600
+`router="data-driven"` picks a request's method from a table built from 1,600
 requests from public benchmarks and 1,078 synthetic requests, all labelled by
 the trainers. It is experimental, needs no key, calls nothing and answers in
 microseconds. Like `rules`, only `plan()` and `run()` ask it, and it ranks no backends.
 
-Try `trained` when you want method rankings from training counts, including
+Try `data-driven` when you want method rankings from training counts, including
 `browse` when you opt in. `rules` chooses extract for a URL, research for a
-research request, and search otherwise. The trained router has not yet been
+research request, and search otherwise. The data-driven router has not yet been
 measured against `rules` on held-out labelled requests; there is no measured
 accuracy advantage to recommend switching for.
 
 ```python
 from web_router import WebRouter
 
-router = WebRouter(router="trained")
+router = WebRouter(router="data-driven")
 plan = router.plan("compare the pricing plans of the top 5 CRM tools")
 plan.tool             # "research", with a research backend configured
-plan.decision.reason  # "trained 0.1.1: research for verb=analyze, url_target=none"
+plan.decision.reason  # "data-driven 0.1.1: research for verb=analyze, url_target=none"
 ```
 
 It reads five things in the prompt, each with a regular expression:
@@ -327,7 +327,7 @@ Three methods are treated apart:
 - `answer` is not a method the table was trained on, so it is never picked.
 
 The table ships as a versioned release, apart from the
-library's own version: `src/web_router/data/trained/manifest.json` names the
+library's own version: `src/web_router/data/data_driven/manifest.json` names the
 version, and every decision's `reason` starts with it. The version changes only
 when a newly trained table ships. A golden file of two thousand requests, with
 the features and method the training code gave each one, is replayed in the

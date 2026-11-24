@@ -86,7 +86,7 @@ def test_a_built_in_whose_config_names_no_url_runs_here_and_says_what_it_may_sen
         routing.build()  # a remote member with no URL is refused when the router is built
 
 
-def test_the_trained_router_runs_in_process_and_carries_no_note_about_a_model() -> None:
-    section = McpRouting.from_environ(named("trained", {"browse": True})).capabilities(None)
-    assert (section["router"], section["router_runs"]) == ("trained", "in_process")
+def test_the_data_driven_router_runs_in_process_and_carries_no_note_about_a_model() -> None:
+    section = McpRouting.from_environ(named("data-driven", {"browse": True})).capabilities(None)
+    assert (section["router"], section["router_runs"]) == ("data-driven", "in_process")
     assert "router_note" not in section

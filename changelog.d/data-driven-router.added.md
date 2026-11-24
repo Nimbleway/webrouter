@@ -1,0 +1,1 @@
+`router="data-driven"`, an experimental keyless router: it picks a request's method (search, extract, research, or browse with `router_config={"browse": True}`) from a table trained on labelled requests, reading five features of the prompt with no model call. Its table ships as a versioned release (0.1.1), named in each decision's reason. `rules` stays the default.

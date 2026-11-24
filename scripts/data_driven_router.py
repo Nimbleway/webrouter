@@ -1,14 +1,14 @@
-"""Import a trained router release: ``make trained-router SOURCE=<folder> VERSION=0.2.0``.
+"""Import a data-driven router release: ``make data-driven-router SOURCE=<folder> VERSION=0.2.0``.
 
 ``SOURCE`` is the folder a training run delivers: a ``webrouter`` package with ``features.py``, ``router1.py``
 and ``artifacts/router1.json``. This script
 
-1. runs that code on the fixed requests of :mod:`scripts.trained_prompts` and writes what it returned to
-   ``tests/data/trained/golden.jsonl.gz``;
-2. copies the table to ``src/web_router/data/trained/tool_table.json`` and writes ``manifest.json`` beside it,
+1. runs that code on the fixed requests of :mod:`scripts.data_driven_prompts` and writes what it returned to
+   ``tests/data/data_driven/golden.jsonl.gz``;
+2. copies the table to ``src/web_router/data/data_driven/tool_table.json`` and writes ``manifest.json`` beside it,
    with the version, table checksum and delivered training-source metadata;
 3. replays the golden file against web-router's own features and table, and exits non-zero with the first
-   differences when they disagree: then ``routing/trained/patterns.py`` no longer matches the training code
+   differences when they disagree: then ``routing/data_driven/patterns.py`` no longer matches the training code
    and has to be updated from it.
 
 The training code is imported and run, so only point this at a delivery you trust.
@@ -27,13 +27,18 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
-from scripts.trained_prompts import prompts
-from web_router.constants_trained import TRAINED_DATA_DIR, TRAINED_MANIFEST_FILE, TRAINED_ROUTER_NAME, TRAINED_SCHEMA
-from web_router.routing.trained.table import ToolTable, checked_table
+from scripts.data_driven_prompts import prompts
+from web_router.constants_data_driven import (
+    DATA_DRIVEN_DATA_DIR,
+    DATA_DRIVEN_MANIFEST_FILE,
+    DATA_DRIVEN_ROUTER_NAME,
+    DATA_DRIVEN_SCHEMA,
+)
+from web_router.routing.data_driven.table import ToolTable, checked_table
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA = ROOT.joinpath("src", "web_router", *TRAINED_DATA_DIR)
-GOLDEN = ROOT / "tests" / "data" / "trained" / "golden.jsonl.gz"
+DATA = ROOT.joinpath("src", "web_router", *DATA_DRIVEN_DATA_DIR)
+GOLDEN = ROOT / "tests" / "data" / "data_driven" / "golden.jsonl.gz"
 TABLE_FILE = "tool_table.json"
 SOURCE_TABLE = Path("webrouter") / "artifacts" / "router1.json"
 SHOWN = 10
@@ -66,11 +71,11 @@ def write_release(source: Path, version: str, *, destination: Path | None = None
     destination.mkdir(parents=True, exist_ok=True)
     (destination / TABLE_FILE).write_bytes(table)
     manifest = {
-        "_about": "The trained router's release: one version for its data files and the features they were "
-        "trained with. Written by `make trained-router`; do not edit by hand.",
-        "router": TRAINED_ROUTER_NAME,
+        "_about": "The data-driven router's release: one version for its data files and the features they were "
+        "trained with. Written by `make data-driven-router`; do not edit by hand.",
+        "router": DATA_DRIVEN_ROUTER_NAME,
         "version": version,
-        "schema": TRAINED_SCHEMA,
+        "schema": DATA_DRIVEN_SCHEMA,
         "built": datetime.now(UTC).date().isoformat(),
         "tool_table": {
             "file": TABLE_FILE,
@@ -79,13 +84,13 @@ def write_release(source: Path, version: str, *, destination: Path | None = None
             **provenance,
         },
     }
-    (destination / TRAINED_MANIFEST_FILE).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    (destination / DATA_DRIVEN_MANIFEST_FILE).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
 def differences(rows: list[list[Any]], *, table: ToolTable | None = None) -> list[str]:
     """Where web-router's own features or table disagree with the training code, one line each."""
-    from web_router.routing.trained.features import featurize
-    from web_router.routing.trained.table import shipped_table
+    from web_router.routing.data_driven.features import featurize
+    from web_router.routing.data_driven.table import shipped_table
 
     if table is None:
         shipped_table.cache_clear()
@@ -138,7 +143,7 @@ def import_release(source: Path, version: str, rows: list[list[Any]]) -> list[st
             return wrong
         DATA.mkdir(parents=True, exist_ok=True)
         GOLDEN.parent.mkdir(parents=True, exist_ok=True)
-        outputs = [(staged / name, DATA / name) for name in (TABLE_FILE, TRAINED_MANIFEST_FILE)]
+        outputs = [(staged / name, DATA / name) for name in (TABLE_FILE, DATA_DRIVEN_MANIFEST_FILE)]
         outputs.append((golden, GOLDEN))
         _publish(outputs, _backup(outputs, staged))
     return []
@@ -153,7 +158,7 @@ def main() -> int:
     wrong = import_release(args.source.resolve(), args.version, rows)
     for line in wrong[:SHOWN]:
         print(line, file=sys.stderr)
-    print(f"trained router {args.version}: {len(rows)} golden requests, {len(wrong)} differences")
+    print(f"data-driven router {args.version}: {len(rows)} golden requests, {len(wrong)} differences")
     return 1 if wrong else 0
 
 

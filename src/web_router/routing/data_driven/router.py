@@ -1,4 +1,4 @@
-"""The built-in ``trained`` router: a request's method, from a table trained on labelled requests.
+"""The built-in ``data-driven`` router: a request's method, from a table trained on labelled requests.
 
 Experimental. It needs no key and calls nothing: five regular expressions read the prompt
 (:mod:`.features`), and the shipped table (:mod:`.table`) says which method the training requests with those
@@ -13,29 +13,29 @@ is slow and billed, so a caller opts in. ``extract`` is ranked only when the cal
 
 from __future__ import annotations
 
-from web_router.constants_trained import (
-    MSG_TRAINED_BROWSE,
-    TRAINED_LAST_RESORT,
-    TRAINED_REASON,
-    TRAINED_REASON_LAST_RESORT,
-    TRAINED_REASON_OVERALL,
-    TRAINED_ROUTER_NAME,
+from web_router.constants_data_driven import (
+    DATA_DRIVEN_LAST_RESORT,
+    DATA_DRIVEN_REASON,
+    DATA_DRIVEN_REASON_LAST_RESORT,
+    DATA_DRIVEN_REASON_OVERALL,
+    DATA_DRIVEN_ROUTER_NAME,
+    MSG_DATA_DRIVEN_BROWSE,
 )
 from web_router.exceptions import ConfigurationError
 from web_router.routing.contract import RouteDecision, RouteRequest, ToolName
-from web_router.routing.trained.table import Row, ToolTable, shipped_table
+from web_router.routing.data_driven.table import Row, ToolTable, shipped_table
 
 
-class TrainedRouter:
-    """``router="trained"``: asked by ``plan()`` and ``run()`` alone, named ``trained``."""
+class DataDrivenRouter:
+    """``router="data-driven"``: asked by ``plan()`` and ``run()`` alone, named ``data-driven``."""
 
     route_tools: tuple[ToolName, ...] = ()
     route_modes = False
-    router_name = TRAINED_ROUTER_NAME
+    router_name = DATA_DRIVEN_ROUTER_NAME
 
     def __init__(self, *, browse: bool = False) -> None:
         if not isinstance(browse, bool):
-            raise ConfigurationError(MSG_TRAINED_BROWSE.format(got=browse))
+            raise ConfigurationError(MSG_DATA_DRIVEN_BROWSE.format(got=browse))
         self.browse = browse
         self.table: ToolTable = shipped_table()
 
@@ -55,12 +55,12 @@ class TrainedRouter:
         held_back = {"browse": not self.browse, "extract": not req.urls}
         ranked = sorted((tool for tool, count in row.counts.items() if count), key=lambda tool: -row.counts[tool])
         tools = [tool for tool in ranked if not held_back.get(tool)]
-        return tools if TRAINED_LAST_RESORT in tools else [*tools, TRAINED_LAST_RESORT]
+        return tools if DATA_DRIVEN_LAST_RESORT in tools else [*tools, DATA_DRIVEN_LAST_RESORT]
 
     def _reason(self, row: Row, tool: ToolName) -> str:
         if not row.values:
-            return TRAINED_REASON_OVERALL.format(version=self.version, tool=tool)
+            return DATA_DRIVEN_REASON_OVERALL.format(version=self.version, tool=tool)
         features = ", ".join(f"{name}={value}" for name, value in zip(self.table.features, row.values, strict=False))
         if not row.counts.get(tool):
-            return TRAINED_REASON_LAST_RESORT.format(version=self.version, features=features)
-        return TRAINED_REASON.format(version=self.version, tool=tool, features=features)
+            return DATA_DRIVEN_REASON_LAST_RESORT.format(version=self.version, features=features)
+        return DATA_DRIVEN_REASON.format(version=self.version, tool=tool, features=features)

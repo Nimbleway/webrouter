@@ -1,4 +1,4 @@
-"""The five things the trained router reads in a request's text, each a short string.
+"""The five things the data-driven router reads in a request's text, each a short string.
 
 Every feature is a regular expression over the text: it takes microseconds, calls nothing, and gives the same
 value for the same text. The expressions live in :mod:`.patterns`, which is never edited by hand.
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 
-from web_router.routing.trained.patterns import (
+from web_router.routing.data_driven.patterns import (
     KW_RESEARCH_RE,
     PLURAL_RE,
     ROOT_PATH_RE,

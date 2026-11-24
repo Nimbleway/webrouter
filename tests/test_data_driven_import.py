@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from scripts import trained_router as importer
+from scripts import data_driven_router as importer
 
 
 def _delivery(tmp_path: Path, counts: list[Any]) -> tuple[Path, dict[str, Any]]:
@@ -38,7 +38,7 @@ def test_import_preserves_delivered_metadata_and_bytes(tmp_path: Path, monkeypat
     output = tmp_path / "output"
     monkeypatch.setattr(importer, "DATA", output)
     importer.write_release(source, "0.1.0")
-    manifest = json.loads((output / importer.TRAINED_MANIFEST_FILE).read_text())
+    manifest = json.loads((output / importer.DATA_DRIVEN_MANIFEST_FILE).read_text())
     content = (output / importer.TABLE_FILE).read_bytes()
     assert content == (source / importer.SOURCE_TABLE).read_bytes()
     assert manifest["tool_table"] == {
@@ -52,7 +52,7 @@ def test_import_preserves_delivered_metadata_and_bytes(tmp_path: Path, monkeypat
 def _installed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Path, Path]:
     output = tmp_path / "output"
     output.mkdir()
-    table, manifest = output / importer.TABLE_FILE, output / importer.TRAINED_MANIFEST_FILE
+    table, manifest = output / importer.TABLE_FILE, output / importer.DATA_DRIVEN_MANIFEST_FILE
     table.write_bytes(b"existing table")
     manifest.write_bytes(b"existing manifest")
     golden = tmp_path / "golden.gz"
@@ -73,7 +73,7 @@ def test_bad_source_counts_leave_existing_release_untouched(
     source, _ = _delivery(tmp_path, counts)
     files = _installed(tmp_path, monkeypatch)
     monkeypatch.setattr(importer, "golden_rows", lambda source: [])
-    monkeypatch.setattr(importer.sys, "argv", ["trained-router", "--source", str(source), "--version", "0.1.0"])
+    monkeypatch.setattr(importer.sys, "argv", ["data-driven-router", "--source", str(source), "--version", "0.1.0"])
     with pytest.raises(ValueError, match="source examples"):
         importer.main()
     _assert_unchanged(files)

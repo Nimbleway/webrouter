@@ -10,20 +10,20 @@ from typing import Any
 
 import pytest
 
-from web_router.constants_trained import (
-    MSG_TRAINED_CHECKSUM,
-    MSG_TRAINED_MIN_COUNT,
-    TRAINED_DATA_DIR,
-    TRAINED_MANIFEST_FILE,
+from web_router.constants_data_driven import (
+    DATA_DRIVEN_DATA_DIR,
+    DATA_DRIVEN_MANIFEST_FILE,
+    MSG_DATA_DRIVEN_CHECKSUM,
+    MSG_DATA_DRIVEN_MIN_COUNT,
 )
 from web_router.exceptions import ConfigurationError
-from web_router.routing.trained import table as table_module
-from web_router.routing.trained.table import shipped_table
+from web_router.routing.data_driven import table as table_module
+from web_router.routing.data_driven.table import shipped_table
 
 
 @pytest.fixture
 def release(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
-    folder = tmp_path.joinpath(*TRAINED_DATA_DIR)
+    folder = tmp_path.joinpath(*DATA_DRIVEN_DATA_DIR)
     folder.mkdir(parents=True)
     monkeypatch.setattr(table_module.resources, "files", lambda package: tmp_path)
     shipped_table.cache_clear()
@@ -39,7 +39,7 @@ def _write_release(folder: Path, min_count: Any = 20) -> Path:
     ).encode()
     table = folder / "tools.json"
     table.write_bytes(content)
-    (folder / TRAINED_MANIFEST_FILE).write_text(
+    (folder / DATA_DRIVEN_MANIFEST_FILE).write_text(
         json.dumps(
             {
                 "schema": 1,
@@ -55,14 +55,14 @@ def _write_release(folder: Path, min_count: Any = 20) -> Path:
 def test_loading_a_release_checks_the_table_bytes(release: Path) -> None:
     table = _write_release(release)
     table.write_text(table.read_text().replace("[1, 1]", "[2, 2]"), encoding="utf-8")
-    with pytest.raises(ConfigurationError, match=MSG_TRAINED_CHECKSUM):
+    with pytest.raises(ConfigurationError, match=MSG_DATA_DRIVEN_CHECKSUM):
         shipped_table()
 
 
 @pytest.mark.parametrize("min_count", [0, -1, True, 1.5, "20", None, float("nan"), float("inf")])
 def test_loading_a_release_refuses_invalid_thresholds(release: Path, min_count: Any) -> None:
     _write_release(release, min_count)
-    with pytest.raises(ConfigurationError, match=MSG_TRAINED_MIN_COUNT):
+    with pytest.raises(ConfigurationError, match=MSG_DATA_DRIVEN_MIN_COUNT):
         shipped_table()
 
 

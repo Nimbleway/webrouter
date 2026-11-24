@@ -311,6 +311,6 @@ make check    # lint, typecheck and the offline unit tests; no keys needed
 [Apache License 2.0](LICENSE). The SimpleQA grader prompt vendored at
 `src/web_router/evals/prompts/` keeps its own MIT license, in
 `LICENSE-simple-evals` beside it. [`NOTICE`](NOTICE) carries the attribution
-for the trained router's table.
+for the data-driven router's table.
 
 <!-- mcp-name: io.github.Nimbleway/webrouter -->

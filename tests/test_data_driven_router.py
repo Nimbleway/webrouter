@@ -1,4 +1,4 @@
-"""The built-in ``trained`` router: the method it ranks first, what it holds back, and its release's checks."""
+"""The built-in ``data-driven`` router: the method it ranks first, what it holds back, and its release's checks."""
 
 from __future__ import annotations
 
@@ -10,19 +10,19 @@ import pytest
 from tests.plan_helpers import called_fixture  # noqa: F401  (fixture)
 from tests.routing_helpers import wr
 from web_router import RouteRequest
-from web_router.constants_trained import (
-    MSG_TRAINED_FEATURES,
-    MSG_TRAINED_METHODS,
-    MSG_TRAINED_ROOT,
-    MSG_TRAINED_ROW_TOTAL,
-    MSG_TRAINED_ROW_WIDTH,
-    MSG_TRAINED_TABLE_DEPTH,
+from web_router.constants_data_driven import (
+    MSG_DATA_DRIVEN_FEATURES,
+    MSG_DATA_DRIVEN_METHODS,
+    MSG_DATA_DRIVEN_ROOT,
+    MSG_DATA_DRIVEN_ROW_TOTAL,
+    MSG_DATA_DRIVEN_ROW_WIDTH,
+    MSG_DATA_DRIVEN_TABLE_DEPTH,
 )
 from web_router.exceptions import ConfigurationError
+from web_router.routing.data_driven import DataDrivenRouter
+from web_router.routing.data_driven import table as table_module
+from web_router.routing.data_driven.table import ToolTable, shipped_table
 from web_router.routing.registry import available_routers
-from web_router.routing.trained import TrainedRouter
-from web_router.routing.trained import table as table_module
-from web_router.routing.trained.table import ToolTable, shipped_table
 
 URL = "https://example.com/prices"
 
@@ -44,12 +44,12 @@ def _req(prompt: str, urls: tuple[str, ...] = ()) -> RouteRequest:
 def test_it_ranks_the_rows_methods_and_holds_back_browse_and_an_extract_with_no_url(
     prompt: str, urls: tuple[str, ...], tools: list[str]
 ) -> None:
-    assert TrainedRouter().route(_req(prompt, urls)).tools == tools
+    assert DataDrivenRouter().route(_req(prompt, urls)).tools == tools
 
 
 def test_browse_is_ranked_only_by_a_router_built_to() -> None:
     prompt = "log in to gamestop and add a PS5 to the cart"
-    opted, held = TrainedRouter(browse=True).route(_req(prompt)), TrainedRouter().route(_req(prompt))
+    opted, held = DataDrivenRouter(browse=True).route(_req(prompt)), DataDrivenRouter().route(_req(prompt))
     assert (opted.tools, opted.confidence) == (["browse", "search"], pytest.approx(27 / 28))
     assert (held.tools, held.confidence) == (["search"], pytest.approx(1 / 28)), "the share of the method ranked first"
 
@@ -57,23 +57,23 @@ def test_browse_is_ranked_only_by_a_router_built_to() -> None:
 @pytest.mark.parametrize("browse", ["false", 1, None])
 def test_browse_takes_a_bool_alone(browse: Any) -> None:
     with pytest.raises(ConfigurationError, match="browse=True or browse=False"):
-        TrainedRouter(browse=browse)
+        DataDrivenRouter(browse=browse)
 
 
 def test_a_search_no_training_request_ran_is_named_the_last_resort() -> None:
-    router = TrainedRouter()
+    router = DataDrivenRouter()
     decision = router.route(_req(f"extract the table from {URL}"))
     assert (decision.tools, decision.confidence) == (["search"], 0.0)
     assert decision.reason == (
-        f"trained {router.version}: search, which no training request with verb=extract, url_target=page, "
+        f"data-driven {router.version}: search, which no training request with verb=extract, url_target=page, "
         "plural=no, kw_research=no, ui_action=no ran, as the last resort"
     )
 
 
 def test_the_decision_names_the_release_the_row_and_its_share() -> None:
-    router = TrainedRouter()
+    router = DataDrivenRouter()
     decision = router.route(_req("compare the pricing plans of the top 5 CRM tools"))
-    assert decision.reason == f"trained {router.version}: research for verb=analyze, url_target=none"
+    assert decision.reason == f"data-driven {router.version}: research for verb=analyze, url_target=none"
     assert decision.confidence == pytest.approx(34 / 36)
 
 
@@ -98,25 +98,25 @@ def test_a_row_seen_too_rarely_backs_off_to_the_shorter_key() -> None:
 
 
 def test_a_request_matching_no_frequent_row_gets_the_overall_reason(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("web_router.routing.trained.router.shipped_table", _table)
-    decision = TrainedRouter().route(_req("the weather"))
+    monkeypatch.setattr("web_router.routing.data_driven.router.shipped_table", _table)
+    decision = DataDrivenRouter().route(_req("the weather"))
     assert (decision.tools, decision.reason) == (
         ["search", "research"],
-        "trained 9.9.9: search, the most common method overall",
+        "data-driven 9.9.9: search, the most common method overall",
     )
 
 
 @pytest.mark.parametrize(
     ("change", "why"),
     [
-        ({"features": ["verb", "mood"]}, MSG_TRAINED_FEATURES),
-        ({"labels": ["search", "teleport"]}, MSG_TRAINED_METHODS),
-        ({"tables": [{"": [1, 1]}]}, MSG_TRAINED_TABLE_DEPTH),
-        ({"tables": []}, MSG_TRAINED_TABLE_DEPTH),
-        ({"tables": [{"": [1, 1]}, {"other": [1]}]}, MSG_TRAINED_ROW_WIDTH),
-        ({"tables": [{}, {}]}, MSG_TRAINED_ROOT),
-        ({"tables": [{"": [0, 0]}, {}]}, MSG_TRAINED_ROOT),
-        ({"tables": [{"": [1, 1]}, {"question": [1, 20]}]}, MSG_TRAINED_ROW_TOTAL),
+        ({"features": ["verb", "mood"]}, MSG_DATA_DRIVEN_FEATURES),
+        ({"labels": ["search", "teleport"]}, MSG_DATA_DRIVEN_METHODS),
+        ({"tables": [{"": [1, 1]}]}, MSG_DATA_DRIVEN_TABLE_DEPTH),
+        ({"tables": []}, MSG_DATA_DRIVEN_TABLE_DEPTH),
+        ({"tables": [{"": [1, 1]}, {"other": [1]}]}, MSG_DATA_DRIVEN_ROW_WIDTH),
+        ({"tables": [{}, {}]}, MSG_DATA_DRIVEN_ROOT),
+        ({"tables": [{"": [0, 0]}, {}]}, MSG_DATA_DRIVEN_ROOT),
+        ({"tables": [{"": [1, 1]}, {"question": [1, 20]}]}, MSG_DATA_DRIVEN_ROW_TOTAL),
     ],
 )
 def test_a_table_this_version_cannot_use_is_refused(change: dict[str, Any], why: str) -> None:
@@ -136,7 +136,7 @@ def test_a_manifest_with_another_schema_is_refused(monkeypatch: pytest.MonkeyPat
 
 
 def test_the_patterns_stay_fast_on_a_long_prompt() -> None:
-    router, start = TrainedRouter(), time.perf_counter()
+    router, start = DataDrivenRouter(), time.perf_counter()
     openers = ("i want to " * 10_000 + "x", "i need to help me to " * 5_000)
     for prompt in (
         "please " * 50_000 + "x",
@@ -149,9 +149,9 @@ def test_the_patterns_stay_fast_on_a_long_prompt() -> None:
 
 
 def test_by_name_it_is_asked_by_plan_and_run_alone() -> None:
-    assert "trained" in available_routers()
-    built = TrainedRouter()
-    assert (built.route_tools, built.route_modes, built.router_name) == ((), False, "trained")
+    assert "data-driven" in available_routers()
+    built = DataDrivenRouter()
+    assert (built.route_tools, built.route_modes, built.router_name) == ((), False, "data-driven")
 
 
 @pytest.mark.usefixtures("called")
@@ -163,5 +163,5 @@ def test_by_name_it_is_asked_by_plan_and_run_alone() -> None:
     ],
 )
 def test_plan_follows_it(prompt: str, config: dict[str, Any], tool: str) -> None:
-    plan = wr(router="trained", router_config=config).plan(prompt)
-    assert (plan.tool, plan.decision.router) == (tool, "trained")
+    plan = wr(router="data-driven", router_config=config).plan(prompt)
+    assert (plan.tool, plan.decision.router) == (tool, "data-driven")

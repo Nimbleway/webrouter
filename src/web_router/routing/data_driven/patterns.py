@@ -1,12 +1,12 @@
-"""The trained router's regular expressions, copied from the code it was trained with.
+"""The data-driven router's regular expressions, copied from the code it was trained with.
 
 ``OPENER``'s possessive loop (``)*+``) prevents repeated openers from backtracking exponentially.
 The training code includes the same fix; every golden request keeps the same feature values.
 
 Never edit one: the tool table holds counts of requests keyed by what these match, so a changed pattern
-moves a request to another row with no error. ``tests/data/trained/golden.jsonl.gz`` holds what the training code
-returned for two thousand requests, and ``tests/test_trained_golden.py`` replays it against these.
-``make trained-router`` imports a new trained version and fails when these no longer match its code: only
+moves a request to another row with no error. ``tests/data/data_driven/golden.jsonl.gz`` holds what the training code
+returned for two thousand requests, and ``tests/test_data_driven_golden.py`` replays it against these.
+``make data-driven-router`` imports a new trained version and fails when these no longer match its code: only
 then is this file updated, from that code.
 """
 
