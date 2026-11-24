@@ -1,0 +1,154 @@
+name: Auto-merge controller
+
+# This workflow has access to repository secrets, so it must use trusted base
+# code only. It never checks out or executes pull-request code.
+on:
+  # Repository secrets are required for fork PRs. Every step below uses trusted
+  # base code and passes event data through environment variables.
+  pull_request_target: # zizmor: ignore[dangerous-triggers] App credentials; trusted base only.
+    branches: [main]
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - converted_to_draft
+      - labeled
+      - unlabeled
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Reconcile auto-merge
+    if: github.repository == 'Nimbleway/webrouter' && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create the repository-scoped App token
+        id: app-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ vars.WEBROUTER_AUTOMERGE_APP_ID }}
+          private-key: ${{ secrets.WEBROUTER_AUTOMERGE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+          permission-statuses: write
+
+      - name: Check out trusted policy code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+
+      - name: Fetch the live pull request
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: gh api "repos/$REPO/pulls/$PR" > "$RUNNER_TEMP/pull-request.json"
+
+      - name: Decide the transition
+        id: policy
+        env:
+          ACTION: ${{ github.event.action }}
+          EVENT_HEAD: ${{ github.event.pull_request.head.sha }}
+          EVENT_LABEL: ${{ github.event.label.name }}
+        run: |
+          python3 scripts/auto_merge_policy.py \
+            --action "$ACTION" \
+            --event-head "$EVENT_HEAD" \
+            --event-label "$EVENT_LABEL" \
+            --pull-request "$RUNNER_TEMP/pull-request.json" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Reset or hold the current head
+        if: steps.policy.outputs.decision == 'reset' || steps.policy.outputs.decision == 'hold'
+        env:
+          DECISION: ${{ steps.policy.outputs.decision }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          HEAD: ${{ steps.policy.outputs.head }}
+          PR: ${{ github.event.pull_request.number }}
+          REASON: ${{ steps.policy.outputs.reason }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [[ "$(gh pr view "$PR" --repo "$REPO" --json autoMergeRequest --jq '.autoMergeRequest != null')" == "true" ]]; then
+            gh pr merge "$PR" --repo "$REPO" --disable-auto
+          fi
+
+          if [[ "$DECISION" == "reset" ]] \
+            && jq -e '.labels[]? | select(.name == "Qodo approved")' "$RUNNER_TEMP/pull-request.json" >/dev/null; then
+            gh api --method DELETE "repos/$REPO/issues/$PR/labels/Qodo%20approved"
+          fi
+
+          gh api --method POST "repos/$REPO/statuses/$HEAD" \
+            -f state=pending \
+            -f context=qodo-ready \
+            -f description="Waiting: $REASON" \
+            -f target_url="$RUN_URL"
+
+      - name: Re-fetch the ready candidate
+        if: steps.policy.outputs.decision == 'ready'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: gh api "repos/$REPO/pulls/$PR" > "$RUNNER_TEMP/pull-request-ready.json"
+
+      - name: Verify the ready candidate
+        if: steps.policy.outputs.decision == 'ready'
+        id: verified
+        env:
+          ACTION: ${{ github.event.action }}
+          EVENT_HEAD: ${{ github.event.pull_request.head.sha }}
+          EVENT_LABEL: ${{ github.event.label.name }}
+        run: |
+          python3 scripts/auto_merge_policy.py \
+            --action "$ACTION" \
+            --event-head "$EVENT_HEAD" \
+            --event-label "$EVENT_LABEL" \
+            --pull-request "$RUNNER_TEMP/pull-request-ready.json" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Mark Qodo ready and arm squash auto-merge
+        if: steps.verified.outputs.decision == 'ready'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          HEAD: ${{ steps.verified.outputs.head }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/$REPO/statuses/$HEAD" \
+            -f state=pending \
+            -f context=qodo-ready \
+            -f description="Controller is arming squash auto-merge" \
+            -f target_url="$RUN_URL"
+
+          auto_method="$(gh pr view "$PR" --repo "$REPO" --json autoMergeRequest --jq '.autoMergeRequest.mergeMethod // ""')"
+          if [[ -n "$auto_method" && "$auto_method" != "SQUASH" ]]; then
+            gh pr merge "$PR" --repo "$REPO" --disable-auto
+          fi
+          if [[ "$auto_method" != "SQUASH" ]] \
+            && ! gh pr merge "$PR" --repo "$REPO" --auto --squash --match-head-commit "$HEAD"; then
+            gh api --method POST "repos/$REPO/statuses/$HEAD" \
+              -f state=error \
+              -f context=qodo-ready \
+              -f description="Controller could not arm auto-merge" \
+              -f target_url="$RUN_URL"
+            exit 1
+          fi
+
+          gh api --method POST "repos/$REPO/statuses/$HEAD" \
+            -f state=success \
+            -f context=qodo-ready \
+            -f description="Qodo approved the current head" \
+            -f target_url="$RUN_URL"

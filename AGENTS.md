@@ -64,7 +64,7 @@ when there are none.
 CDP URL the caller drives with Playwright, browser-use or Stagehand, and
 released when the block holding it ends. The handle can also drive the page
 itself — `goto`, `snapshot`, `click`, `type`, `press`, `screenshot`, `read` —
-installed by `browser`. Steel, Browserbase, Hyperbrowser, Anchor, Kernel, the keyless
+installed by [browser]. Steel, Browserbase, Hyperbrowser, Anchor, Kernel, the keyless
 `local`, which launches a Chromium on this machine, and `auto`, which tries the
 vendors you hold keys for and then `local`.
 
@@ -157,7 +157,7 @@ src/web_router/
 ├── client_requests.py  the routers' request builders: a method's arguments in, its
 │                       normalized request out; JsonSchema; the sync router's
 │                       async_client check
-├── evals/              accuracy: a question set, judged — installed by `evals`
+├── evals/              accuracy: a question set, judged — installed by [evals]
 │   ├── types.py        EvaluationReport / EvaluationRow / ProviderScore, Grade
 │   ├── datasets.py     Dataset / Question — SimpleQA, SimpleQA Verified, FRAMES,
 │   │                   SealQA, or a CSV; seeded sampling; answer-key pages withheld
@@ -369,7 +369,7 @@ src/web_router/
 │                       stdout, a JSON error and an exit status on stderr
 │                       (output.py); its strings live in constants_cli.py
 ├── mcp/                the stdio MCP server — a thin projection of the methods
-│                       for an agent to call, installed by `mcp`
+│                       for an agent to call, installed by [mcp]
 │   ├── methods.py      the library method behind each provider-picking tool: its
 │   │                   registry, classes, options and env table, in one table
 │   ├── schema.py       a tool's schema narrowed to the backends serving it here,
@@ -398,7 +398,7 @@ src/web_router/
 │   ├── _tools.py       the Claude and OpenAI tools' shared half: names,
 │   │                   schemas, input checks, the executor, routing_guide()
 │   ├── langchain.py    WebRouterSearch / WebRouterExtract tools — installed by
-│   │                   `langchain`
+│   │                   [langchain]
 │   ├── anthropic.py    WebRouterTools (Claude custom tools + local executor)
 │   │                   and routing_guide() — no SDK, no extra
 │   └── openai.py       WebRouterTools (OpenAI function tools, Responses and
@@ -1625,9 +1625,12 @@ keeps its ancestry, then squash only the final integration pull request into `ma
 
 A required code-owner approval is valid only for the head commit it covers; Qodo's review is a
 separate gate. After any new commit, wait for fresh code-owner approval of the latest head.
-Immediately before enabling auto-merge, read the current head again and verify that every merge
-requirement is already satisfied, including green required checks, approval of that exact head, and
-the correct merge method. Do not enable auto-merge to wait for unfinished checks or approval.
+For a pull request into `main`, the [auto-merge controller](.github/auto-merge.md) disables any old
+auto-merge request and resets `qodo-ready` on every new head. When Qodo adds `Qodo approved` to that
+exact head, the controller arms squash auto-merge with the head SHA pinned. GitHub then waits for
+required CI, `qodo-ready`, current code-owner approval, and resolved conversations. Do not arm it
+manually except to recover a failed controller run after rechecking the same conditions. Pull requests
+into integration branches are ignored, so stack parents keep the merge-commit exception above.
 
 A change users would notice adds a fragment, `changelog.d/<name>.<type>.md`, holding one entry of at
 most 400 characters (format in `changelog.d/README.md`); never edit `CHANGELOG.md`, which `make changelog`
