@@ -251,11 +251,18 @@ def test_an_unfinished_run_is_not_asked_for_an_answer_it_does_not_have(provider:
     assert api.calls == [("GET", f"/v1/tasks/runs/{RUN_ID}")]
 
 
-def test_a_run_id_cannot_point_a_request_elsewhere(provider: ParallelResearchProvider) -> None:
+@pytest.mark.parametrize("asynchronous", [False, True])
+async def test_a_run_id_cannot_point_a_request_elsewhere(
+    provider: ParallelResearchProvider, asynchronous: bool
+) -> None:
     run_id = "trun_1/../../v1/x?y=1"
     api = _stub(provider, states=[_run("completed", run_id=run_id)])
+    request = ResearchRequest(query="q")
 
-    provider.poll(ResearchRequest(query="q"), run_id)
+    if asynchronous:
+        await provider.apoll(request, run_id)
+    else:
+        provider.poll(request, run_id)
 
     assert api.calls == [
         ("GET", "/v1/tasks/runs/trun_1%2F..%2F..%2Fv1%2Fx%3Fy%3D1"),
