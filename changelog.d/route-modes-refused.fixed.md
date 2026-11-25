@@ -1,0 +1,1 @@
+With `route_modes` or `extra_modes`, a vendor mode its backend refuses for the request, such as Parallel's `low` effort beside an `include_domains` entry with a path, is now dropped from the candidates with why, so a routed search moves on to the next attempt instead of raising `UnsupportedParameterError`.
