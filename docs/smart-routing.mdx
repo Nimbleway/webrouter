@@ -559,8 +559,8 @@ field may be left out or `null`):
   own bearer key, `api_key` in `router_config` or
   `WEB_ROUTER_REMOTE_ROUTER_API_KEY` (read once, when the router is built,
   and refused unless it is visible ASCII), never logged.
-- **Transport.** httpx (`pip install "webrouter[remote]"`, or any method
-  extra), imported only when the router is built. The router is async only,
+- **Transport.** httpx (included in `pip install webrouter`),
+  imported only when the router is built. The router is async only,
   so a call past its time is cancelled rather than left running, from sync and
   async code alike. Its one connection pool belongs to the event loop that
   first used it -- for `WebRouter`, web-router's private loop, where all its
@@ -655,8 +655,7 @@ wr = WebRouter(router="search-first")
 
 Two deciders are built in, each a registered name. Nothing is on by default:
 each sends the prompt off your machine only when you name it. Both post with
-httpx, so install the `remote` extra (`pip install "webrouter[remote]"`, or
-`all`) to use them.
+httpx, which the base install (`pip install webrouter`) includes.
 
 - **`router="llm"`**: a chat model on any OpenAI-compatible chat-completions
   API, posted with httpx (no SDK, so no `OPENAI_BASE_URL` or other variable is
@@ -734,7 +733,7 @@ order, and the record says only `router_timeout`, `router_error` or
 raises carries the error class or HTTP status and the scheme and host on its
 `__cause__`, never the URL's path or the key. The record names each
 `llm(<host>)` or `systemone(<host>)`: the host, not the model. Both need
-httpx, which the `remote` extra installs. Each call bills on that server: the
+httpx, which the base install includes. Each call bills on that server: the
 router's own call is billed by its vendor and is not counted in a `Budget`'s
 cost or the record's `estimated_cost_usd`.
 

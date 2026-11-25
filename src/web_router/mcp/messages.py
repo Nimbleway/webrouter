@@ -10,10 +10,11 @@ from mcp_types import CallToolResult, TextContent
 
 from web_router.constants_mcp import MCP_PROVIDER_CONFIG_ASIDE, MCP_PROVIDER_CONFIG_CLAUSE
 from web_router.constants_mcp_context import MCP_LOG_TOOL_RAISED, MCP_MSG_ERROR_FACTS
-from web_router.exceptions import WebRouterError
+from web_router.constants_mcp_instructions import MCP_UNTRUSTED_MARK
+from web_router.exceptions import DeadlineExceededError, ProviderError, WebRouterError
 from web_router.mcp.key_text import key_hint
 from web_router.mcp.masking import mask_configured_text
-from web_router.mcp.shaping import redact, redaction_note
+from web_router.mcp.shaping import redact, redaction_note, render
 from web_router.types_errors import is_retryable
 
 _LOG = logging.getLogger(__name__)
@@ -29,6 +30,8 @@ def failure_result(exc: Exception) -> CallToolResult:
     if not isinstance(exc, WebRouterError | ValueError):
         frames = "".join(traceback.format_tb(exc.__traceback__))
         _LOG.error(MCP_LOG_TOOL_RAISED, type(exc).__name__, text, frames)
+    if isinstance(exc, ProviderError | DeadlineExceededError):
+        text = f"{render(MCP_UNTRUSTED_MARK)}\n{text}"
     return CallToolResult(content=[TextContent(text=text)], is_error=True)
 
 

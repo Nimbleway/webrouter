@@ -1,0 +1,1 @@
+A search result's `description` is now the backend's own short snippet, or at most 500 characters taken from the body when the backend sends none; the full text is only in `content`, no longer repeated in `description`.

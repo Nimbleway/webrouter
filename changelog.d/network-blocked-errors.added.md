@@ -1,0 +1,1 @@
+A call that every backend failed because this machine's proxy or firewall refused their hosts, or could not reach them, now says so: `ProviderError.kind` is `network_blocked` or `unreachable`, `AllProvidersFailedError` names the hosts to allow in `blocked_hosts`, and the CLI's error JSON adds `kind`, `hops` and `blocked_hosts`.

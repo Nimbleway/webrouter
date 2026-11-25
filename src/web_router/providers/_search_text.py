@@ -7,28 +7,14 @@ import re
 from collections.abc import Sequence
 from typing import Any
 
-from web_router.constants import SNIPPET_LIMIT
 from web_router.constants_search import EXCLUDE_SITE_OPERATOR, MSG_NOT_A_DOMAIN, SITE_DOMAIN_PATTERN, SITE_OPERATOR
+from web_router.snippet import as_snippet as as_snippet
 from web_router.types import SearchDepth, SearchRequest, SearchResult
 
 DOMAIN_LISTS = ("include_domains", "exclude_domains")
 """The two domain filters a search request carries."""
 
 _SITE_DOMAIN = re.compile(SITE_DOMAIN_PATTERN)
-
-
-def as_snippet(text: str) -> str:
-    """Shorten body text to something the size of a snippet.
-
-    For providers that return page content but no summary, so ``description``
-    means the same thing everywhere. Breaks on whitespace to avoid cutting a
-    word in half.
-    """
-    if len(text) <= SNIPPET_LIMIT:
-        return text
-    head = text[:SNIPPET_LIMIT]
-    cut = head.rfind(" ")
-    return (head[:cut] if cut > 0 else head).rstrip() + "\u2026"
 
 
 def lite_body(text: str, depth: SearchDepth | None) -> str:

@@ -48,12 +48,13 @@ from web_router.constants_tavily import TAVILY_SEARCH_PARAMETERS
 from web_router.exceptions import ConfigurationError
 from web_router.modes import ModeDeclarations
 from web_router.providers._http import HttpSearchProvider
-from web_router.providers._search_text import as_snippet, lite_body
+from web_router.providers._search_text import lite_body
 from web_router.providers._utils import best_text
 from web_router.providers.exa import ExaProvider
 from web_router.providers.parallel_search import ParallelProvider
 from web_router.providers.tavily import TavilyProvider, search_fields
 from web_router.routing.remote_url import checked_url
+from web_router.snippet import as_snippet
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 

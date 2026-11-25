@@ -222,8 +222,8 @@ class SearchResult(BaseModel):
     description: str = Field(
         default="",
         description=(
-            "A snippet-length summary: the provider's own when it gives one, otherwise "
-            "the head of the page body so the field means the same thing everywhere."
+            "A snippet of at most 500 characters: the backend's own when it sends one, otherwise the head of "
+            "the page body. Each backend's mapping cuts it, so it never repeats the full text in `content`."
         ),
     )
     content: str = Field(
@@ -274,7 +274,7 @@ class ExtractedDocument(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     url: str
-    title: str = Field(default="", description="The page title, when the provider returned one.")
+    title: str = Field(default="", description="The page title, from the provider or the page's title, og:title or H1.")
     content: str = Field(default="", description="The page body, in the representation :attr:`format` names.")
     format: ExtractFormat | None = Field(
         default=None,

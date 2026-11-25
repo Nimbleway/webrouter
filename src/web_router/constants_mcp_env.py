@@ -48,12 +48,15 @@ MCP_MSG_ENV_BAD_ARGUMENTS = (
 )
 
 ENV_MCP_LOAD_ENV = "WEB_ROUTER_MCP_LOAD_ENV"
-"""What the ``load_env`` tool may do: load and remember, load for this session only, or nothing (not listed)."""
+"""What the ``load_env`` tool may do: load and remember, load for this session only, or nothing (not listed, the
+default). The ``.env`` files the server reads at startup are read whatever this says."""
 
 MCP_LOAD_ENV_REMEMBER = "remember"
 MCP_LOAD_ENV_LOAD = "load"
 MCP_LOAD_ENV_OFF = "off"
-MCP_LOAD_ENV_DEFAULT = MCP_LOAD_ENV_REMEMBER
+MCP_LOAD_ENV_DEFAULT = MCP_LOAD_ENV_OFF
+MCP_MSG_LOAD_ENV_OFF = "off; {name}={value} turns it on"
+"""The capabilities resource's ``tools.load_env`` while the tool is off."""
 
 ENV_MCP_REMEMBERED_ENV = "WEB_ROUTER_MCP_REMEMBERED_ENV"
 """Where a remembered ``.env`` is read at startup: in any directory, only inside the one it lies in, or never."""
@@ -71,15 +74,24 @@ MCP_CWD_ENV_OFF = "off"
 MCP_CWD_ENV_DEFAULT = MCP_CWD_ENV_ON
 
 ENV_MCP_PRIVATE_URLS = "WEB_ROUTER_MCP_PRIVATE_URLS"
-"""Whether the browser tools may open loopback and private-network addresses: on by default, off over HTTP,
-where the browser runs on a shared server and those addresses are the server's own network."""
+"""Whether the browser tools may open loopback, private-network and link-local addresses (cloud metadata among
+them): off unless the operator turns it on, for a local app the user is building."""
 
 MCP_PRIVATE_URLS_ON = "on"
 MCP_PRIVATE_URLS_OFF = "off"
-MCP_PRIVATE_URLS_DEFAULT = MCP_PRIVATE_URLS_ON
+MCP_PRIVATE_URLS_DEFAULT = MCP_PRIVATE_URLS_OFF
+
+ENV_MCP_PROFILE = "WEB_ROUTER_MCP_PROFILE"
+"""Which tools the server serves when ``WEB_ROUTER_MCP_TOOLS`` is unset: ``slim`` (the default) or ``full``."""
+
+MCP_PROFILE_SLIM = "slim"
+MCP_PROFILE_FULL = "full"
+MCP_PROFILE_ALLOWLIST = "allowlist"
+"""What the capabilities resource names as the profile when ``WEB_ROUTER_MCP_TOOLS`` chose the tools instead."""
 
 MCP_MSG_BROWSER_REFUSED_PRIVATE = (
-    "that is a loopback or private-network address, which this server may not open ({env_var}=off)"
+    "that is a loopback or private-network address, which this server does not open; the operator can allow "
+    "it by setting {env_var}=on"
 )
 
 MCP_ENV_SWITCHES: dict[str, tuple[tuple[str, ...], str]] = {
@@ -90,8 +102,9 @@ MCP_ENV_SWITCHES: dict[str, tuple[tuple[str, ...], str]] = {
     ),
     ENV_MCP_CWD_ENV: ((MCP_CWD_ENV_ON, MCP_CWD_ENV_OFF), MCP_CWD_ENV_DEFAULT),
     ENV_MCP_PRIVATE_URLS: ((MCP_PRIVATE_URLS_ON, MCP_PRIVATE_URLS_OFF), MCP_PRIVATE_URLS_DEFAULT),
+    ENV_MCP_PROFILE: ((MCP_PROFILE_SLIM, MCP_PROFILE_FULL), MCP_PROFILE_SLIM),
 }
-"""Each switch's accepted values and its default, which is today's behaviour. Unset or blank is the default."""
+"""Each switch's accepted values and its default, the safer setting. Unset or blank is the default."""
 
 MCP_MSG_ENV_BAD_SWITCH = "{name}={value!r} is not one of {values}; unset it for the default, {default}."
 

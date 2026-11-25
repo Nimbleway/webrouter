@@ -139,8 +139,8 @@ also need `WEB_ROUTER_ALLOW_DATA_API_WRITES=1` on the server.
 
 An HTTP error raises `ProviderError` with every credential masked out of the
 vendor's message, including URL-encoded copies of a key sent in the query.
-`AsyncWebRouter` has the same methods, awaited. The data API methods need the
-`vendors` extra (httpx), which `all` and `mcp` include.
+`AsyncWebRouter` has the same methods, awaited. The data API methods need nothing
+beyond the base install, which carries httpx.
 
 The old names (`call_vendor`, `vendor_request`, `vendors()`, `vendor()`,
 `vendor_endpoint`, `find_vendor_endpoints`, `vendor_credentials=`,

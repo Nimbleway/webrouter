@@ -11,10 +11,12 @@ import argparse
 import math
 from typing import Any, NoReturn, get_args
 
+from web_router._version import __version__
 from web_router.constants_cli import (
     CLI_DESCRIPTION,
     CLI_EPILOG,
     CLI_PROG,
+    CLI_VERSION,
     HELP,
     HELP_COMMAND,
     MSG_BAD_NUMBER,
@@ -86,6 +88,9 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     _output_flags(parser, default=False)
+    parser.add_argument(
+        "--version", action="version", version=CLI_VERSION.format(version=__version__), help=HELP["version"]
+    )
     commands = parser.add_subparsers(dest="command", required=True, metavar="COMMAND", parser_class=_Parser)
     _search(commands)
     _extract(commands)

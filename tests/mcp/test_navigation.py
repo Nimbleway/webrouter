@@ -11,6 +11,7 @@ from __future__ import annotations
 import importlib.util
 import inspect
 import socket
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -26,7 +27,7 @@ from web_router.mcp.navigation import NavigationGuard, NavigationPolicy, files_a
 
 CDP = "ws://127.0.0.1:9333/devtools/browser/abc"
 
-POLICY = NavigationPolicy.for_session(CDP, allow_files=False)
+POLICY = replace(NavigationPolicy.for_session(CDP, allow_files=False), allow_private=True)  # its own rules alone
 
 PUBLIC = "93.184.215.14"
 
@@ -288,9 +289,8 @@ async def _installed() -> tuple[NavigationGuard, FakePlaywrightPage]:
 
 
 async def test_a_redirect_to_a_refused_host_is_caught_where_the_page_landed() -> None:
-    # Playwright routes only a chain's first request, so the hop to the metadata
-    # service is seen by the after-action check -- the page is taken back before
-    # anything it loaded reaches the model.
+    # Playwright routes only a chain's first request, so the hop to the metadata service is seen by the
+    # after-action check -- the page is taken back before anything it loaded reaches the model.
     guard, page = await _installed()
     first = FakeRoute(FakeRequest("http://127.0.0.1:8000/redirect"))
 

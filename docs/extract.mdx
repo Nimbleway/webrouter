@@ -5,8 +5,8 @@ sidebarTitle: "Extract"
 icon: "file-lines"
 ---
 
-`extract()` is the other half: give it URLs you already have and it returns the
-pages, through whichever backend you point it at.
+`extract()` is the other half: give it URLs you already have and it returns the pages, through whichever backend you
+point it at.
 
 ```python
 response = router.extract(
@@ -18,10 +18,9 @@ for document in response.documents:
     print(document.url, document.format, len(document.content))
 ```
 
-One URL or many: `router.extract("https://example.com")` is the same call, and
-the answer has the same shape. Backends that take a single URL per request are
-fanned out for you, concurrently on `AsyncWebRouter`, and the documents come back
-in the order you asked for them.
+One URL or many: `router.extract("https://example.com")` is the same call, and the answer has the same shape. Backends
+that take a single URL per request are fanned out for you, concurrently on `AsyncWebRouter`, and the documents come
+back in the order you asked for them.
 
 ## Formats
 
@@ -34,15 +33,12 @@ page should come back as, mapped onto each backend's own vocabulary.
 | `html` | The page's HTML as fetched | `formats: [html]` |  | `formats: [html]` | default (`type: raw`) | default | `X-Return-Format: html` | `includeRawContent: true` | `format: raw` (the body as served) |
 | `text` | Visible text, no markup |  | `format: text` |  |  |  | `X-Return-Format: text` |  |  |
 
-Exa is left out of the table because it has one row to give: its Contents API
-returns `text` and nothing else, asked for as `text: true`. WebIQ is left out
-too: Browse takes `contentFormat: markdown` or `text`, and its `html` is a
-simplified markup rather than the page as fetched, so `html` is refused. It
-reads WebIQ's own index, so a page WebIQ has not crawled comes back as a
-failure. Keenable is left out as well: its Fetch API has no format field and
-returns markdown alone, so `html` and `text` are refused. WebRouter asks it for
-up to 500,000 characters, since it otherwise cuts a page at 50,000. DeepSeek is
-left out too: its Fetch API returns markdown alone.
+Exa is left out of the table because it has one row to give: its Contents API returns `text` and nothing else, asked
+for as `text: true`. WebIQ is left out too: Browse takes `contentFormat: markdown` or `text`, and its `html` is a
+simplified markup rather than the page as fetched, so `html` is refused. It reads WebIQ's own index, so a page WebIQ
+has not crawled comes back as a failure. Keenable is left out as well: its Fetch API has no format field and returns
+markdown alone, so `html` and `text` are refused. WebRouter asks it for up to 500,000 characters, since it otherwise
+cuts a page at 50,000. DeepSeek is left out too: its Fetch API returns markdown alone.
 
 A backend that cannot produce the format you asked for **raises rather than
 returning a different one under the same name**, because code that pipes
@@ -55,12 +51,15 @@ WebRouter(Provider.TAVILY).extract("https://example.com", format="html")
 # 'html', or add the mapping -- see CONTRIBUTING.md.
 ```
 
-`document.format` always says which representation `document.content` holds.
-Leave `format` unset and you get `markdown` from every backend that can return
-it, Nimble, Oxylabs and Bright Data included, whose own APIs default to HTML:
-an agent reading the page pays for every character. Exa, which returns only
-text, returns `text` and says so. Ask for `html` by name to get the markup. `auto` takes all three formats and sends each call only to a
-member that returns the one asked for.
+`document.format` always says which representation `document.content` holds. Leave `format` unset and you get
+`markdown` from every backend that can return it, Nimble, Oxylabs and Bright Data included, whose own APIs default to
+HTML: an agent reading the page pays for every character. Exa, which returns only text, returns `text` and says so.
+Ask for `html` by name to get the markup. `auto` takes all three formats and sends each call only to a member that
+returns the one asked for.
+
+`document.title` is filled on every backend. When a backend returns none,
+WebRouter reads it from the page: the HTML `<title>`, then `og:title`, then the
+first H1 of the HTML or markdown. Markdown headings over 1,000 characters are skipped. The H1 stays in `content`.
 
 ## Partial failure
 
@@ -76,24 +75,20 @@ response.failures[0].url  # 'https://nope.invalid'
 response.failures[0].error  # why it did not come back
 ```
 
-A call where **nothing** came back raises instead, so a bad credential can never
-look like a page with no text. When the URLs failed separately, it raises an
-`ExtractFailedError` whose `url_failures` holds each URL's own failure, as
-`failures` would have. This works the same way whether the backend
-reports its own per-URL failures (Tavily, Exa) or was fanned out one URL at a
-time (everything else). That uniformity is enforced in `ExtractProvider`, not
-asked of each provider.
+A call where **nothing** came back raises instead, so a bad credential can never look like a page with no text. When
+the URLs failed separately, it raises an `ExtractFailedError` whose `url_failures` holds each URL's own failure, as
+`failures` would have. This works the same way whether the backend reports its own per-URL failures (Tavily, Exa) or
+was fanned out one URL at a time (everything else). That uniformity is enforced in `ExtractProvider`, not asked of
+each provider.
 
-`response.raw` holds the untouched payloads, one per API call that answered: a
-single entry from a backend that took every URL at once, one per URL that came
-back from a backend that did not. A call that failed outright is in `failures`
-instead; there was no payload to keep.
+`response.raw` holds the untouched payloads, one per API call that answered: a single entry from a backend that took
+every URL at once, one per URL that came back from a backend that did not. A call that failed outright is in
+`failures` instead; there was no payload to keep.
 
 ### Under a timeout
 
-`timeout=` caps how many seconds the call waits. Each vendor call still running
-when it runs out is cut off, its URLs land in `failures` with `kind` `timeout`,
-and the pages that came back in time are returned:
+`timeout=` caps how many seconds the call waits. Each vendor call still running when it runs out is cut off, its URLs
+land in `failures` with `kind` `timeout`, and the pages that came back in time are returned:
 
 ```python
 response = router.extract(urls, provider="jina", timeout=10)
@@ -102,11 +97,10 @@ response.documents  # every page read within 10 seconds
 [f.url for f in response.failures if f.kind == "timeout"]  # the ones still loading
 ```
 
-When nothing came back in time the call raises `DeadlineExceededError`; when a
-single vendor call failed for a reason of its own, such as a 401, that error is
-raised as it came. `timeout=10` is the same as `budget=Budget(time_limit_s=10)`,
-and beside a `budget` the tighter time cap holds; see
-[Running in production](/production#timeouts).
+When nothing came back in time the call raises `DeadlineExceededError`; when a single vendor call failed for a reason
+of its own, such as a 401, that error is raised as it came. `timeout=10` is the same as
+`budget=Budget(time_limit_s=10)`, and beside a `budget` the tighter time cap holds; see [Running in
+production](/production#timeouts).
 
 ### Error pages, challenges and login walls
 
@@ -121,22 +115,28 @@ same rule turns these into failures rather than documents:
 - **A login wall.** A page titled "Sign in" or "Login", one that asks you to sign
   in to view it, or one LinkedIn sent to its `/authwall`.
 
-Each failure carries a `kind` and the page's `status_code`. A 404 or 410 is
-`target`, whatever the page shows: the site says the page is gone, every
-backend would read the same, so `auto` does not try another for that URL. Any
-other error status, or a challenge or login wall served with a status below
-400, is `upstream`, and `auto` tries the next backend for it. So is a 404 that
-a redirect reached, since it is the landing page's, not the URL asked for,
-when the page can be matched to the URL it came from. A
-call where every URL failed raises. The challenge and login checks read the
-title, and the text only of a short page, so an article that mentions a login
-page stays a document.
+Each failure carries a `kind` and the page's `status_code`. A 404 or 410 is `target`, whatever the page shows: the
+site says the page is gone, every backend would read the same, so `auto` does not try another for that URL. Any other
+error status, or a challenge or login wall served with a status below 400, is `upstream`, and `auto` tries the next
+backend for it. So is a 404 that a redirect reached, since it is the landing page's, not the URL asked for, when the
+page can be matched to the URL it came from. A call where every URL failed raises. The challenge and login checks read
+the title, and the text only of a short page, so an article that mentions a login page stays a document.
 
-A page with **almost no text** -- under 64 characters, often a shell its
-scripts fill in -- stays a document, because some real answers are that short
-(a plain-text endpoint, a one-line reply), but it carries a warning in
-`document.warnings`. That list also holds a backend's own warning about the
-page, such as Jina's "This page maybe not yet fully loaded".
+Three more kinds of page carry a warning in `document.warnings` instead:
+
+- **Almost no text.** Under 64 characters, often a shell its scripts fill in.
+- **A tracking pixel.** A short page that is a 1x1 image or a tracking pixel.
+- **Another site.** A redirect that landed on a different site from the one
+  asked for, such as an ad server. A redirect from a link shortener
+  (`bit.ly`, `t.co`, ...) does not count.
+
+A near-empty page stays a document under `auto` too, and `auto` does not try another backend for it: some real
+answers are that short (a plain-text endpoint, a one-line reply). Under `auto`, a tracking pixel or an off-site page is
+a failure of its URL, and `auto` tries the next backend for it. A tracking pixel stays a failure when no backend is
+left. An off-site page comes back with its warning when no later backend reads the URL, unless a later backend reports
+the page gone (404 or 410), since redirects can intentionally cross sites. A call to one named `provider` returns all
+three as documents with their warning. `document.warnings` also holds a backend's own warning about the page, such as Jina's "This page maybe not
+yet fully loaded".
 
 ### A batch under `auto`
 

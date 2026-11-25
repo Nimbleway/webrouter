@@ -31,8 +31,8 @@ from web_router.exceptions import ProviderError
 from web_router.providers._clock import recency_start
 from web_router.providers._cost import stated_cost
 from web_router.providers._http import HttpSearchProvider
-from web_router.providers._search_text import as_snippet
 from web_router.providers._utils import best_text, build_payload
+from web_router.snippet import as_snippet
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "content", "description", "publication_date", "relevance_score"})
@@ -91,11 +91,11 @@ class ValyuProvider(HttpSearchProvider):
         content = hit.get("content")
         body = content if isinstance(content, str) else ""
         # With no description of its own, the opening of the body is the snippet.
-        description = hit.get("description") or as_snippet(body)
+        description = hit.get("description") or body
         return SearchResult(
             url=hit.get("url", ""),
             title=hit.get("title") or "",
-            description=description,
+            description=as_snippet(description),
             content=best_text(body, description),
             score=hit.get("relevance_score"),
             # Valyu sends "" for a page with no known date.

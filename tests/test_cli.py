@@ -89,8 +89,8 @@ def test_refused_input_exits_with_usage(argv: tuple[str, ...], capsys: pytest.Ca
 def test_providers_lists_each_method(capsys: pytest.CaptureFixture[str]) -> None:
     status, out, _ = _run(capsys, "providers")
     assert status == EXIT_OK
-    assert {"search", "extract", "answer", "research", "browse", "browser", "live_data"} == set(out)
-    assert "auto" in out["search"]
+    assert {"search", "extract", "answer", "research", "browse", "browser", "live_data"} < set(out)
+    assert "auto" in out["search"] and {"keyless", "needs_key"} <= set(out)
 
 
 def _spy(monkeypatch: pytest.MonkeyPatch, cls: type[Any]) -> list[Any]:

@@ -12,6 +12,7 @@ from web_router.exceptions_typed import AllProvidersFailedError
 from web_router.integrations import short_error
 from web_router.integrations._render import render_extract
 from web_router.types import ExtractedDocument, ExtractResponse
+from web_router.types_errors import ProviderErrorKind
 
 
 def _throttled() -> ProviderError:
@@ -39,6 +40,19 @@ def test_an_auto_failure_names_each_backend_it_tried_and_its_kind() -> None:
 
 def test_a_call_out_of_time_is_a_retryable_timeout() -> None:
     assert short_error(DeadlineExceededError("exa", 20.0)) == "exa: no answer in time (kind=timeout, retryable=true)."
+
+
+@pytest.mark.parametrize(
+    ("kind", "reason"),
+    [
+        ("network_blocked", "this machine's proxy or firewall refused the backend's host"),
+        ("unreachable", "the backend's host did not resolve or refused the connection from here"),
+    ],
+)
+def test_network_failures_tell_the_model_why_the_call_failed(kind: ProviderErrorKind, reason: str) -> None:
+    error = ProviderError("exa", "vendor details", kind=kind)
+
+    assert short_error(error) == f"exa: {reason} (kind={kind}, retryable=false)."
 
 
 @pytest.mark.parametrize(

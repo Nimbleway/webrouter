@@ -1,0 +1,1 @@
+`webrouter providers` shows what `auto` can run without a key and, for a method with nothing configured, the variables that would enable it; research and browse list no backend when no key serves them. Adds `webrouter --version`.

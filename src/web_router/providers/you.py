@@ -44,6 +44,7 @@ from web_router.providers._search_text import DOMAIN_LISTS, lite_body, refused_d
 from web_router.providers._utils import best_text, build_payload, mapped
 from web_router.providers.you_answer import YouAnswerProvider as YouAnswerProvider
 from web_router.providers.you_research import YouResearchProvider as YouResearchProvider
+from web_router.snippet import as_snippet
 from web_router.types import (
     SearchDepth,
     SearchRequest,
@@ -128,7 +129,7 @@ class YouProvider(HttpSearchProvider):
         return SearchResult(
             url=hit.get("url", ""),
             title=hit.get("title") or "",
-            description=description,
+            description=as_snippet(description),
             content=lite_body(best_text(body, description), depth),
             published_date=hit.get("page_age"),
             extra={"section": section, **{k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS}},

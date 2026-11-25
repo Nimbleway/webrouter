@@ -65,9 +65,9 @@ from web_router.exceptions import ConfigurationError, ProviderError
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._mcp import McpSearchMixin
-from web_router.providers._search_text import as_snippet
 from web_router.providers._utils import build_payload, compact
 from web_router.providers.agentcore_sigv4 import _SigV4
+from web_router.snippet import as_snippet
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 _MAPPED_RESULT_FIELDS = frozenset({"text", "url", "title", "publishedDate"})

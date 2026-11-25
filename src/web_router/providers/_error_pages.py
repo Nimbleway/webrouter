@@ -2,14 +2,13 @@
 
 Every backend's answer passes through :func:`split_error_pages`, so the rule
 is the same whichever one served the call: an error status, a bot challenge
-or a login wall lands in ``failures`` naming why, and a near-empty page stays
-a document carrying a warning.
+or a login wall lands in ``failures`` naming why; a junk page (:func:`junk`)
+stays a document whose warning tells ``auto`` to try the next backend.
 """
 
 from __future__ import annotations
 
 import html
-import re
 from collections.abc import Iterable, Sequence
 from http import HTTPStatus
 from urllib.parse import urlsplit
@@ -18,16 +17,24 @@ from web_router.constants import MSG_EXTRACT_BAD_STATUS
 from web_router.constants_extract import (
     EXTRACT_CHALLENGE_MARKERS,
     EXTRACT_CHALLENGE_TITLE,
+    EXTRACT_COUNTRY_SECOND_LEVELS,
     EXTRACT_LOGIN_MARKERS,
     EXTRACT_LOGIN_TITLE,
     EXTRACT_LOGIN_URL_PARTS,
     EXTRACT_NEAR_EMPTY_CHARS,
+    EXTRACT_PIXEL_MAX_CHARS,
+    EXTRACT_PIXEL_TEXT,
+    EXTRACT_SHORTENER_HOSTS,
     EXTRACT_WALL_MAX_CHARS,
-    HTML_TITLE,
+    HTML_NON_TEXT,
     MSG_EXTRACT_CHALLENGE,
     MSG_EXTRACT_LOGIN_WALL,
     MSG_EXTRACT_NEAR_EMPTY,
+    MSG_EXTRACT_OFF_SITE,
+    MSG_EXTRACT_TRACKER_PIXEL,
 )
+from web_router.providers._delegated import is_delegated
+from web_router.providers._extract_title import html_title, titled
 from web_router.providers._url_match import asked_for, bare_url, owners
 from web_router.types import ExtractedDocument, ExtractFailure, ExtractResponse
 from web_router.types_errors import ERROR_KIND_TARGET, ERROR_KIND_UPSTREAM, TARGET_GONE_STATUSES
@@ -56,8 +63,7 @@ def split_error_pages(
 
     A page with a 4xx or 5xx status fails whatever it says: a site's "not
     found" page read as content is the error the caller most needs to see. A
-    near-empty page is kept, with :data:`MSG_EXTRACT_NEAR_EMPTY` in its
-    ``warnings``, since some real answers are that short.
+    junk page (:func:`junk`) is kept with its warnings; ``auto`` reads them.
 
     ``asked`` is the batch of URLs the call carried: a failure is named by the
     one it answers rather than by where a redirect landed, so the caller sees
@@ -74,7 +80,7 @@ def split_error_pages(
     for document, owner in zip(pages, named, strict=True):
         reason = not_the_page(document)
         if reason is None:
-            kept.append((_warned(document), owner))
+            kept.append((_warned(document if is_delegated() else titled(document), owner), owner))
         else:
             (failed if owner else strays).append(_failure(document, reason, owner))
     if strays and asked and all(owner for _, owner in kept):
@@ -130,7 +136,7 @@ def not_the_page(document: ExtractedDocument) -> str | None:
         return MSG_EXTRACT_LOGIN_WALL
     if len(document.content) >= EXTRACT_WALL_MAX_CHARS:
         return None
-    title = _title(document)
+    title = document.title or html_title(document)
     if EXTRACT_CHALLENGE_TITLE.search(title):
         return MSG_EXTRACT_CHALLENGE
     if EXTRACT_LOGIN_TITLE.search(title):
@@ -148,26 +154,36 @@ def _is_login_path(path: str) -> bool:
     return any(path == part or path.startswith(f"{part}/") for part in EXTRACT_LOGIN_URL_PARTS)
 
 
-def _title(document: ExtractedDocument) -> str:
-    """The page's title: the backend's, else the ``<title>`` of an HTML body, since some backends set none for HTML."""
-    if document.title or document.format != "html":
-        return document.title
-    found = HTML_TITLE.search(document.content)
-    return html.unescape(found.group(1)).strip() if found else ""
+def junk(document: ExtractedDocument, asked: str | None = None) -> list[str]:
+    """The warnings ``document`` earns as junk: near-empty, a tracking pixel, another site than ``asked``'s."""
+    text = _text(document)
+    pixel = len(text) < EXTRACT_PIXEL_MAX_CHARS and EXTRACT_PIXEL_TEXT.search(f"{document.title}\n{text}") is not None
+    flags = (
+        (MSG_EXTRACT_NEAR_EMPTY, 0 < len(text) < EXTRACT_NEAR_EMPTY_CHARS),
+        (MSG_EXTRACT_TRACKER_PIXEL, pixel),
+        (MSG_EXTRACT_OFF_SITE, asked is not None and off_site(asked, document.url)),
+    )
+    return [warning for warning, flagged in flags if flagged]
 
 
-HTML_NON_TEXT = re.compile(r"<(script|style)\b.*?</\1>|<[^>]*>", re.IGNORECASE | re.DOTALL)
+def off_site(asked: str, landed: str) -> bool:
+    """Whether ``landed`` is on another site than ``asked``: ``shop.com`` to ``shop.de`` is not, an ad host is."""
+    shortener = (urlsplit(asked).hostname or "").removeprefix("www.") in EXTRACT_SHORTENER_HOSTS
+    return not shortener and "" not in (_site(asked), _site(landed)) and _site(asked) != _site(landed)
 
 
-def near_empty(document: ExtractedDocument) -> bool:
-    """Some text, but under :data:`EXTRACT_NEAR_EMPTY_CHARS` characters of it: a shell more often than a page."""
-    content = document.content
-    if document.format == "html":
-        content = html.unescape(HTML_NON_TEXT.sub(" ", content))
-    return 0 < len(content.strip()) < EXTRACT_NEAR_EMPTY_CHARS
+def _site(url: str) -> str:  # The name a host is registered under: `example` for www.example.com, shop.example.co.uk
+    labels = (urlsplit(url).hostname or "").removeprefix("www.").split(".")
+    country_suffix = len(labels) > 2 and len(labels[-1]) == 2 and labels[-2] in EXTRACT_COUNTRY_SECOND_LEVELS
+    return labels[-3 if country_suffix else -2] if len(labels) > 1 else labels[0]
 
 
-def _warned(document: ExtractedDocument) -> ExtractedDocument:
-    if not near_empty(document) or MSG_EXTRACT_NEAR_EMPTY in document.warnings:
-        return document
-    return document.model_copy(update={"warnings": [*document.warnings, MSG_EXTRACT_NEAR_EMPTY]})
+def _text(document: ExtractedDocument) -> str:  # Its text: an HTML body's without its tags, scripts and styles
+    text = html.unescape(HTML_NON_TEXT.sub(" ", document.content)) if document.format == "html" else document.content
+    return text.strip()
+
+
+def _warned(document: ExtractedDocument, asked: str | None) -> ExtractedDocument:
+    if found := [warning for warning in junk(document, asked) if warning not in document.warnings]:
+        return document.model_copy(update={"warnings": [*document.warnings, *found]})
+    return document
