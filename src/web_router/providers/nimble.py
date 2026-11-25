@@ -66,6 +66,8 @@ from web_router.types import (
     SearchResult,
 )
 
+_MAPPED_RESULT_FIELDS = frozenset({"url", "title", "description", "content", "metadata", "additional_data"})
+
 
 class NimbleProvider(_NimbleKeyless, SearchProvider):
     """Routes searches to the Nimble Search API."""
@@ -98,7 +100,11 @@ class NimbleProvider(_NimbleKeyless, SearchProvider):
                     description=description,
                     content=best_text(item.get("content"), description),
                     published_date=additional.get("publish_date") or additional.get("published_date"),
-                    extra={"metadata": item.get("metadata") or {}, **additional},
+                    extra={
+                        **{key: value for key, value in item.items() if key not in _MAPPED_RESULT_FIELDS},
+                        "metadata": item.get("metadata") or {},
+                        **additional,
+                    },
                 )
             )
 
