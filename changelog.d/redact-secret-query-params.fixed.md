@@ -1,0 +1,1 @@
+The MCP server now also redacts a URL whose query carries `refresh_token`, `id_token`, `client_secret`, `secret`, `password`, `private_key` or `access_key`, and a presigned URL (`X-Amz-Signature`, `X-Amz-Security-Token`, `X-Goog-Signature`). Parameters are still matched by exact name, so a `pageToken` is kept.

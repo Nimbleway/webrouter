@@ -338,6 +338,7 @@ src/web_router/
 ├── constants_mcp.py    the MCP server's instructions, and its routing tools' names, schemas,
 │                       descriptions, environment variables and messages
 ├── constants_mcp_hints.py each MCP tool's title and behaviour hints
+├── constants_mcp_redact.py the query parameters that mark a URL as carrying a credential
 ├── _urls.py            urls_in(): the URLs written in a query's prose; host_of(): a
 │                       URL shown as its scheme and host only
 ├── _hosts.py           a URL host's kind -- loopback, cloud metadata, private -- in

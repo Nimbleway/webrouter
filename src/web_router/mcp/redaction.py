@@ -3,7 +3,7 @@
 Kept apart from :mod:`web_router.mcp.shaping`, which re-exports it, so that file
 stops growing. A browse payload can carry the URL of the session the agent ran
 in, and some backends put a key in it; the rules are the ``MCP_REDACT_*`` tables
-in ``constants.py``.
+in ``constants.py`` and ``constants_mcp_redact.py``.
 """
 
 from __future__ import annotations
@@ -16,7 +16,6 @@ from web_router.constants import (
     MCP_MSG_REDACTED,
     MCP_REDACT_DEVTOOLS_PATTERN,
     MCP_REDACT_PLURAL,
-    MCP_REDACT_QUERY_PARAMS,
     MCP_REDACT_SECRET_KEY_SUFFIXES,
     MCP_REDACT_SECRET_KEYS,
     MCP_REDACT_SESSION_ID_KEY_SUFFIXES,
@@ -26,6 +25,7 @@ from web_router.constants import (
     MCP_REDACT_URL_SESSION_WORDS,
     MCP_REDACTED,
 )
+from web_router.constants_mcp_redact import MCP_REDACT_QUERY_PARAMS
 
 _URL = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s\"'<>]+")
 _DEVTOOLS = re.compile(MCP_REDACT_DEVTOOLS_PATTERN)

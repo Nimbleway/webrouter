@@ -277,6 +277,21 @@ def test_the_extra_credential_query_parameters_are_redacted(param: str) -> None:
     assert redact({"url": f"https://example.com/a?{param}=s"}) == ({"url": MCP_REDACTED}, 1)
 
 
+@pytest.mark.parametrize(
+    "param",
+    ["refresh_token", "id_token", "client_secret", "password", "private_key", "X-Amz-Signature", "X-Goog-Signature"],
+)
+def test_a_credential_or_a_presigned_signature_in_a_query_is_redacted(param: str) -> None:
+    assert redact(f"went to https://example.com/cb?{param}=s&x=1") == (f"went to {MCP_REDACTED}", 1)
+
+
+@pytest.mark.parametrize("param", ["pageToken", "csrf_token", "monkey"])
+def test_a_query_parameter_that_only_ends_like_a_credential_is_kept(param: str) -> None:
+    text = f"next page: https://example.com/list?{param}=abc"
+
+    assert redact(text) == (text, 0)
+
+
 def test_a_url_with_only_a_username_is_redacted() -> None:
     assert redact("see https://user@example.com/x") == (f"see {MCP_REDACTED}", 1)
 

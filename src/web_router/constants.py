@@ -3525,24 +3525,6 @@ What catches ``http://127.0.0.1:9222/devtools/browser/...`` quoted in an
 agent's note, where there is no key to go by.
 """
 
-MCP_REDACT_QUERY_PARAMS: frozenset[str] = frozenset(
-    {
-        "token",
-        "apikey",
-        "xapikey",
-        "signingkey",
-        "jwt",
-        "key",
-        "auth",
-        "accesstoken",
-        "authtoken",
-        "sessiontoken",
-        "signature",
-        "sig",
-    }
-)
-"""Query parameters, lowercased with ``_`` and ``-`` removed, that carry a credential inside a URL."""
-
 MCP_REDACT_SECRET_KEY_SUFFIXES: tuple[str, ...] = (
     "token",
     "apikey",
