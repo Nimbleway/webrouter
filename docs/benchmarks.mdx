@@ -81,7 +81,7 @@ report["nimble"].response.documents[0].content  # the full ExtractResponse rides
 ```
 
 Leave `providers` unset to compare every extract backend this environment holds
-credentials for plus the keyless Jina Reader, minus `auto`. `format` goes to
+credentials for plus the keyless Jina Reader, and `obscura` where its binary is installed, minus `auto`. `format` goes to
 every row unchanged; leave it unset and each backend answers in markdown where
 it can and its own default where it cannot, so every backend serves — name one
 and a backend that cannot return it is that row's `UnsupportedFormatError`,

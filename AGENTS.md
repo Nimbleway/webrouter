@@ -14,7 +14,8 @@ tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
 Firecrawl, Linkup, Oxylabs, Bright Data, WebIQ, Keenable, DeepSeek, Browserbase, SpecStream,
-the keyless Jina Reader, `auto` again, and `max`, which sends the request to
+the keyless Jina Reader, the opt-in `obscura` (a headless browser binary run on this
+machine, in no `auto` chain), `auto` again, and `max`, which sends the request to
 every member `auto` would try at once and returns the first document back -- the
 fastest answer any backend can give, at one fetch per member, so never the
 default. `profile` names a saved identity on the backend, the one a browser
@@ -516,6 +517,7 @@ src/web_router/
     ├── oxylabs.py      extract, via httpx — HTTP Basic, username + password
     ├── brightdata.py   extract, via httpx — needs a zone beside its token
     ├── jina.py         extract, keyless — Jina Reader
+    ├── obscura.py      extract, keyless — runs a local `obscura fetch` per URL
     ├── steel.py        browser, via httpx — the CDP URL carries the key
     ├── browserbase.py  browser + browse + extract, via httpx — Sessions, Agents
     │                   and Fetch APIs; one Context serves `profile` on sessions
@@ -1659,13 +1661,13 @@ from the environment (`NIMBLE_API_KEY`, `TAVILY_API_KEY`, `YOU_API_KEY`,
 `JINA_API_KEY`) or from `provider_config` at construction. `agentcore` reads
 `AGENTCORE_GATEWAY_URL`, which is not a secret; its credential is the AWS one
 botocore resolves, never a key of ours. `.env.example` lists
-every one, beside `CHROME_PATH`, which is a path for `local` rather than a
-secret; `WEB_ROUTER_ENV_FILE`, the path of the `.env` the MCP server loads, is
+every one, beside `CHROME_PATH` and `OBSCURA_PATH`, paths for `local` and `obscura` rather than
+secrets; `WEB_ROUTER_ENV_FILE`, the path of the `.env` the MCP server loads, is
 not a secret either and comes from the real environment only, since no file can
 set it. `ENV_BY_PROVIDER`, `EXTRACT_ENV_BY_PROVIDER`,
 `RESEARCH_ENV_BY_PROVIDER`, `ANSWER_ENV_BY_PROVIDER`, `BROWSER_ENV_BY_PROVIDER` and
 `BROWSE_ENV_BY_PROVIDER` in `constants.py` are the machine-readable versions.
-`auto`, `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina` and `local` need none, and
+`auto`, `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina`, `obscura` and `local` need none, and
 Nimble, Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and
 `ANTHROPIC_API_KEY` are the two library keys that are not a provider's: each is
 read only by its judge behind `evaluate()` (the `evals` extra) —
@@ -1708,7 +1710,7 @@ naming no file, never skipping it silently. Every file, from
 wherever, is read on the same terms: only `credential_variables()` — every
 variable `ALL_ENV_TABLES` in `mcp/env_credentials.py` names, and Jina's optional key — a user-scoped server can be started from any
 workspace, and a foreign `.env` must not flip `WEB_ROUTER_MCP_ALLOW_FILE_URLS`
-or aim `CHROME_PATH` at its own binary; a variable already set wins; nothing is
+or aim `CHROME_PATH` or `OBSCURA_PATH` at its own binary; a variable already set wins; nothing is
 interpolated, so `${OTHER}` cannot copy another secret into a provider's key;
 and finding no file is a no-op, so a fresh install starts on the keyless tier.
 `load_env` takes a path from the model, never a value, and refuses anything
@@ -1734,7 +1736,7 @@ a library that reads dotfiles behind its caller's back surprises whoever
 embeds it.
 
 If `web-router://capabilities` reports only the keyless backends (`auto`,
-`max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina`, `local`) on a machine that should have keys, the keys are
+`max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina`, `local`, and `obscura` where installed) on a machine that should have keys, the keys are
 not reaching the server, not missing from the account: read its `env` object —
 every place the server looked, what it found there, the file it used and the
 variables it loaded, by name — and check that the file holds them and that the

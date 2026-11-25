@@ -17,8 +17,9 @@ import pytest
 
 from tests.conftest import billing_aware
 from web_router import WebRouter
-from web_router.constants import ENV_BY_PROVIDER, EXTRACT_ENV_BY_PROVIDER
+from web_router.constants import ENV_BY_PROVIDER, EXTRACT_ENV_BY_PROVIDER, PROVIDER_OBSCURA
 from web_router.exceptions import UnsupportedParameterError
+from web_router.providers.obscura import obscura_installed
 from web_router.registry import (
     available_extract_providers,
     available_providers,
@@ -176,10 +177,12 @@ def _extractors(body_format: str | None = None) -> list:
     return [
         pytest.param(
             name,
-            marks=pytest.mark.skipif(
-                any(not os.getenv(env_var) for env_var in env_vars),
-                reason=f"{' / '.join(env_vars)} not set",
-            ),
+            marks=[
+                pytest.mark.skipif(
+                    any(not os.getenv(env_var) for env_var in env_vars), reason=f"{' / '.join(env_vars)} not set"
+                ),
+                pytest.mark.skipif(name == PROVIDER_OBSCURA and not obscura_installed(), reason="no obscura binary"),
+            ],
             id=name,
         )
         for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items()
