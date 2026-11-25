@@ -43,6 +43,17 @@ def test_an_id_naming_its_method_is_checked_for_that_method_only() -> None:
     assert WebRouter("extract:exa:exa-summary").default_provider == "extract:exa:exa-summary"
 
 
+@pytest.mark.parametrize("provider", ["exa:", ":exa", "exa::exa-instant"])
+def test_an_id_with_an_empty_part_fails_when_built(provider: str) -> None:
+    with pytest.raises(InvalidParameterError, match="is not tool:provider"):
+        WebRouter(provider)
+
+
+def test_a_method_without_modes_named_by_a_default_serves_its_backend() -> None:
+    """A research default named ``research:nimble`` serves ``nimble``, as the router's research getter does."""
+    assert WebRouter("research:nimble").default_provider == "research:nimble"
+
+
 def test_a_mode_on_a_backend_no_pinning_method_knows_is_refused() -> None:
     """``local`` only opens browsers, which take no mode."""
     with pytest.raises(InvalidParameterError, match="takes none of"):
@@ -51,7 +62,7 @@ def test_a_mode_on_a_backend_no_pinning_method_knows_is_refused() -> None:
 
 @pytest.mark.parametrize(
     ("tool", "provider"),
-    [("search", "exa:exa-instant"), ("SEARCH", "exa"), ("extract", "exa:exa-summary"), ("research", "research:nimble")],
+    [("search", "exa:exa-instant"), ("SEARCH", "exa"), ("extract", "exa:exa-summary"), ("research", "nimble")],
 )
 def test_check_passes_an_id_its_tool_takes(tool: str, provider: str) -> None:
     check_provider_id(provider, tool)
@@ -65,6 +76,8 @@ def test_check_passes_an_id_its_tool_takes(tool: str, provider: str) -> None:
         ("search", "exaa", ProviderNotFoundError, "exaa"),
         ("research", "exa", ProviderNotFoundError, "does not serve"),
         ("research", "nimble:fast", InvalidParameterError, "research takes none of"),
+        ("research", "research:nimble", ProviderNotFoundError, "research:nimble"),
+        ("search", "exa:", InvalidParameterError, "is not tool:provider"),
         ("search", "extract:exa:exa-summary", InvalidParameterError, "names 'extract'"),
         ("searh", "exa", InvalidParameterError, "not a router method"),
     ],

@@ -16,6 +16,7 @@ from web_router import registry
 from web_router.constants_modes import (
     ID_SEP,
     MODE_FIELD,
+    MSG_ID_SHAPE,
     MSG_PIN_NONE,
     MSG_PIN_TOOL,
     MSG_TOOL_UNKNOWN,
@@ -57,6 +58,8 @@ def check_provider_id(provider_id: str | Provider, tool: str | None = None) -> N
     tool = tool.lower() if tool is not None else None
     if tool is not None and tool not in TOOLS:
         raise InvalidParameterError("tool", MSG_TOOL_UNKNOWN.format(tool=tool), allowed=TOOLS)
+    if not all(text.split(ID_SEP)):  # "exa:" would build, then fail on its first call
+        raise InvalidParameterError(MODE_FIELD, MSG_ID_SHAPE.format(text=text))
     head = text.partition(ID_SEP)[0]
     named = head if ID_SEP in text and head in TOOLS else None
     if tool and named and named != tool:
@@ -66,7 +69,7 @@ def check_provider_id(provider_id: str | Provider, tool: str | None = None) -> N
         return
     if named:
         with suppress(ProviderNotInstalledError):  # modes unread here; the method used names the extra to install
-            _check_for(named, text)
+            _check_for(named, text, default=True)
         return
     backend, mode = split_pin(text)
     known = every_provider_name()
@@ -76,12 +79,16 @@ def check_provider_id(provider_id: str | Provider, tool: str | None = None) -> N
         _check_any(text, backend)
 
 
-def _check_for(tool: str, text: str) -> None:
-    """``text`` resolved as ``tool`` resolves it; a method that pins nothing refuses a mode."""
+def _check_for(tool: str, text: str, *, default: bool = False) -> None:
+    """``text`` resolved as ``tool`` resolves it; a method that pins nothing refuses a mode.
+
+    A method that pins nothing takes no method prefix in a call (``research(provider="research:nimble")`` fails),
+    but as a router's ``default`` it serves the id's backend.
+    """
     backend, mode = split_pin(text)
     if mode and tool not in _PINNED:
         raise InvalidParameterError(MODE_FIELD, MSG_PIN_NONE.format(text=text, tools=tool))
-    _CLASSES[tool][0](text if tool in _PINNED else backend)
+    _CLASSES[tool][0](backend if default and tool not in _PINNED else text)
 
 
 def _check_any(text: str, backend: str) -> None:
