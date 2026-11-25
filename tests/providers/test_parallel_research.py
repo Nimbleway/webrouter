@@ -117,7 +117,7 @@ class _Api:
         self.bodies: list[dict[str, Any]] = []
 
     def handle(self, request: httpx.Request) -> httpx.Response:
-        self.calls.append((request.method, request.url.path))
+        self.calls.append((request.method, request.url.raw_path.decode()))
         if request.method == "POST":
             self.bodies.append(json.loads(request.content))
             return httpx.Response(200, json=self._started)
@@ -249,6 +249,18 @@ def test_an_unfinished_run_is_not_asked_for_an_answer_it_does_not_have(provider:
     assert progress.state == "running"
     assert progress.response is None
     assert api.calls == [("GET", f"/v1/tasks/runs/{RUN_ID}")]
+
+
+def test_a_run_id_cannot_point_a_request_elsewhere(provider: ParallelResearchProvider) -> None:
+    run_id = "trun_1/../../v1/x?y=1"
+    api = _stub(provider, states=[_run("completed", run_id=run_id)])
+
+    provider.poll(ResearchRequest(query="q"), run_id)
+
+    assert api.calls == [
+        ("GET", "/v1/tasks/runs/trun_1%2F..%2F..%2Fv1%2Fx%3Fy%3D1"),
+        ("GET", "/v1/tasks/runs/trun_1%2F..%2F..%2Fv1%2Fx%3Fy%3D1/result"),
+    ]
 
 
 def test_a_status_parallel_has_never_reported_before_is_not_passed_through(
