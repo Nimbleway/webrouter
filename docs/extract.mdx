@@ -23,7 +23,7 @@ that take a single URL per request are fanned out for you, concurrently on `Asyn
 back in the order you asked for them.
 
 Explicit URLs must use `http://` or `https://` and include a host. Invalid
-explicit URLs are never sent to a backend. If every input is refused,
+explicit and scheme-relative URLs are never sent to a backend. If every input is refused,
 `extract()` raises `InvalidParameterError` naming the first input's position
 (for example, `urls.0`). Otherwise, permitted inputs are fetched and refused
 ones appear in `failures` when the batch returns a document. Bare domains and

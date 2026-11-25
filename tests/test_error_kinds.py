@@ -107,7 +107,15 @@ def test_a_refused_option_is_an_invalid_parameter_error_naming_the_field(call, f
 
 
 @pytest.mark.parametrize(
-    "url", ["ftp://example.com/x", "file:///example.txt", "data:text/plain,example", "https://", "http:///path"]
+    "url",
+    [
+        "ftp://example.com/x",
+        "file:///example.txt",
+        "data:text/plain,example",
+        "//example.com/path",
+        "https://",
+        "http:///path",
+    ],
 )
 def test_an_invalid_explicit_extract_url_is_refused_before_dispatch(url: str, fake_extract_provider: type) -> None:
     router = WebRouter("fake")
@@ -121,7 +129,7 @@ def test_an_invalid_explicit_extract_url_is_refused_before_dispatch(url: str, fa
 
 
 async def test_extract_returns_bad_request_failures_alongside_successes(fake_extract_provider: type) -> None:
-    urls = ["https://example.com/a", "ftp://example.com/b", "example.com"]
+    urls = ["https://example.com/a", "//example.com/b", "example.com"]
     sync_response = await asyncio.to_thread(WebRouter("fake").extract, urls)
     for response in (sync_response, await AsyncWebRouter("fake").extract(urls)):
         assert response.urls == [urls[0], urls[2]]

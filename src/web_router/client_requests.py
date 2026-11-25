@@ -93,10 +93,8 @@ def build_extract_request(
         # Keep bare hosts unchanged, including host:port forms that look like a scheme to urlsplit.
         candidate = url.lstrip()
         if (
-            _EXTRACT_SCHEME.match(candidate)
-            and not _EXTRACT_HOST_PORT.match(candidate)
-            and (reason := any_web_url(candidate))
-        ):
+            candidate.startswith("//") or (_EXTRACT_SCHEME.match(candidate) and not _EXTRACT_HOST_PORT.match(candidate))
+        ) and (reason := any_web_url(candidate)):
             error = InvalidParameterError(f"urls.{position}", f"{reason}.")
             first = first or error
             refused.append(ExtractFailure(url=url, error=str(error), kind="bad_request"))
