@@ -38,7 +38,7 @@ def test_every_shipped_row_is_found_again_with_no_id_given() -> None:
     rows = [row(name, effort) | {"call": {"search_depth": depths.get(name, "fast")}} for name, effort in arms]
     ids, left_out = _kept(*rows)
     assert (ids, left_out) == ([kept["id"] for kept in shipped], [])
-    assert shipped_providers().measured == "2026-11-23"
+    assert shipped_providers().measured == named["measured"]
 
 
 def test_a_named_id_is_kept_only_when_it_sends_the_measured_request() -> None:
