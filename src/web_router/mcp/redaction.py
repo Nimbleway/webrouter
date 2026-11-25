@@ -92,8 +92,10 @@ def _redact(value: Any, context: str | None) -> tuple[Any, int]:
     return value, count + devtools
 
 
-@functools.lru_cache(maxsize=4096)  # a snapshot repeats the same field names in every record; the tables never change
-def _classify(key: str) -> str | None:
+_CLASSIFY_CACHE_MAX_KEY = 256  # a real field name is a few words; a longer one is page payload, not a name
+
+
+def _classify_uncached(key: str) -> str | None:
     """Whether a field's name marks its contents as a credential, a session's id, a way into one, or neither."""
     words = _key_words(key)
     joined = "".join(words)
@@ -108,6 +110,21 @@ def _classify(key: str) -> str | None:
     ):
         return _SESSION
     return None
+
+
+# A snapshot repeats the same field names in every record; the tables never change.
+_classify_cached = functools.lru_cache(maxsize=4096)(_classify_uncached)
+
+
+def _classify(key: str) -> str | None:
+    """``_classify_uncached``, memoized for a realistic field name and never for a page's own long key.
+
+    The memo holds the names themselves, and an entry cap does not bound their bytes,
+    so a browse result's long keys are classified without being kept.
+    """
+    if len(key) <= _CLASSIFY_CACHE_MAX_KEY:
+        return _classify_cached(key)
+    return _classify_uncached(key)
 
 
 def _singular(word: str) -> set[str]:

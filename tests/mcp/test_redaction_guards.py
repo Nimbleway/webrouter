@@ -47,6 +47,16 @@ def test_a_marker_still_takes_the_sweep(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_classify_answers_a_repeated_field_name_from_cache() -> None:
-    redaction._classify.cache_clear()
+    redaction._classify_cached.cache_clear()
     assert redaction._classify("api_key") == redaction._classify("api_key")
-    assert redaction._classify.cache_info().hits == 1
+    assert redaction._classify_cached.cache_info().hits == 1
+
+
+def test_an_overlong_field_name_is_classified_but_not_kept() -> None:
+    redaction._classify_cached.cache_clear()
+    long_key = "live_view_url" + "a" * 5000
+    before = redaction._classify_cached.cache_info()
+    assert redaction._classify(long_key) == "session"
+    assert redaction._classify(long_key) == "session"
+    after = redaction._classify_cached.cache_info()
+    assert (after.currsize, after.misses) == (before.currsize, before.misses), "an overlong key entered the memo"
