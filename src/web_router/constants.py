@@ -1,8 +1,7 @@
 """Every literal the package depends on.
 
-Endpoints, environment variable names, timeouts and message templates live here
-rather than inline, so a provider's wire details can be reviewed in one place
-and changed without touching logic.
+Endpoints, environment variable names, timeouts and message templates live here rather than inline, so a provider's wire
+details can be reviewed in one place and changed without touching logic.
 """
 
 from __future__ import annotations
@@ -15,6 +14,7 @@ from web_router.constants_answer import MCP_ANSWER_PROPERTIES, MCP_DESC_ANSWER
 from web_router.constants_extract import MCP_DESC_EXTRACT, MCP_EXTRACT_PROPERTIES
 from web_router.constants_litellm import LITELLM_AUTO_SETTINGS, LITELLM_ENV_BY_PROVIDER
 from web_router.constants_live_data import (
+    ENV_APIFY_TOKEN,
     MCP_DESC_LIVE_DATA,
     MCP_DESC_LIVE_DATA_SOURCE,
     MCP_DESC_LIVE_DATA_SOURCES,
@@ -80,6 +80,7 @@ PROVIDER_KEENABLE = Provider.KEENABLE.value
 PROVIDER_DEEPSEEK = Provider.DEEPSEEK.value
 PROVIDER_VALYU = Provider.VALYU.value
 PROVIDER_SPECSTREAM = Provider.SPECSTREAM.value
+PROVIDER_APIFY = Provider.APIFY.value
 PROVIDER_AGENTCORE = Provider.AGENTCORE.value
 PROVIDER_YOU_MCP = Provider.YOU_MCP.value
 PROVIDER_EXA_MCP = Provider.EXA_MCP.value
@@ -205,6 +206,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_VALYU: ENV_VALYU_API_KEY,
     PROVIDER_SPECSTREAM: ENV_SPECSTREAM_API_KEY,
     PROVIDER_FIRECRAWL: ENV_FIRECRAWL_API_KEY,
+    PROVIDER_APIFY: ENV_APIFY_TOKEN,
     # Not a credential: the AWS one comes from botocore's chain. The gateway is
     # what has to exist before a call can be worth trying.
     PROVIDER_AGENTCORE: ENV_AGENTCORE_GATEWAY_URL,
@@ -236,6 +238,7 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_KEENABLE: (ENV_KEENABLE_API_KEY,),
     PROVIDER_DEEPSEEK: (ENV_DEEPSEEK_API_KEY,),
     PROVIDER_SPECSTREAM: (ENV_SPECSTREAM_API_KEY,),
+    PROVIDER_APIFY: (ENV_APIFY_TOKEN,),
     PROVIDER_JINA: (),
     PROVIDER_OBSCURA: (),
     PROVIDER_BROWSERBASE: (ENV_BROWSERBASE_API_KEY,),
@@ -275,9 +278,8 @@ ANSWER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 }
 """Which variables each answer provider needs, all of them.
 
-Shaped like :data:`RESEARCH_ENV_BY_PROVIDER`. Every answer backend bills the
-call, so there is no keyless tier; ``auto`` tries the configured ones in the
-order route-eval ranked them, and is not listed here since it needs no key.
+Shaped like :data:`RESEARCH_ENV_BY_PROVIDER`. Every answer backend bills the call, so there is no keyless tier; ``auto``
+tries the configured ones in the order route-eval ranked them, and is not listed here since it needs no key.
 """
 
 BROWSER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -291,10 +293,9 @@ BROWSER_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 }
 """Which variables each browser provider needs, all of them; ``()`` means none.
 
-Shaped like :data:`RESEARCH_ENV_BY_PROVIDER`. A cloud browser bills by the
-minute it is open; ``local`` is the keyless tier, a Chromium launched on this
-machine, and plays the part Jina Reader plays for extract. ``auto`` needs
-whatever its chain does.
+Shaped like :data:`RESEARCH_ENV_BY_PROVIDER`. A cloud browser bills by the minute it is open; ``local`` is the keyless
+tier, a Chromium launched on this machine, and plays the part Jina Reader plays for extract. ``auto`` needs whatever its
+chain does.
 """
 
 BROWSE_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
@@ -316,9 +317,8 @@ DEFAULT_HTTP_TIMEOUT = 60.0
 MAX_CONCURRENT_EXTRACTS = 8
 """How many URLs an async extract fetches at once on a backend taking one per call.
 
-Unbounded, ``aextract`` over a long list would open one connection per URL and
-earn a 429 from a call the sync router makes serially without trouble -- the
-same request behaving differently for reasons the caller never chose.
+Unbounded, ``aextract`` over a long list would open one connection per URL and earn a 429 from a call the sync router
+makes serially without trouble -- the same request behaving differently for reasons the caller never chose.
 """
 
 FOLLOW_REDIRECTS = False
@@ -378,9 +378,8 @@ NIMBLE_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "html"
 NIMBLE_EXTRACT_SUCCESS_STATUS = "success"
 """The one ``status`` that means the page was fetched.
 
-The others -- ``blocked``, ``fatal``, ``rejected`` and the rest -- arrive with
-HTTP 200 and no content, so the status is the only thing that distinguishes a
-fetched page from one that was refused.
+The others -- ``blocked``, ``fatal``, ``rejected`` and the rest -- arrive with HTTP 200 and no content, so the status is
+the only thing that distinguishes a fetched page from one that was refused.
 """
 
 NIMBLE_LIVE_DATA_SUCCESS_STATUS = NIMBLE_EXTRACT_SUCCESS_STATUS
@@ -640,6 +639,7 @@ AUTO_EXTRACT_APPENDED: tuple[str, ...] = (
     PROVIDER_DEEPSEEK,
     PROVIDER_BROWSERBASE,
     PROVIDER_SPECSTREAM,
+    PROVIDER_APIFY,
 )
 """Members added after the chain existed, tried after the keyless tier, as :data:`AUTO_APPENDED` is for search.
 

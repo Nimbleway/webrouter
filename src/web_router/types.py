@@ -66,9 +66,9 @@ class Provider(str, Enum):
 
     Not every name serves every method: ``oxylabs``, ``brightdata``, ``firecrawl``, ``jina`` and ``obscura`` only
     extract, and most search backends do not extract. ``steel``, ``browserbase``, ``hyperbrowser``, ``anchor``,
-    ``kernel`` and ``local`` only open browser sessions, ``browser-use`` and ``skyvern`` only run browse tasks, and
-    ``apify`` only runs live data. :func:`web_router.available_providers` and its per-method counterparts list each
-    method's own set. ``auto`` tries its backends in turn for every method; ``max`` races them all, for extract alone.
+    ``kernel`` and ``local`` only open browser sessions, and ``browser-use`` and ``skyvern`` only run browse tasks.
+    :func:`web_router.available_providers` and its per-method counterparts list each method's own set. ``auto`` tries
+    its backends in turn for every method; ``max`` races them all, for extract alone.
     """
 
     NIMBLE = "nimble"

@@ -31,6 +31,7 @@ README_NAMES = {
     "Keirolabs": "keirolabs",
     "SpecStream": "specstream",
     "Firecrawl": "firecrawl",
+    "Apify": "apify",
     "AgentCore": "agentcore",
     "Exa LiteLLM": "exa-litellm",
     "Tavily LiteLLM": "tavily-litellm",

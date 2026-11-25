@@ -1,0 +1,67 @@
+{
+  "provider": "apify",
+  "method": "extract",
+  "class": "web_router.providers.apify.ApifyExtractProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://apify--web-fetch.apify.actor",
+    "paths": {
+      "extract_path": "/"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "APIFY_TOKEN"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.formats": [
+      "markdown"
+    ],
+    "body.url": "https://example.com"
+  },
+  "options": {
+    "format": {
+      "markdown": {
+        "unchanged": "no wire change"
+      },
+      "html": {
+        "body.formats": [
+          "html"
+        ]
+      },
+      "text": {
+        "body.formats": [
+          "text"
+        ]
+      }
+    }
+  },
+  "not_mapped": [
+    "profile"
+  ],
+  "default_format": "markdown",
+  "batches_urls": false,
+  "source": [
+    "https://apify.com/apify/web-fetch",
+    "https://apify.com/apify/web-fetch/api"
+  ],
+  "verified": {
+    "format": "live: tests/providers/test_apify_search_extract.py::test_live_extract_returns_page_content"
+  },
+  "vendor_options": {
+    "wait": {
+      "status": "passthrough",
+      "note": "Milliseconds, 1 to 60000, to wait after load; renders the page in a real browser, slower."
+    },
+    "headers": {
+      "status": "passthrough",
+      "note": "Object of extra HTTP headers sent to the target page, such as Accept-Language."
+    },
+    "unwrap": {
+      "status": "not_supported",
+      "note": "Returns the body bare instead of JSON; the mapping reads the JSON envelope."
+    }
+  }
+}

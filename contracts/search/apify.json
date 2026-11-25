@@ -1,0 +1,107 @@
+{
+  "provider": "apify",
+  "method": "search",
+  "class": "web_router.providers.apify.ApifySearchProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://apify--web-search.apify.actor",
+    "paths": {
+      "search_path": "/"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "APIFY_TOKEN"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.query": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.maxResults": 3
+      }
+    },
+    "search_depth": {
+      "lite": {
+        "unchanged": "no wire change"
+      },
+      "fast": {
+        "refused": "UnsupportedParameterError"
+      },
+      "deep": {
+        "refused": "UnsupportedParameterError"
+      }
+    },
+    "include_domains": {
+      "sample": {
+        "body.allowedDomains": [
+          "example.com"
+        ]
+      }
+    },
+    "exclude_domains": {
+      "sample": {
+        "body.blockedDomains": [
+          "example.org"
+        ]
+      }
+    },
+    "country": {
+      "sample": {
+        "body.countryCode": "US"
+      }
+    },
+    "locale": {
+      "sample": {
+        "body.languageCode": "en"
+      }
+    },
+    "recency": {
+      "day": {
+        "body.dateFrom": "2026-01-14"
+      },
+      "week": {
+        "body.dateFrom": "2026-01-08"
+      },
+      "month": {
+        "body.dateFrom": "2025-12-16"
+      },
+      "year": {
+        "body.dateFrom": "2025-01-15"
+      }
+    }
+  },
+  "not_mapped": [
+    "effort"
+  ],
+  "source": [
+    "https://apify.com/apify/web-search",
+    "https://apify.com/apify/web-search/api"
+  ],
+  "verified": {
+    "max_results": "live: tests/providers/test_apify_search_extract.py::test_live_search_returns_web_results",
+    "search_depth": "docs: https://apify.com/apify/web-search/api",
+    "include_domains": "docs: https://apify.com/apify/web-search/api",
+    "exclude_domains": "docs: https://apify.com/apify/web-search/api",
+    "country": "docs: https://apify.com/apify/web-search/api",
+    "locale": "docs: https://apify.com/apify/web-search/api",
+    "recency": "docs: https://apify.com/apify/web-search/api"
+  },
+  "vendor_options": {
+    "provider": {
+      "status": "passthrough",
+      "note": "google (default) or duckduckgo, a second independent ranking; each search is charged."
+    },
+    "location": {
+      "status": "passthrough",
+      "note": "A place name, most specific first; Google only, best-effort; DuckDuckGo answers INVALID_PARAMETER."
+    },
+    "dateTo": {
+      "status": "passthrough",
+      "note": "Latest publication date, YYYY-MM-DD, best-effort; recency maps dateFrom only."
+    }
+  }
+}

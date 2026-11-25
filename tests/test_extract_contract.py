@@ -1,9 +1,8 @@
 """Guards on the extract contract itself.
 
-The counterpart of test_contract.py. These catch drift that is invisible at
-runtime until a user hits it: a backend that reports the wrong format for what
-it returned, a fan-out that aborts the URLs that worked, a call that comes back
-empty instead of saying why.
+The counterpart of test_contract.py. These catch drift that is invisible at runtime until a user hits it: a backend that
+reports the wrong format for what it returned, a fan-out that aborts the URLs that worked, a call that comes back empty
+instead of saying why.
 """
 
 from __future__ import annotations
@@ -460,6 +459,7 @@ _STUB_PAYLOADS: dict[str, Any] = {
     "deepseek": lambda urls: {"title": "", "content": _body(urls[0])},
     "browserbase": lambda urls: {"statusCode": 200, "content": _body(urls[0]), "contentType": "text/html"},
     "specstream": lambda urls: {"data": {"results": [{"url": u, "status": "ok", "text": _body(u)} for u in urls]}},
+    "apify": lambda urls: {"url": urls[0], "fetch": {"httpStatusCode": 200}, "markdown": _body(urls[0])},
 }
 """The shape each backend really answers with, trimmed to what is mapped.
 

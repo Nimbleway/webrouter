@@ -96,6 +96,7 @@ _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_VALYU: ("web_router.providers.valyu", "ValyuProvider", EXTRA_SEARCH),
     PROVIDER_SPECSTREAM: ("web_router.providers.specstream", "SpecStreamProvider", EXTRA_SEARCH),
     PROVIDER_FIRECRAWL: ("web_router.providers.firecrawl", "FirecrawlProvider", EXTRA_SEARCH),
+    Provider.APIFY.value: ("web_router.providers.apify", "ApifySearchProvider", EXTRA_SEARCH),
     PROVIDER_AGENTCORE: ("web_router.providers.agentcore", "AgentCoreProvider", EXTRA_AWS),
     PROVIDER_YOU_MCP: ("web_router.providers.you_mcp", "YouMcpProvider", EXTRA_SEARCH),
     PROVIDER_EXA_MCP: ("web_router.providers.exa_mcp", "ExaMcpProvider", EXTRA_SEARCH),
@@ -118,6 +119,7 @@ _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_KEENABLE: ("web_router.providers.keenable_extract", "KeenableExtractProvider", EXTRA_EXTRACT),
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekExtractProvider", EXTRA_EXTRACT),
     PROVIDER_SPECSTREAM: ("web_router.providers.specstream", "SpecStreamExtractProvider", EXTRA_EXTRACT),
+    Provider.APIFY.value: ("web_router.providers.apify", "ApifyExtractProvider", EXTRA_EXTRACT),
     PROVIDER_JINA: ("web_router.providers.jina", "JinaExtractProvider", EXTRA_EXTRACT),
     PROVIDER_OBSCURA: ("web_router.providers.obscura", "ObscuraExtractProvider", EXTRA_EXTRACT),
     PROVIDER_BROWSERBASE: ("web_router.providers.browserbase_extract", "BrowserbaseExtractProvider", EXTRA_EXTRACT),
@@ -125,8 +127,7 @@ _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_MAX: ("web_router.providers.max", "MaxExtractProvider", AUTO_EXTRA),
 }
 
-# A template run is the Extract API's, so the class ships with the extract extra.
-# No `auto`: a template's name belongs to one vendor, so there is nothing to route.
+# A live data run ships with the extract extra. No `auto`: a source's name belongs to one vendor, nothing to route.
 _BUILTIN_LIVE_DATA_PROVIDERS = BUILTIN_LIVE_DATA_PROVIDERS
 
 _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
@@ -277,9 +278,8 @@ def _resolve(
     try:
         module = importlib.import_module(module_path)
     except ImportError as exc:
-        # Only the missing SDK means "not installed". An ImportError from inside
-        # the provider module is a bug, and reporting it as a missing extra would
-        # send the reader looking in entirely the wrong place.
+        # Only the missing SDK means "not installed". An ImportError from inside the provider module is a bug, and
+        # reporting it as a missing extra would send the reader looking in entirely the wrong place.
         if exc.name and exc.name.startswith("web_router"):
             raise
         raise ProviderNotInstalledError(key, extra) from exc

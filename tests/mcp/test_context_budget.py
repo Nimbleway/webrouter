@@ -28,7 +28,7 @@ from web_router.mcp.shaping import render, shape_research
 from web_router.mcp.tools import WebRouterTools
 from web_router.types import ResearchResponse
 
-TOOL_LIST_BUDGET = 26_720  # +50 over SpecStream's 26,670: the `merchant` backend is named in the live data tools
+TOOL_LIST_BUDGET = 26_740  # +20 for Apify's name in the search and extract provider lists; 26,735 with it
 """Bytes of compact JSON the whole tool list may take with every backend configured -- about 6.6k tokens.
 
 It was 31,051 (about 7.8k tokens) before descriptions were cut down and the
@@ -38,11 +38,11 @@ bring it to 26,289; ``extract``'s two (``data_apis``, ``configured_only``), to 2
 SpecStream's name in the ``search`` and ``extract`` provider lists brings it to 26,663.
 """
 
-TOOL_BUDGET = 2_670
+TOOL_BUDGET = 2_680
 """Bytes any one tool may take: ``search``, the largest, is 2,606 with its data API options.
 
 Each search backend adds its name to ``search``'s ``provider`` list; Valyu, Seltz and
-Octen together bring it to about 2,620, SpecStream to 2,647, and Firecrawl to 2,661.
+Octen together bring it to about 2,620, SpecStream to 2,647, Firecrawl to 2,661, and Apify to 2,669.
 """
 
 
