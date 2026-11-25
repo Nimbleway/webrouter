@@ -1,0 +1,1 @@
+`extract()` no longer sends explicit non-HTTP(S) URLs, scheme-relative URLs, or hostless HTTP(S) URLs to backends. Mixed batches keep their valid results and report refused inputs as failures. A call with only refused inputs raises `InvalidParameterError`; bare domains still pass through.

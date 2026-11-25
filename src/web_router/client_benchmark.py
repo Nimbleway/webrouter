@@ -30,7 +30,7 @@ from web_router.registry import (
     configured_extract_providers,
     configured_providers,
 )
-from web_router.types import ExtractFormat, Provider, Recency, ResearchEffort, SearchDepth
+from web_router.types import ExtractFormat, ExtractResponse, Provider, Recency, ResearchEffort, SearchDepth
 from web_router.types_benchmark import BenchmarkReport, BenchmarkRun, ExtractBenchmarkReport, ExtractBenchmarkRun
 
 if TYPE_CHECKING:
@@ -161,7 +161,7 @@ class SyncBenchmark(_BenchmarkMembers):
                 default where it cannot; a format a backend cannot return is
                 that row's refusal, never a substitution.
         """
-        request = build_extract_request(urls, format=format, provider_options=None)
+        prepared = build_extract_request(urls, format=format, provider_options=None)
         members = members_of(
             providers,
             default=self._default_extract_benchmark_providers,
@@ -170,12 +170,12 @@ class SyncBenchmark(_BenchmarkMembers):
         )
         runs = fan_out(
             members,
-            lambda provider: provider.extract(request),
+            lambda provider: prepared.with_failures(provider.extract(prepared.request)),
             ExtractBenchmarkRun.of,
             timeout,
             stragglers=self._stragglers,
         )
-        return ExtractBenchmarkReport(urls=request.urls, runs=runs)
+        return ExtractBenchmarkReport(urls=prepared.original_urls, runs=runs)
 
     def evaluate(
         self,
@@ -289,15 +289,19 @@ class AsyncBenchmark(_BenchmarkMembers):
         As on the sync router, with the rows gathered on the event loop: a row
         that runs out of ``timeout`` is cancelled rather than left running.
         """
-        request = build_extract_request(urls, format=format, provider_options=None)
+        prepared = build_extract_request(urls, format=format, provider_options=None)
         members = members_of(
             providers,
             default=self._default_extract_benchmark_providers,
             build=self.get_extract_provider,
             none_named=MSG_BENCHMARK_EXTRACT_NO_PROVIDERS,
         )
-        runs = await afan_out(members, lambda provider: provider.aextract(request), ExtractBenchmarkRun.of, timeout)
-        return ExtractBenchmarkReport(urls=request.urls, runs=runs)
+
+        async def extract(provider: ExtractProvider) -> ExtractResponse:
+            return prepared.with_failures(await provider.aextract(prepared.request))
+
+        runs = await afan_out(members, extract, ExtractBenchmarkRun.of, timeout)
+        return ExtractBenchmarkReport(urls=prepared.original_urls, runs=runs)
 
     async def evaluate(
         self,

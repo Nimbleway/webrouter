@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import httpx
 import pytest
 
-from web_router import AllProvidersFailedError, Budget, InvalidParameterError, WebRouter, WebRouterError
+from web_router import AllProvidersFailedError, AsyncWebRouter, Budget, InvalidParameterError, WebRouter, WebRouterError
 from web_router.exceptions import ProviderError
 from web_router.types import ExtractFailure
 from web_router.types_errors import classify
@@ -102,6 +104,53 @@ def test_a_refused_option_is_an_invalid_parameter_error_naming_the_field(call, f
     assert isinstance(error, WebRouterError) and isinstance(error, ValueError)
     assert (error.field, error.allowed) == (field, allowed)
     assert "pydantic" not in str(error), "one line, no validator docs link"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "ftp://example.com/x",
+        "file:///example.txt",
+        "data:text/plain,example",
+        "//example.com/path",
+        "https://",
+        "http:///path",
+    ],
+)
+def test_an_invalid_explicit_extract_url_is_refused_before_dispatch(url: str, fake_extract_provider: type) -> None:
+    router = WebRouter("fake")
+
+    for urls in ([url], [url, "ftp://example.com/y"]):
+        with pytest.raises(InvalidParameterError) as caught:
+            router.extract(urls)
+        assert caught.value.field == "urls.0"
+
+    assert router.get_extract_provider().calls == []  # type: ignore[attr-defined]
+
+
+async def test_extract_returns_bad_request_failures_alongside_successes(fake_extract_provider: type) -> None:
+    urls = ["https://example.com/a", "//example.com/b", "example.com"]
+    sync_response = await asyncio.to_thread(WebRouter("fake").extract, urls)
+    for response in (sync_response, await AsyncWebRouter("fake").extract(urls)):
+        assert response.urls == [urls[0], urls[2]]
+        assert [(failure.url, failure.kind) for failure in response.failures] == [(urls[1], "bad_request")]
+        assert [url for call in response.raw or [] for url in call["urls"]] == [urls[0], urls[2]]
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "example.com",
+        "example.com/path?next=https://example.org",
+        "example.com:443",
+        "localhost:8080",
+        "HTTPS://Example.com",
+    ],
+)
+def test_supported_extract_input_reaches_the_backend_unchanged(url: str, fake_extract_provider: type) -> None:
+    router = WebRouter("fake")
+    router.extract(url)
+    assert router.get_extract_provider().calls == [[url]]  # type: ignore[attr-defined]
 
 
 def test_a_budget_cap_that_is_not_a_number_is_an_invalid_parameter_error() -> None:
