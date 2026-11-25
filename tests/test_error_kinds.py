@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import httpx
 import pytest
 
-from web_router import AllProvidersFailedError, Budget, InvalidParameterError, WebRouter, WebRouterError
+from web_router import AllProvidersFailedError, AsyncWebRouter, Budget, InvalidParameterError, WebRouter, WebRouterError
 from web_router.exceptions import ProviderError
 from web_router.types import ExtractFailure
 from web_router.types_errors import classify
@@ -110,11 +112,21 @@ def test_a_refused_option_is_an_invalid_parameter_error_naming_the_field(call, f
 def test_an_invalid_explicit_extract_url_is_refused_before_dispatch(url: str, fake_extract_provider: type) -> None:
     router = WebRouter("fake")
 
-    with pytest.raises(InvalidParameterError) as caught:
-        router.extract(["https://example.com", url])
+    for urls in ([url], [url, "ftp://example.com/y"]):
+        with pytest.raises(InvalidParameterError) as caught:
+            router.extract(urls)
+        assert caught.value.field == "urls.0"
 
-    assert caught.value.field == "urls.1"
     assert router.get_extract_provider().calls == []  # type: ignore[attr-defined]
+
+
+async def test_extract_returns_bad_request_failures_alongside_successes(fake_extract_provider: type) -> None:
+    urls = ["https://example.com/a", "ftp://example.com/b", "example.com"]
+    sync_response = await asyncio.to_thread(WebRouter("fake").extract, urls)
+    for response in (sync_response, await AsyncWebRouter("fake").extract(urls)):
+        assert response.urls == [urls[0], urls[2]]
+        assert [(failure.url, failure.kind) for failure in response.failures] == [(urls[1], "bad_request")]
+        assert [url for call in response.raw or [] for url in call["urls"]] == [urls[0], urls[2]]
 
 
 @pytest.mark.parametrize(

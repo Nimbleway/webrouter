@@ -1,1 +1,1 @@
-`extract()` rejects explicit non-HTTP(S) URLs and HTTP(S) URLs with no host before contacting any backend. Bare domains and host-and-port inputs still reach the backend unchanged.
+`extract()` no longer sends explicit non-HTTP(S) URLs or hostless HTTP(S) URLs to backends. Mixed batches keep their valid results and report refused inputs as failures. A call with only refused inputs raises `InvalidParameterError`; bare domains still pass through.

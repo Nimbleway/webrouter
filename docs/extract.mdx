@@ -22,11 +22,12 @@ One URL or many: `router.extract("https://example.com")` is the same call, and t
 that take a single URL per request are fanned out for you, concurrently on `AsyncWebRouter`, and the documents come
 back in the order you asked for them.
 
-Explicit URLs must use `http://` or `https://` and include a host. Otherwise
-`extract()` raises `InvalidParameterError` naming the URL's position (for
-example, `urls.1`) before contacting any backend. Bare domains such as
-`example.com` and host-and-port inputs such as `example.com:443` still reach
-the backend unchanged. Whether they work depends on the backend.
+Explicit URLs must use `http://` or `https://` and include a host. Invalid
+explicit URLs are never sent to a backend. If every input is refused,
+`extract()` raises `InvalidParameterError` naming the first input's position
+(for example, `urls.0`). Otherwise, permitted inputs are fetched and refused
+ones appear in `failures` when the batch returns a document. Bare domains and
+domain or localhost inputs with a port still reach the backend unchanged.
 
 ## Formats
 
