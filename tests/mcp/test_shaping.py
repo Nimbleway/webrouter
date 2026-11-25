@@ -331,9 +331,12 @@ def _research_response(report_chars: int, citations: int = 40) -> ResearchRespon
     )
 
 
-def test_a_research_result_gets_five_budgets_and_scales_with_the_override(monkeypatch: pytest.MonkeyPatch) -> None:
-    assert result_budget(MCP_TOOL_RESEARCH) == 5 * MCP_MAX_RESPONSE_CHARS
-    assert result_budget(MCP_TOOL_SEARCH) == MCP_MAX_RESPONSE_CHARS
+def test_a_research_result_gets_the_documented_budget_and_scales_with_the_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The sizes docs/mcp-server.mdx promises: 40,000 for a finished research run, 8,000 for any other result.
+    assert result_budget(MCP_TOOL_RESEARCH) == 40_000
+    assert result_budget(MCP_TOOL_SEARCH) == 8_000
 
     monkeypatch.setenv(ENV_MCP_MAX_CHARS, "1000")
     assert result_budget(MCP_TOOL_RESEARCH) == 5000
