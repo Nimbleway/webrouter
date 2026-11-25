@@ -1,0 +1,1 @@
+A page a batching extract backend returned under a rewritten URL (a trailing slash, another case) is no longer also listed in `failures` when the same answer left another URL out; only the URL that got no page is reported.

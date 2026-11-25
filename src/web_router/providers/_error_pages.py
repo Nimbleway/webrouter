@@ -13,7 +13,7 @@ from collections.abc import Iterable, Sequence
 from http import HTTPStatus
 from urllib.parse import urlsplit
 
-from web_router.constants import MSG_EXTRACT_BAD_STATUS
+from web_router.constants import MSG_EXTRACT_BAD_STATUS, MSG_EXTRACT_NO_DOCUMENT
 from web_router.constants_extract import (
     EXTRACT_CHALLENGE_MARKERS,
     EXTRACT_CHALLENGE_TITLE,
@@ -125,6 +125,22 @@ def _renamed(failure: ExtractFailure, owner: str | None) -> ExtractFailure:
     redirected = bare_url(owner) != bare_url(failure.url)
     kind = ERROR_KIND_UPSTREAM if redirected and failure.kind == ERROR_KIND_TARGET else failure.kind
     return failure.model_copy(update={"url": owner, "kind": kind})
+
+
+def left_out(response: ExtractResponse, asked: Sequence[str]) -> list[ExtractFailure]:
+    """A failure for each of ``asked`` that ``response`` mentions neither as a document nor as a failure.
+
+    A backend can answer 200 with a payload its mapping did not expect --
+    Oxylabs returns no result tagged with the format asked for, a batching
+    backend leaves a URL out of its list -- and the URL would otherwise vanish
+    from a call that partly succeeded. A URL is read as
+    :func:`~._url_match.owners` reads it, so one echoed rewritten was answered.
+    """
+    answered = [document.url for document in response.documents] + [failure.url for failure in response.failures]
+    if len(answered) >= len(asked):
+        return []
+    mentioned = set(owners(answered, asked))
+    return [ExtractFailure(url=url, error=MSG_EXTRACT_NO_DOCUMENT) for url in asked if url not in mentioned]
 
 
 def not_the_page(document: ExtractedDocument) -> str | None:

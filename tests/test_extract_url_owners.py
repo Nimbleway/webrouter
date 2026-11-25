@@ -164,6 +164,21 @@ def test_two_urls_redirected_to_two_walls_fail_under_the_urls_asked_for() -> Non
     assert sorted(failure.url for failure in failures) == [A, B], "auto retries A and B, not the walls"
 
 
+def test_a_page_echoed_under_a_rewritten_url_is_not_also_reported_left_out() -> None:
+    """A batch that rewrote one URL and left another out failed only the one it left out."""
+    from tests.conftest import FakeExtractProvider
+
+    def _extract(self: Any, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
+        return ExtractResponse(provider="fake", documents=[ExtractedDocument(url=f"{A}/", content=TEXT)])
+
+    provider = type("Rewrites", (FakeExtractProvider,), {"batches_urls": True, "_extract": _extract})()
+
+    response = provider.extract(ExtractRequest(urls=[A, B]))
+
+    assert [document.url for document in response.documents] == [f"{A}/"]
+    assert [failure.url for failure in response.failures] == [B]
+
+
 @pytest.mark.parametrize(
     ("asked", "echoed"),
     [
