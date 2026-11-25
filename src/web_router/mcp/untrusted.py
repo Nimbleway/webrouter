@@ -2,7 +2,7 @@
 
 Shaped results are marked as they are fitted (:mod:`web_router.mcp.shaping_fit`);
 ``fetch_raw`` and the browser actions that show a page get the mark here, at the
-one exit every tool result passes through; ``call_vendor``'s shaper marks its own.
+one exit every tool result passes through; ``call_data_api``'s shaper marks its own.
 """
 
 from __future__ import annotations
