@@ -66,13 +66,21 @@ def _encoded(text: str) -> str:
     return re.sub(r"%[0-9a-fA-F]{2}", lambda escape: escape.group(0).upper(), quote(text, safe=_ASCII_SAFE))
 
 
+def _by_bare(urls: Iterable[str]) -> dict[str, set[str]]:
+    """``urls`` grouped by the form :func:`bare_url` gives them, read once instead of once per answer."""
+    index: dict[str, set[str]] = {}
+    for url in urls:
+        index.setdefault(bare_url(url), set()).add(url)
+    return index
+
+
 def asked_for(url: str, urls: Sequence[str]) -> set[str]:
     """The requested URLs ``url`` stands for: itself when asked for exactly, else the one a backend rewrote into it."""
     if url in urls:
         return {url}
     # A rewrite that could be either of two URLs asked for proves neither was read.
-    matches = {asked for asked in urls if bare_url(asked) == bare_url(url)}
-    return matches if len(matches) == 1 else set()
+    matches = _by_bare(urls).get(bare_url(url))
+    return matches if matches and len(matches) == 1 else set()
 
 
 def owners(answered: Sequence[str], urls: Sequence[str], also_claimed: Iterable[str] = ()) -> list[str | None]:
@@ -84,8 +92,24 @@ def owners(answered: Sequence[str], urls: Sequence[str], also_claimed: Iterable[
     that redirect is the unclaimed URL's. So one requested URL owns its own
     page, or the one redirect it led to, never a second unrelated page.
     """
-    matched = [next(iter(found)) if (found := asked_for(url, urls)) else None for url in answered]
-    claimed = {owner for owner in matched if owner} | {o for url in also_claimed for o in asked_for(url, urls)}
+    known = set(urls)
+    # Built on the first answer that is not asked for verbatim, so a run of exact
+    # answers pays nothing for it -- and a URL no parser can read only reaches
+    # :func:`bare_url` once an answer actually needs the rewrite rule.
+    index: dict[str, set[str]] | None = None
+
+    def owner_of(url: str) -> str | None:
+        """What :func:`asked_for` answers for ``url``, against the index built once on first need."""
+        nonlocal index
+        if url in known:
+            return url
+        if index is None:
+            index = _by_bare(urls)
+        found = index.get(bare_url(url))
+        return next(iter(found)) if found and len(found) == 1 else None
+
+    matched = [owner_of(url) for url in answered]
+    claimed = {owner for owner in matched if owner} | {owner for url in also_claimed if (owner := owner_of(url))}
     unclaimed = [url for url in urls if url not in claimed]
     if matched.count(None) == 1 and len(unclaimed) == 1:
         matched[matched.index(None)] = unclaimed[0]
