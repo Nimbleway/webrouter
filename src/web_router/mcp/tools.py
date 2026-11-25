@@ -337,7 +337,7 @@ class WebRouterTools:
             # A failed task's detail is the backend's own message, which can quote a session URL.
             shaped, count = redact(shape_progress(progress, record.handle, wait=waited))
             if count:
-                shaped["note"] = redaction_note(count).strip()
+                shaped["note"] = _noted(shaped.get("note", ""), [redaction_note(count).strip()])
             return dict(shaped)
         record.raw = progress.response.raw
         return shape_browse(progress.response, record.handle, budget=result_budget(MCP_TOOL_BROWSE))

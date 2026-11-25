@@ -16,6 +16,7 @@ from tests.conftest import FakeBrowseProvider, FakeResearchProvider
 from tests.mcp.conftest import FAKE
 from web_router import AsyncWebRouter
 from web_router.constants import (
+    MCP_REDACTED,
     MCP_TOOL_BROWSE,
     MCP_TOOL_BROWSE_STATUS,
     MCP_TOOL_RESEARCH,
@@ -145,6 +146,30 @@ async def test_browse_status_waits_for_a_task_that_finishes_inside_the_wait(tool
 
         assert answered["state"] == "completed"
         assert answered["answer"] == "the answer"
+    finally:
+        unregister_browse_provider(FAKE)
+
+
+async def test_a_task_still_going_keeps_its_note_when_its_detail_is_redacted(tools: WebRouterTools) -> None:
+    class LeakyRunningBrowseProvider(FakeBrowseProvider):
+        polls_before_done = 1_000
+
+        def _progress(self, request: Any) -> Any:
+            progress = super()._progress(request)
+            return progress.model_copy(update={"detail": "live at wss://connect.example.test/?token=SEKRIT"})
+
+    register_browse_provider(FAKE, LeakyRunningBrowseProvider)
+    try:
+        pending = _payload(await call_tool(tools, MCP_TOOL_BROWSE, {"task": "find the price"}))
+        tools.browse_wait = 0.05
+
+        payload = _payload(await call_tool(tools, MCP_TOOL_BROWSE_STATUS, {"handle": pending["handle"]}))
+
+        assert payload["state"] == "running"
+        assert "SEKRIT" not in json.dumps(payload)
+        # Both said: call again, and what was taken out.
+        assert MCP_TOOL_BROWSE_STATUS in payload["note"] and repr(pending["handle"]) in payload["note"]
+        assert MCP_REDACTED in payload["note"]
     finally:
         unregister_browse_provider(FAKE)
 
