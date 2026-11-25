@@ -36,18 +36,31 @@ from web_router.vendors.schema import Vendor, VendorEndpoint
 
 _WORD = re.compile(r"[a-z0-9]+")
 
+_WORDS_CACHE_MAX_LEN = 512
+"""Longest text the cache keeps: the catalog's own endpoint texts run to 281 characters, a query has no bound."""
 
-@functools.lru_cache(maxsize=16384)
-def words(text: str) -> frozenset[str]:
+
+def _words(text: str) -> frozenset[str]:
     """Lowercase words, plurals folded: "monitors" and "monitor" are one word to a search.
 
-    Cached: a find tokenizes the same endpoint texts again for every query, and the
-    set is frozen so a caller cannot mutate what the next caller reads.
+    The set is frozen so a caller cannot mutate what the next caller reads.
     """
     return frozenset(
         word[:-1] if len(word) > 3 and word.endswith("s") and not word.endswith("ss") else word
         for word in _WORD.findall(text.lower())
     )
+
+
+_words_cached = functools.lru_cache(maxsize=16384)(_words)
+
+
+def words(text: str) -> frozenset[str]:
+    """``_words``, cached for the short fixed texts a find tokenizes once per query.
+
+    Longer text is a query or a URL, not a catalog entry: caching it would keep
+    unbounded user input in a process-level cache after the request returned.
+    """
+    return _words_cached(text) if len(text) <= _WORDS_CACHE_MAX_LEN else _words(text)
 
 
 class VendorCatalog:

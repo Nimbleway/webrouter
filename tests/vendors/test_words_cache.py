@@ -14,3 +14,10 @@ def test_words_is_cached_and_frozen() -> None:
     assert first is catalog.words("Stripe Payments API")
     assert isinstance(first, frozenset)
     assert "stripe" in first
+
+
+def test_long_text_is_tokenized_but_not_cached() -> None:
+    text = "Monitors " * 5_000
+    before = catalog._words_cached.cache_info().currsize
+    assert catalog.words(text) == {"monitor"}
+    assert catalog._words_cached.cache_info().currsize == before
