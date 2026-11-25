@@ -93,6 +93,23 @@ MCP_JSON_SEPARATORS = (",", ":")
 MCP_EMPTY_VALUES: tuple[Any, ...] = ("", [])
 """Values a shaped row leaves out with ``None``: a key that says nothing costs as much as one that does."""
 
+MCP_BUDGET_FACTOR_BY_TOOL: dict[str, int] = {MCP_TOOL_RESEARCH: 5}
+"""How many per-result budgets one result of a tool may take; a tool not named here takes one.
+
+A finished research run is a report the caller waited minutes and paid for, written from reading
+the model never has to repeat. Reports measured 7,000 to 74,000 characters, about 37,000 at the
+median, and at one budget the report got 4,000 of them: the rest only through ``fetch_raw``, whose
+untouched payload is two to three times the report's size. Five budgets is 40,000 characters,
+about 10,000 tokens, the same as a browser snapshot.
+"""
+
+MCP_RESEARCH_ANSWER_SHARE = 0.75
+"""Fraction of a research result's budget its report may take; the rest is its citations.
+
+The report is what the run was paid for. A run cites 20 to 80 sources, whose snippets are cut
+before any is dropped, so a quarter of the budget still lists most of them.
+"""
+
 _STRING = {"type": "string"}
 _HANDLE: dict[str, Any] = {"handle": _STRING, "truncated": {"type": "boolean"}, "note": _STRING}
 
