@@ -57,9 +57,9 @@
             "pages": [
               "index",
               "quickstart",
-              "free-web-access",
               "how-it-works",
-              "providers"
+              "providers",
+              "free-web-access"
             ]
           },
           {
