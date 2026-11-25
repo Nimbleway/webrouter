@@ -30,6 +30,7 @@ README_NAMES = {
     "Octen": "octen",
     "Keirolabs": "keirolabs",
     "SpecStream": "specstream",
+    "Firecrawl": "firecrawl",
     "AgentCore": "agentcore",
     "Exa LiteLLM": "exa-litellm",
     "Tavily LiteLLM": "tavily-litellm",

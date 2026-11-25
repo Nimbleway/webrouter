@@ -9,7 +9,7 @@ Guidance for AI coding agents working in this repository. Humans: see
 web APIs, across seven methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
-Linkup, WebIQ, Keenable, DeepSeek, AWS AgentCore Web Search, Keirolabs and SpecStream, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
+Linkup, WebIQ, Keenable, DeepSeek, AWS AgentCore Web Search, Keirolabs, SpecStream and Firecrawl, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
 tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,

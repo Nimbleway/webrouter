@@ -1,13 +1,15 @@
-"""What search providers share on text: a body cut to a snippet, and domain filters as ``site:`` operators."""
+"""What search providers share on text: a body cut to a snippet, a result read from named fields, and domain filters
+as ``site:`` operators."""
 
 from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from typing import Any
 
 from web_router.constants import SNIPPET_LIMIT
 from web_router.constants_search import EXCLUDE_SITE_OPERATOR, MSG_NOT_A_DOMAIN, SITE_DOMAIN_PATTERN, SITE_OPERATOR
-from web_router.types import SearchDepth, SearchRequest
+from web_router.types import SearchDepth, SearchRequest, SearchResult
 
 DOMAIN_LISTS = ("include_domains", "exclude_domains")
 """The two domain filters a search request carries."""
@@ -37,6 +39,34 @@ def lite_body(text: str, depth: SearchDepth | None) -> str:
     served it. The vendor's full text stays in ``raw``.
     """
     return as_snippet(text) if depth == "lite" else text
+
+
+def named_result(
+    hit: dict[str, Any],
+    depth: SearchDepth | None = None,
+    *,
+    link: str = "url",
+    snippet: str = "description",
+    body: str | None = None,
+    date: str | None = None,
+) -> SearchResult:
+    """One result from a hit whose fields are named here; every field not named stays in ``extra``.
+
+    ``description`` is the snippet cut to a snippet's size. ``content`` is the
+    page body when ``body`` names one that came back, else the snippet, cut when
+    ``lite`` was asked for. A date comes only from ``date``, and there is never a
+    score: nothing the backend did not return is invented.
+    """
+    text = str(hit.get(snippet) or "")
+    named = {link, "title", snippet, body, date}
+    return SearchResult(
+        url=hit[link],
+        title=hit.get("title") or "",
+        description=as_snippet(text),
+        content=lite_body(hit.get(body) or text if body else text, depth),
+        published_date=hit.get(date) or None if date else None,
+        extra={key: value for key, value in hit.items() if key not in named},
+    )
 
 
 def site_operators(

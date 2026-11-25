@@ -94,6 +94,7 @@ _BUILTIN_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekProvider", EXTRA_SEARCH),
     PROVIDER_VALYU: ("web_router.providers.valyu", "ValyuProvider", EXTRA_SEARCH),
     PROVIDER_SPECSTREAM: ("web_router.providers.specstream", "SpecStreamProvider", EXTRA_SEARCH),
+    PROVIDER_FIRECRAWL: ("web_router.providers.firecrawl", "FirecrawlProvider", EXTRA_SEARCH),
     PROVIDER_AGENTCORE: ("web_router.providers.agentcore", "AgentCoreProvider", EXTRA_AWS),
     PROVIDER_YOU_MCP: ("web_router.providers.you_mcp", "YouMcpProvider", EXTRA_SEARCH),
     PROVIDER_EXA_MCP: ("web_router.providers.exa_mcp", "ExaMcpProvider", EXTRA_SEARCH),
