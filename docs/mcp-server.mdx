@@ -331,9 +331,10 @@ tools, `browse`, the live data tools and the data API tools, `call_data_api`
 among them, are off until you set `WEB_ROUTER_MCP_PROFILE=full` or name them in
 `WEB_ROUTER_MCP_TOOLS`; `load_env` is off until you set
 `WEB_ROUTER_MCP_LOAD_ENV`; and the browser refuses loopback and private
-addresses until you set `WEB_ROUTER_MCP_PRIVATE_URLS=on`. To keep what you had:
+addresses until you set `WEB_ROUTER_MCP_PRIVATE_URLS=on`. Restore these settings with:
 `WEB_ROUTER_MCP_PROFILE=full`, `WEB_ROUTER_MCP_LOAD_ENV=remember` and
-`WEB_ROUTER_MCP_PRIVATE_URLS=on`. See
+`WEB_ROUTER_MCP_PRIVATE_URLS=on`. Tools with no configured backend stay hidden
+in every profile; name them in `WEB_ROUTER_MCP_TOOLS` to list them anyway. See
 [Serving fewer tools](#serving-fewer-tools-web_router_mcp_tools).
 </Warning>
 
