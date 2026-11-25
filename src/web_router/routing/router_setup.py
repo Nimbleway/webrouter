@@ -14,6 +14,7 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
+from web_router._urls import urls_in
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_invoke import ROUTER_URL_POLICY_ATTR
 from web_router.providers._runtime import Runtime
@@ -29,7 +30,7 @@ from web_router.routing.record import prompt_of
 from web_router.routing.request_modes import runnable
 from web_router.routing.route_tools import ALL_TOOLS, checked_extra_modes, checked_route_modes, checked_route_tools
 from web_router.routing.router_owner import RouterOwner
-from web_router.routing.url_policy import UrlPolicy, url_check
+from web_router.routing.url_policy import UrlPolicy, screened, url_check
 from web_router.spend_record import SpendSinkHolder
 from web_router.types import NormalizedRequest
 from web_router.types_decision import DecisionRecord
@@ -83,6 +84,11 @@ class RouterSetup(RouterOwner, SpendSinkHolder):
             self._router = None if attached is None else AttachedRouter(attached, fail_on_error=fail_on_router_error)
             floor = getattr(attached, ROUTER_URL_POLICY_ATTR, None) if url_policy is None else url_policy
             self._router_url_check = url_check(floor)
+
+    def _screen(self, prompt: str) -> tuple[list[str], dict[str, str]]:
+        """The prompt's URLs, each once, kept or refused by ``url_policy``; a name may be resolved."""
+        assert self._url_check is not None  # set by every router's constructor
+        return screened(list(dict.fromkeys(urls_in(prompt))), self._url_check)
 
     def _route_request(
         self, chain: Any, request: NormalizedRequest, budget: Budget | None

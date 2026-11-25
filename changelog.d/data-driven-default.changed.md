@@ -1,0 +1,1 @@
+The default router is now `data-driven`: `plan()`, `run()` and the MCP server's `web_run` pick the method from the trained table. A URL is no longer always extracted, and research, billed per run, is planned far more often, for simple how, why, compare and list questions too. Pass `tool=` to pin a method, a `budget` to cap it, or `router=None` for a plain search plan.

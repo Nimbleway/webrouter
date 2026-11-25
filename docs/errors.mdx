@@ -28,7 +28,7 @@ except WebRouterError as exc:
 | `ResearchTimeoutError` / `BrowseTimeoutError` | A research run or browse task outlasted the timeout you allowed it | Nothing is lost: the run is still going and the exception carries its `job_id`. Poll it, or allow longer |
 | `BenchmarkTimeoutError` | Never raised: it is the `error` of a `benchmark()` or `benchmark_extract()` row whose provider had not answered within the comparison's `timeout` | Allow longer, or leave that provider out of `providers`; the other rows are unaffected |
 | `ProviderError` | The backend itself failed: HTTP error, SDK exception, bad credentials | Branch on `kind` (see below); the original error is on `original`, wrapped, not swallowed |
-| `AllProvidersFailedError` | A `ProviderError`: every backend `auto` tried failed | `failures` maps each backend to its own error; `kind` is theirs when they agree |
+| `AllProvidersFailedError` | A `ProviderError`: every backend `auto` tried failed | `failures` maps each backend to its own error; `kind` is theirs when they agree. When none was reachable from this machine, `blocked_hosts` lists the hosts to allow (see below) |
 | `ExtractFailedError` | A `ProviderError`: an extract read no page, and its URLs failed separately | `url_failures` holds each URL's `ExtractFailure`, with its own `kind` and `retryable`, as a partly successful extract's `failures` does |
 | `InvalidParameterError` | An option is not a value the method takes: an empty or whitespace-only query, `max_results=0`, an unknown `search_depth`, a negative `Budget` cap. Raised before any backend is called | Fix the value: `field` names the option and `allowed` its values. Also a `ValueError` |
 | `LiveDataJobError` | A `ProviderError`: a live data run the vendor runs as a job failed or was still running after it was submitted, up to five minutes or the call's deadline (Oxylabs' job-only scrapers; a Bright Data scrape past its synchronous window) | The run may still have billed: `job_id` names the Oxylabs job or the Bright Data snapshot to read later |
@@ -54,7 +54,7 @@ ends in the same facts, as ` (kind=target, retryable=false)`.
 
 | Field | Meaning |
 | --- | --- |
-| `kind` | `auth` (the key was refused: 401, 403, or Brave's 422 `SUBSCRIPTION_TOKEN_INVALID`), `rate_limit` (429, 402, or an MCP backend's 200 that says it throttled the call or its quota ran out), `bad_request` (400, 422), `not_found` (the backend's endpoint or resource is not there: 404), `timeout`, `target` (the page is the problem: its host does not resolve, its URL is not one, or the page itself came back 404 or 410), `local` (a failure on this side: an async router reused on a second event loop, or a provider's own bug), or `upstream` (anything else the backend did) |
+| `kind` | `auth` (the key was refused: 401, 403, or Brave's 422 `SUBSCRIPTION_TOKEN_INVALID`), `rate_limit` (429, 402, or an MCP backend's 200 that says it throttled the call or its quota ran out), `bad_request` (400, 422), `not_found` (the backend's endpoint or resource is not there: 404), `timeout`, `target` (the page is the problem: its host does not resolve, its URL is not one, or the page itself came back 404 or 410), `local` (a failure on this side: an async router reused on a second event loop, or a provider's own bug), `network_blocked` (this machine's proxy refused the backend's host: a refused `CONNECT`, or a 407), `unreachable` (the backend's host did not resolve from here, or refused the connection), or `upstream` (anything else the backend did) |
 | `status_code` | The backend's HTTP status, when it answered with one |
 | `retryable` | Whether trying again, on the same backend or another, may work: `rate_limit`, `timeout` and `upstream` |
 | `retry_after` | Seconds the backend asked you to wait (`Retry-After`), when it said |
@@ -82,3 +82,30 @@ that is refused (`auth`) moves on, and is logged at `WARNING` on the
 `web_router` logger, so a broken key is not hidden by the backend that
 answered after it. A keyless backend's 401 or 403 refused no key of yours, so
 only its `INFO` hop record shows it.
+
+## When no backend is reachable
+
+`network_blocked` and `unreachable` say the call never got past this
+machine's network: the backend did not fail. Neither is `retryable`, since the
+same network refuses the same host again, and `auto` moves on after either,
+since the next backend's host may be allowed. A failed call of either kind is
+logged in the spend log as `failed`, with no cost.
+
+A refused connection to `localhost`, a loopback, link-local or private address
+is the local backend's own failure: it stays `upstream` and retryable.
+A refusal with no request host stays `upstream` too; DNS failures remain
+`unreachable`.
+
+When every backend `auto` tried failed one of these two ways, the
+`AllProvidersFailedError` is one line naming the hosts, its `kind` is
+`network_blocked` (or `unreachable`, when every hop was), and `blocked_hosts`
+lists them:
+
+```text
+[auto] no backend host is reachable from this machine: sdk.nimbleway.com, api.tavily.com, api.you.com, ...
+```
+
+Allow those hosts in your proxy or firewall, or set a key for a backend whose
+host is allowed. [Network access](/production#network-access) lists the host
+each backend needs. The CLI prints the same line, and its error JSON adds
+`kind`, `hops` (each backend's own kind) and `blocked_hosts`.

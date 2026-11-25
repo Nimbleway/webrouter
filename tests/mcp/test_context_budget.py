@@ -38,11 +38,11 @@ bring it to 26,289; ``extract``'s two (``data_apis``, ``configured_only``), to 2
 SpecStream's name in the ``search`` and ``extract`` provider lists brings it to 26,663.
 """
 
-TOOL_BUDGET = 2_650
+TOOL_BUDGET = 2_670
 """Bytes any one tool may take: ``search``, the largest, is 2,606 with its data API options.
 
 Each search backend adds its name to ``search``'s ``provider`` list; Valyu, Seltz and
-Octen together bring it to about 2,620, and SpecStream to 2,647.
+Octen together bring it to about 2,620, SpecStream to 2,647, and Firecrawl to 2,661.
 """
 
 
@@ -147,7 +147,7 @@ def test_a_result_is_rendered_compact() -> None:
     assert render({"a": [1, 2], "b": {"c": "d"}}) == '{"a":[1,2],"b":{"c":"d"}}'
 
 
-async def test_core_results_match_their_published_output_schemas(tools: WebRouterTools) -> None:
+async def test_core_results_match_their_published_output_schemas(tools: WebRouterTools, all_runnable: None) -> None:
     calls = {
         MCP_TOOL_SEARCH: {"query": "q"},
         MCP_TOOL_EXTRACT: {"urls": ["https://example.com"]},
@@ -182,7 +182,7 @@ async def test_web_run_will_not_run_a_method_the_allowlist_leaves_out(
     failed, text = await outcome(routed(), MCP_TOOL_WEB_RUN, prompt=f"read {URL}")
 
     assert failed and f"web_run planned {MCP_TOOL_EXTRACT}" in text and ENV_MCP_TOOLS in text
-    assert members == [], "nothing was run"
+    assert members == [] and "WEB_ROUTER_MCP_PROFILE" in text, "nothing was run"
 
 
 def test_an_empty_structured_answer_is_kept() -> None:

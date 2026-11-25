@@ -37,6 +37,7 @@ from typing import Any, ClassVar
 from web_router.constants import MSG_MAX_BAD_HEDGE, PROVIDER_MAX
 from web_router.exceptions import ConfigurationError, WebRouterError
 from web_router.providers._chain import RECOVERABLE, _ChainSpec
+from web_router.providers._delegated import delegating
 from web_router.providers._race import _AsyncRace, _Losses, _Race, _Runner
 from web_router.providers.auto import AutoExtractProvider
 from web_router.providers.base import ExtractProvider
@@ -202,9 +203,8 @@ class MaxExtractProvider(AutoExtractProvider):
     ) -> list[_Runner]:
         """Submit every runner's call; returns the empty list of runners left to start."""
         for provider_name, member in runners:
-            # In a copy of the caller's context, so a deadline set around the
-            # call reaches the member on its worker thread.
-            future = pool.submit(contextvars.copy_context().run, member.extract, delegated)
+            with delegating():
+                future = pool.submit(contextvars.copy_context().run, member.extract, delegated)
             with self._quiet:
                 self._inflight.add(future)
             # Registered outside the lock: a call already finished runs its

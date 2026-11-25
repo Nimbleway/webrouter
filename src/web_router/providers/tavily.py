@@ -43,6 +43,7 @@ from web_router.providers.base import SearchProvider
 from web_router.providers.tavily_clients import TavilyClients, TavilyClientsMixin, sdk_errors
 from web_router.providers.tavily_extract import TavilyExtractProvider as TavilyExtractProvider
 from web_router.providers.tavily_extract import clamped_timeout, tavily_key
+from web_router.snippet import as_snippet
 from web_router.types import (
     SearchRequest,
     SearchResponse,
@@ -140,7 +141,7 @@ class TavilyProvider(TavilyClientsMixin, SearchProvider):
                 SearchResult(
                     url=item.get("url", ""),
                     title=item.get("title") or "",
-                    description=lite_body(snippet, request.search_depth),
+                    description=as_snippet(snippet),
                     content=lite_body(best_text(item.get("raw_content"), snippet), request.search_depth),
                     score=item.get("score"),
                     published_date=item.get("published_date"),

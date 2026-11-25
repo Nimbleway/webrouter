@@ -83,7 +83,7 @@
     "exclude_domains": "live: tests/test_integration_surface.py::test_excluded_domains_do_not_come_back",
     "country": "live: tests/test_integration_surface.py::test_country_is_accepted_as_an_iso_code",
     "locale": "live: tests/test_integration_surface.py::test_locale_is_accepted_as_a_language_code",
-    "recency": "docs: https://docs.nimbleway.com/api-reference/search/search (time_range day | week | month | year). Nimble applies the filter, and its results carry no date: live on 2026-11-09 day and year returned none dated, so web-router's results cannot show the window"
+    "recency": "docs: https://docs.nimbleway.com/api-reference/search/search (time_range day | week | month | year). Nimble applies the filter, and its results carry no date: live on 2026-11-09 day and year returned none dated, so web-router's results cannot show the window. Live on 2026-11-24 day left lite's results unchanged, so lite refuses recency"
   },
   "vendor_options": {
     "focus": {

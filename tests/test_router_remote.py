@@ -10,21 +10,31 @@ from typing import Any
 
 import pytest
 
-from tests.routing_remote_helpers import URL_PROMPT, Canned, Recorder, ask, canned, config, reference, running
+from tests.routing_remote_helpers import (
+    URL_PROMPT,
+    Canned,
+    Recorder,
+    ask,
+    canned,
+    config,
+    reference,
+    running,
+    url_reason,
+)
 from web_router import AsyncWebRouter, Budget, WebRouter
 from web_router.routing._runner import _classified
 from web_router.routing.remote import RemoteRouter, RemoteRouterError, RemoteRouterInvalid, RemoteRouterTimeout
 from web_router.routing.wire import request_from_wire
 
 
-def test_the_reference_server_routes_a_plan_with_the_rules_router() -> None:
+def test_the_reference_server_routes_a_plan_with_the_data_driven_router() -> None:
     recorder = Recorder()
     with running(recorder) as server, WebRouter(router="remote", router_config=config(server)) as wr:
         plan = wr.plan(URL_PROMPT)
         searched = wr.plan("solar news")
     assert (plan.tool, searched.tool) == ("extract", "search")
     assert plan.decision.router == "remote(http://127.0.0.1)"
-    assert plan.decision.reason == "the prompt names a URL"
+    assert plan.decision.reason == url_reason()
     sent = recorder.bodies[0]
     assert sent["schema"] == 1 and sent["urls"] == ["https://en.wikipedia.org/wiki/Web_scraping"]
     assert all(c["id"] == f"{c['tool']}:{c['provider']}" for c in sent["candidates"])

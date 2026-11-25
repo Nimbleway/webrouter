@@ -42,7 +42,6 @@ from web_router.constants import (
     MCP_BROWSER_SESSION_TIMEOUT_LIMIT,
     MCP_BROWSER_SNAPSHOT_MAX_CHARS,
     MCP_BROWSER_SNAPSHOT_MAX_CHARS_LIMIT,
-    MCP_BROWSER_TOOLS,
     MCP_MSG_BROWSE_PENDING,
     MCP_MSG_BROWSER_ALREADY_ENDED,
     MCP_MSG_BROWSER_LOWERED,
@@ -79,20 +78,19 @@ from web_router.constants import (
 )
 from web_router.constants_live_data import MCP_TOOL_LIVE_DATA, MCP_TOOL_LIVE_DATA_SOURCE, MCP_TOOL_LIVE_DATA_SOURCES
 from web_router.constants_mcp import (
-    MCP_MSG_NOTHING_CONFIGURED,
     MCP_MSG_UNKNOWN_ARGUMENTS,
     MCP_NO_ARGUMENTS,
 )
 from web_router.constants_mcp_context import MCP_OUTPUT_SCHEMAS
 from web_router.constants_mcp_hints import MCP_TOOL_HINTS
 from web_router.exceptions import BrowseTimeoutError, ResearchTimeoutError
-from web_router.mcp import allowlist, methods, schema
+from web_router.mcp import allowlist, methods, profile_report, schema
 from web_router.mcp.answer_tool import answer_tool
 from web_router.mcp.browsers import BrowserSessions, check_target, playwright_installed, require_playwright
 from web_router.mcp.budget import ConnectionBudget, browser_charged, wait_left
 from web_router.mcp.env import EnvSources, user_config_dir
 from web_router.mcp.env_tool import load_env_entry
-from web_router.mcp.key_text import env_hint, no_backend_hint, server_instructions
+from web_router.mcp.key_text import env_hint, no_backend_hint, nothing_configured, server_instructions
 from web_router.mcp.live_data_tools import live_data_source_tool, live_data_sources_tool, live_data_tool
 from web_router.mcp.methods import METHODS
 from web_router.mcp.raw_tool import fetch_raw_tool
@@ -112,7 +110,7 @@ from web_router.mcp.shaping import (
     shape_research,
     shape_search,
 )
-from web_router.mcp.urls import screen
+from web_router.mcp.urls import ascreen
 from web_router.providers.base import BrowseJob, ResearchJob
 from web_router.types import (
     ExtractResponse,
@@ -169,33 +167,33 @@ class WebRouterTools:
         self.browsers = browsers if browsers is not None else BrowserSessions()
         self.env = env if env is not None else EnvSources()
         self._waits = {**MCP_TOOL_WAITS, MCP_TOOL_RESEARCH: research_wait, MCP_TOOL_BROWSE: browse_wait}
-        self._handlers: dict[str, _Handler] = allowlist.allowed(
-            {
-                MCP_TOOL_SEARCH: self._search,
-                MCP_TOOL_EXTRACT: self._extract,
-                MCP_TOOL_LIVE_DATA_SOURCES: partial(live_data_sources_tool, self),
-                MCP_TOOL_LIVE_DATA_SOURCE: partial(live_data_source_tool, self),
-                MCP_TOOL_LIVE_DATA: partial(live_data_tool, self),
-                MCP_TOOL_ANSWER: partial(answer_tool, self),
-                MCP_TOOL_RESEARCH: self._research,
-                MCP_TOOL_RESEARCH_STATUS: self._research_status,
-                MCP_TOOL_BROWSE: self._browse,
-                MCP_TOOL_BROWSE_STATUS: self._browse_status,
-                MCP_TOOL_FETCH_RAW: partial(fetch_raw_tool, self),
-                **load_env_entry(self),  # none when the operator turned load_env off
-                **{name: functools.partial(handler, self) for name, handler in SESSION_TOOLS.items()},
-                MCP_TOOL_BROWSER_OPEN: self._browser_open,
-                MCP_TOOL_BROWSER_GOTO: self._browser_goto,
-                MCP_TOOL_BROWSER_SNAPSHOT: self._browser_snapshot,
-                MCP_TOOL_BROWSER_CLICK: self._browser_click,
-                MCP_TOOL_BROWSER_TYPE: self._browser_type,
-                MCP_TOOL_BROWSER_PRESS: self._browser_press,
-                MCP_TOOL_BROWSER_SCREENSHOT: self._browser_screenshot,
-                MCP_TOOL_BROWSER_READ: self._browser_read,
-                MCP_TOOL_BROWSER_CLOSE: self._browser_close,
-            }
-        )
-        self.served = frozenset(self._handlers)  # the tools listed and callable here: the allowlist's, or all
+        every: dict[str, _Handler] = {
+            MCP_TOOL_SEARCH: self._search,
+            MCP_TOOL_EXTRACT: self._extract,
+            MCP_TOOL_LIVE_DATA_SOURCES: partial(live_data_sources_tool, self),
+            MCP_TOOL_LIVE_DATA_SOURCE: partial(live_data_source_tool, self),
+            MCP_TOOL_LIVE_DATA: partial(live_data_tool, self),
+            MCP_TOOL_ANSWER: partial(answer_tool, self),
+            MCP_TOOL_RESEARCH: self._research,
+            MCP_TOOL_RESEARCH_STATUS: self._research_status,
+            MCP_TOOL_BROWSE: self._browse,
+            MCP_TOOL_BROWSE_STATUS: self._browse_status,
+            MCP_TOOL_FETCH_RAW: partial(fetch_raw_tool, self),
+            **load_env_entry(self),  # none when the operator turned load_env off
+            **{name: functools.partial(handler, self) for name, handler in SESSION_TOOLS.items()},
+            MCP_TOOL_BROWSER_OPEN: self._browser_open,
+            MCP_TOOL_BROWSER_GOTO: self._browser_goto,
+            MCP_TOOL_BROWSER_SNAPSHOT: self._browser_snapshot,
+            MCP_TOOL_BROWSER_CLICK: self._browser_click,
+            MCP_TOOL_BROWSER_TYPE: self._browser_type,
+            MCP_TOOL_BROWSER_PRESS: self._browser_press,
+            MCP_TOOL_BROWSER_SCREENSHOT: self._browser_screenshot,
+            MCP_TOOL_BROWSER_READ: self._browser_read,
+            MCP_TOOL_BROWSER_CLOSE: self._browser_close,
+        }
+        self._handlers = allowlist.allowed(every)
+        self.served = frozenset(self._handlers)  # the tools listed and callable here: the allowlist's or profile's
+        self._every = tuple(every)
 
     def list_tools(self) -> list[Tool]:
         """Every tool this install can serve, with an input schema built from what it is configured for.
@@ -203,10 +201,9 @@ class WebRouterTools:
         The ``provider`` enum names only backends that have their credentials
         here, so the model cannot pick one that is certain to throw, and a user
         holding one key is not shown thirteen they do not have. For the same
-        reason the ``browser_*`` tools are left out when Playwright is not
-        installed: every one of them would fail.
+        reason a tool with no backend here is left out -- the ``browser_*`` tools without Playwright too.
         """
-        hidden = () if playwright_installed() else MCP_BROWSER_TOOLS
+        hidden = allowlist.unrunnable(self._handlers, browser=playwright_installed())
         return [
             Tool(
                 name=name,
@@ -235,6 +232,7 @@ class WebRouterTools:
             "default_provider": self.router.default_provider,
             "env": env,
             "unlock": methods.unlock(),
+            "tools": profile_report.report(self._every, self.served),
             "routing": self.capabilities_routing(),
         }
 
@@ -243,12 +241,13 @@ class WebRouterTools:
         return self.routing.capabilities(self.budget.status())
 
     def keyed(self) -> bool:
-        """Whether any backend is configured here that needed a credential to be."""
         return any(methods.keyed(method) for method in methods.EACH_METHOD)
 
     def instructions(self, *, remote: bool = False) -> str:
         """The server's instructions, saying what the model can do about it when no key reached the server."""
-        return self.env.noted(server_instructions(keyed=self.keyed(), remote=remote))
+        browser = MCP_TOOL_BROWSER_OPEN in self.served and playwright_installed()
+        hidden = allowlist.unrunnable(self.served, browser=playwright_installed())
+        return self.env.noted(server_instructions(keyed=self.keyed(), remote=remote, browser=browser, hidden=hidden))
 
     def tools_changed(self) -> bool:
         """Whether the tool list changed since this was last asked -- true once, so the client is told once."""
@@ -289,7 +288,7 @@ class WebRouterTools:
 
     async def _extract(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         kwargs = self.arguments(MCP_TOOL_EXTRACT, arguments)
-        kwargs["urls"] = screen(MCP_TOOL_EXTRACT, kwargs["urls"])
+        kwargs["urls"] = await ascreen(MCP_TOOL_EXTRACT, kwargs["urls"])
         response = await self.router.extract(**kwargs)
         record = self.store.add(MCP_TOOL_EXTRACT, raw=response.raw)
         return shape_extract(response, record.handle, budget=max_response_chars())
@@ -318,7 +317,7 @@ class WebRouterTools:
 
     async def _browse(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         kwargs = self.arguments(MCP_TOOL_BROWSE, arguments)
-        screen(MCP_TOOL_BROWSE, [kwargs["start_url"]] if "start_url" in kwargs else [])
+        await ascreen(MCP_TOOL_BROWSE, [kwargs["start_url"]] if "start_url" in kwargs else [])
         job = await self.router.submit_browse(**kwargs)
         try:
             response = await job.aresult(timeout=(waited := wait_left(self.browse_wait)))
@@ -495,13 +494,10 @@ class WebRouterTools:
         declare; one left unset stays unset rather than being sent as a default of ours.
         """
         names = schema.argument_names(tool)
-        # `is None`, not truthiness: browser_type's required `text` may be ""
-        # -- the way a field is cleared -- and supplied-but-empty is not missing.
         missing = [name for name in MCP_TOOL_REQUIRED[tool] if arguments.get(name) is None]
         if (method := methods.unconfigured_live_data(tool, arguments)) is not None:
-            # The schema offers no `provider` when there is none: say what would add one, not that it is missing.
             env_vars = ", ".join(methods.env_vars(method))
-            raise ValueError(MCP_MSG_NOTHING_CONFIGURED.format(tool=tool, env_vars=env_vars))
+            raise ValueError(nothing_configured(tool, env_vars))
         if missing:
             raise ValueError(MCP_MSG_MISSING_ARGUMENT.format(tool=tool, name=missing[0]))
         return {name: arguments[name] for name in names if arguments.get(name) is not None}

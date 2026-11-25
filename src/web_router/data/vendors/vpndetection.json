@@ -1,0 +1,98 @@
+{
+  "vendor": "vpndetection",
+  "name": "VPNDetection",
+  "category": "security",
+  "summary": "VPN, Tor and privacy relay detection for IPv4 and IPv6 addresses, with bot, anycast and bogon flags, country, ASN and network type on the free plan, and proxy, hosting and CDN detection, the operator behind each flag, city and abuse contact on paid plans.",
+  "docs_url": "https://docs.vpndetection.io/api",
+  "pricing_url": "https://vpndetection.io/pricing",
+  "base_url": "https://api.vpndetection.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "VPNDETECTION_API_KEY"
+        ],
+        "required": false,
+        "description": "a VPNDetection API key (vpndetection.io console > API keys). Optional: without one the free Unlimited plan answers single lookups"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}",
+        "optional": true
+      }
+    ]
+  },
+  "notes": [
+    "No key is needed: the free Unlimited plan answers every single lookup with is_vpn, is_tor and is_relay, the tor and relay detail objects with their provider, is_bot, is_anycast, is_bogon, hostname, country-level location and the announcing ASN with its type (isp, hosting, business...), prefix and RPKI status (terms: https://vpndetection.io/terms#no-key).",
+    "A field missing from an answer is one the plan does not include, never false: the proxy flags (is_resproxy, is_dcproxy, is_mobproxy, is_pubproxy), is_hosting, is_cdn, the vpn object (which VPN it is), city and coordinates need a paid plan. For hosting traffic on the free plan, read asn.type.",
+    "Private and reserved addresses answer 200 with is_bogon true, not an error. A 429 carries Retry-After."
+  ],
+  "sources": [
+    "https://docs.vpndetection.io/api",
+    "https://docs.vpndetection.io/api/lookup/lookupIp",
+    "https://docs.vpndetection.io/api/lookup/lookupBatch",
+    "https://docs.vpndetection.io/get-started/plans-and-fields"
+  ],
+  "curated": "2026-11-24",
+  "endpoints": [
+    {
+      "id": "vpndetection.ip.lookup",
+      "name": "Look up an IP address",
+      "summary": "is_vpn, is_tor, is_relay, is_bot, is_anycast and is_bogon, country, ASN with network type and prefix, and hostname for an IPv4 or IPv6 address; proxy, hosting and CDN flags, the operator and evidence behind each, city and abuse contact on paid plans.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/{ip}",
+      "params": {
+        "ip": {
+          "in": "path",
+          "required": true,
+          "description": "IPv4 or IPv6 address.",
+          "example": "146.70.116.130"
+        },
+        "user_agent": {
+          "in": "query",
+          "type": "string",
+          "description": "The User-Agent of the request being decided on, up to 1024 characters. On a paid plan the answer then says which agent it names and whether this address bears it out."
+        }
+      },
+      "job": "ip.lookup",
+      "docs_url": "https://docs.vpndetection.io/api/lookup/lookupIp",
+      "verified": {
+        "docs": "https://docs.vpndetection.io/api/lookup/lookupIp",
+        "live": "2026-11-24"
+      }
+    },
+    {
+      "id": "vpndetection.ip.batch",
+      "name": "Look up many IP addresses",
+      "summary": "Up to 1000 addresses in one call, each answered with the fields a single lookup carries for the plan, keyed by the string sent; an address that fails sits in errors without disturbing the rest.",
+      "kind": "read",
+      "method": "POST",
+      "path": "/batch",
+      "params": {
+        "ips": {
+          "in": "body",
+          "type": "array",
+          "required": true,
+          "description": "The addresses, up to 1000; exact duplicates collapse to one lookup.",
+          "example": [
+            "146.70.116.130",
+            "2606:4700:4700::1111"
+          ]
+        }
+      },
+      "notes": [
+        "A read over POST. Needs a paid plan's key: without a key it answers 401, and with a free-plan key 402, unless ips holds one address, which is answered as a single lookup."
+      ],
+      "job": "ip.lookup",
+      "docs_url": "https://docs.vpndetection.io/api/lookup/lookupBatch",
+      "verified": {
+        "docs": "https://docs.vpndetection.io/api/lookup/lookupBatch",
+        "live": "2026-11-24"
+      }
+    }
+  ]
+}

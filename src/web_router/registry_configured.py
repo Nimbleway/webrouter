@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 
 from web_router.constants import (
     BROWSE_ENV_BY_PROVIDER,
     BROWSER_ENV_BY_PROVIDER,
     ENV_BY_PROVIDER,
     EXTRACT_ENV_BY_PROVIDER,
+    PROVIDER_AUTO,
+    PROVIDER_OBSCURA,
     RESEARCH_ENV_BY_PROVIDER,
 )
 from web_router.constants_litellm import LITELLM_SEARCH_SETTINGS_BY_PROVIDER as SEARCH_SETTINGS
@@ -42,10 +45,15 @@ def configured_extract_providers() -> list[str]:
     """Every builtin extract provider you currently have credentials for, plus the keyless ones.
 
     The same caveats as :func:`configured_providers`. A backend needing more than one variable -- Oxylabs its
-    username and password, Bright Data its token and zone -- is reported only when it has all of them.
+    username and password, Bright Data its token and zone -- is reported only when it has all of them. ``obscura``
+    runs a program on this machine, so it is reported only when that program is found.
     """
+    from web_router.providers.obscura import obscura_installed  # its module imports the provider base classes
+
     return sorted(
-        name for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items() if all(is_set(env_var) for env_var in env_vars)
+        name
+        for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items()
+        if all(is_set(env_var) for env_var in env_vars) and (name != PROVIDER_OBSCURA or obscura_installed())
     )
 
 
@@ -59,15 +67,13 @@ def configured_live_data_providers() -> list[str]:
 
 
 def configured_research_providers() -> list[str]:
-    """Every builtin research provider you currently have credentials for.
+    """Every builtin research provider you currently have credentials for, with ``auto`` once there is one.
 
-    The same caveats as :func:`configured_providers`. Shorter than the other two in practice: every research backend
-    bills for the run, so there is no keyless member to pad it out, and with no key at all this is empty but for
-    ``auto`` -- which will then say which variables would fix it.
+    The same caveats as :func:`configured_providers`. Every research backend bills for the run, so there is no
+    keyless member, and with no key at all this is empty: ``auto`` would have nothing to run, and calling it
+    then says which variables would fix that.
     """
-    return sorted(
-        name for name, env_vars in RESEARCH_ENV_BY_PROVIDER.items() if all(is_set(env_var) for env_var in env_vars)
-    )
+    return _auto_beside_a_key(RESEARCH_ENV_BY_PROVIDER)
 
 
 def configured_browser_providers() -> list[str]:
@@ -82,11 +88,11 @@ def configured_browser_providers() -> list[str]:
 
 
 def configured_browse_providers() -> list[str]:
-    """Every builtin browse provider you currently have credentials for.
+    """As :func:`configured_research_providers`, for browse: no keyless tier, so with no key this is empty."""
+    return _auto_beside_a_key(BROWSE_ENV_BY_PROVIDER)
 
-    The same caveats as :func:`configured_providers`. No keyless tier: every task backend bills for the run, so
-    with no key at all this is empty but for ``auto`` -- which will then say which variables would fix it.
-    """
-    return sorted(
-        name for name, env_vars in BROWSE_ENV_BY_PROVIDER.items() if all(is_set(env_var) for env_var in env_vars)
-    )
+
+def _auto_beside_a_key(table: Mapping[str, tuple[str, ...]]) -> list[str]:
+    """The names in ``table`` whose variables are all set, with ``auto`` only beside one: alone it runs nothing."""
+    names = sorted(name for name, env_vars in table.items() if name != PROVIDER_AUTO and all(map(is_set, env_vars)))
+    return sorted([PROVIDER_AUTO, *names]) if names else []

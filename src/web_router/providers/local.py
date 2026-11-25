@@ -21,7 +21,6 @@ import sys
 import tempfile
 import threading
 import time
-import warnings
 import weakref
 from collections import OrderedDict
 from collections.abc import Callable, Iterator
@@ -70,7 +69,6 @@ from web_router.constants import (
     MSG_LOCAL_EXITED,
     MSG_LOCAL_LOG_TAIL,
     MSG_LOCAL_NO_BROWSER,
-    MSG_LOCAL_PROFILE_LEFT,
     MSG_LOCAL_RESERVED_SWITCH,
     MSG_LOCAL_STARTUP_TIMEOUT,
     MSG_LOCAL_UNKNOWN_SESSION,
@@ -83,6 +81,7 @@ from web_router.constants import (
     PROVIDER_LOCAL,
 )
 from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.providers._local_profile import remove_profile, warn_if_left
 from web_router.providers.base import BrowserProvider
 from web_router.types import BrowserRequest, BrowserSession, BrowserState, Viewport
 
@@ -166,7 +165,7 @@ class LocalBrowserProvider(BrowserProvider):
             if request.viewport is not None:
                 _size_page(port, path, request.viewport, executable)
         except BaseException:
-            _warn_if_left(root, _end(launched))
+            warn_if_left(root, _end(launched))
             raise
 
         session_id = path.rsplit("/", 1)[-1]
@@ -262,7 +261,7 @@ class LocalBrowserProvider(BrowserProvider):
             # -- or, at the latest, this process exiting -- tries the removal again.
             with self._lock:
                 self._sessions[session_id] = launched
-            _warn_if_left(launched.root, leftover)
+            warn_if_left(launched.root, leftover)
         return True
 
     def _wait_for_devtools(self, process: subprocess.Popen[bytes], root: Path, executable: str) -> tuple[int, str]:
@@ -558,24 +557,8 @@ def _end(launched: _Launched) -> OSError | None:
     try:
         _stop(launched.process)
     finally:
-        leftover = _remove_profile(launched.root)
+        leftover = remove_profile(launched.root)
     return leftover
-
-
-def _remove_profile(root: Path) -> OSError | None:
-    try:
-        shutil.rmtree(root)
-    except FileNotFoundError:
-        # Already gone -- by an earlier attempt that got partway, or by hand.
-        return None
-    except OSError as exc:
-        return exc
-    return None
-
-
-def _warn_if_left(root: Path, error: OSError | None) -> None:
-    if error is not None:
-        warnings.warn(MSG_LOCAL_PROFILE_LEFT.format(path=root, error=error), RuntimeWarning, stacklevel=2)
 
 
 def _stop(process: subprocess.Popen[bytes]) -> None:

@@ -64,12 +64,11 @@ class Provider(str, Enum):
     discoverable from an editor rather than remembered. Backends added with :func:`web_router.register_provider`
     are named by string, which is why the string form is never going away.
 
-    Not every name serves every method: ``oxylabs``, ``brightdata``, ``firecrawl`` and ``jina`` extract but do not
-    search, and most search backends do not extract. ``steel``, ``browserbase``, ``hyperbrowser``, ``anchor``,
+    Not every name serves every method: ``oxylabs``, ``brightdata``, ``firecrawl``, ``jina`` and ``obscura`` only
+    extract, and most search backends do not extract. ``steel``, ``browserbase``, ``hyperbrowser``, ``anchor``,
     ``kernel`` and ``local`` only open browser sessions, ``browser-use`` and ``skyvern`` only run browse tasks, and
     ``apify`` only runs live data. :func:`web_router.available_providers` and its per-method counterparts list each
-    method's own set. ``auto`` serves every method by trying its backends in turn; ``max`` serves extract alone, by
-    trying every backend at once and returning the first document back.
+    method's own set. ``auto`` tries its backends in turn for every method; ``max`` races them all, for extract alone.
     """
 
     NIMBLE = "nimble"
@@ -99,6 +98,7 @@ class Provider(str, Enum):
     BRIGHTDATA = "brightdata"
     FIRECRAWL = "firecrawl"
     JINA = "jina"
+    OBSCURA = "obscura"
     STEEL = "steel"
     BROWSERBASE = "browserbase"
     HYPERBROWSER = "hyperbrowser"
@@ -222,8 +222,8 @@ class SearchResult(BaseModel):
     description: str = Field(
         default="",
         description=(
-            "A snippet-length summary: the provider's own when it gives one, otherwise "
-            "the head of the page body so the field means the same thing everywhere."
+            "A snippet of at most 500 characters: the backend's own when it sends one, otherwise the head of "
+            "the page body. Each backend's mapping cuts it, so it never repeats the full text in `content`."
         ),
     )
     content: str = Field(
@@ -274,7 +274,7 @@ class ExtractedDocument(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     url: str
-    title: str = Field(default="", description="The page title, when the provider returned one.")
+    title: str = Field(default="", description="The page title, from the provider or the page's title, og:title or H1.")
     content: str = Field(default="", description="The page body, in the representation :attr:`format` names.")
     format: ExtractFormat | None = Field(
         default=None,

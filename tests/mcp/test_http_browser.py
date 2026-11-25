@@ -1,6 +1,6 @@
 """Over HTTP a model's browser runs on the server, so it may not open the server's own loopback or network.
 
-Each case has the stdio control: with the switch at its default, the same addresses still open.
+Under stdio they are refused too by default, and open once the operator sets the switch on.
 """
 
 from __future__ import annotations
@@ -36,7 +36,13 @@ def test_over_http_a_private_address_is_refused(http_switches: None, url: str) -
 
 
 @pytest.mark.parametrize("url", PRIVATE)
-def test_under_stdio_a_private_address_still_opens(stdio_switches: None, url: str) -> None:
+def test_under_stdio_a_private_address_is_refused_until_the_operator_turns_it_on(
+    stdio_switches: None, url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    reason = NavigationPolicy.for_session(CDP).refusal(url)
+    assert reason is not None and f"{ENV_MCP_PRIVATE_URLS}={MCP_PRIVATE_URLS_ON}" in reason
+
+    monkeypatch.setenv(ENV_MCP_PRIVATE_URLS, MCP_PRIVATE_URLS_ON)
     assert NavigationPolicy.for_session(CDP).refusal(url) is None
 
 

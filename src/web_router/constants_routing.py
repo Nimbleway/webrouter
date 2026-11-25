@@ -43,6 +43,12 @@ RULES_DEFINITION_PATTERN = (
 """A prompt asking what something is or how to do something, which the rules router searches even when it names
 research's words: "What is market research?", "How do I compare two columns in Excel and ...?"."""
 
+MSG_RULES_DEPRECATED = (
+    "router='rules' is deprecated, retained for one release and removed in the following release; "
+    "use 'data-driven' (the default), router=None for a plain search plan, "
+    "or use examples/router_rules.py as a starting point for a custom router."
+)
+
 PROMPT_PARAMS = frozenset({"query", "task"})
 """The options that carry a plan's prompt, left out of its ``repr`` with the prompt itself."""
 

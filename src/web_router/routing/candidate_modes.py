@@ -55,6 +55,7 @@ def mode_requests(
     for wanted in (*(offers(owner) if offered else ()), *extra.get(name, ())):
         try:
             moded = pinned_request(owner, request, wanted)
+            owner.validate(moded)
             payload = owner._build_payload(moded)  # the mode merged and its refusals held, as the call sends it
         except InvalidParameterError as exc:
             entries.append((wanted, MSG_DROPPED_REFUSES_MODE.format(why=exc)))

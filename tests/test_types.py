@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
+from web_router.snippet import SNIPPET_LIMIT, as_snippet
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 
@@ -35,3 +36,18 @@ def test_response_exposes_length_and_urls() -> None:
     )
     assert len(response) == 2
     assert response.urls == ["https://a.com", "https://b.com"]
+
+
+def test_a_snippet_survives_being_cut_again() -> None:
+    once = as_snippet("x" * 2000)
+    assert len(once) == SNIPPET_LIMIT and as_snippet(once) == once
+
+
+def test_a_short_text_is_its_own_snippet() -> None:
+    assert as_snippet("A short summary.") == "A short summary."
+
+
+@pytest.mark.parametrize("separator", [" ", "\n", "\t", "\r", "\u00a0", "\u2003"])
+def test_a_text_broken_by_whitespace_is_cut_between_words(separator: str) -> None:
+    lines = separator.join(["alpha", "beta"] * 200)
+    assert as_snippet(lines).split()[-1] in {"alpha\u2026", "beta\u2026"}

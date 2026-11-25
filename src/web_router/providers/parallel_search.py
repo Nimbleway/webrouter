@@ -42,8 +42,9 @@ from web_router.constants_parallel import (
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._modes import merged
-from web_router.providers._search_text import as_snippet, lite_body, refused_domains
+from web_router.providers._search_text import lite_body, refused_domains
 from web_router.providers._utils import build_payload, compact, mapped
+from web_router.snippet import as_snippet
 from web_router.types import (
     SearchDepth,
     SearchRequest,

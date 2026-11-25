@@ -1,0 +1,1 @@
+Data API catalog: SearchApi, with 13 read-only endpoints (Google web, News, Maps, Shopping, Images, Videos, Scholar, Jobs, Trends and Autocomplete, Bing, YouTube and Amazon search), each written from the vendor's own documentation; the Google web search was called live.

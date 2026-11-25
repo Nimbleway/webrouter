@@ -84,8 +84,8 @@ less under its name.
 | `deep` | The whole page | `standard` + `full_content` | `advanced` + raw content | `full_page` | whole text | `text` | refused | refused | refused | refused | `need_content` |
 
 Octen serves `fast` (`full_content` at its default of 2,048 tokens a page) and `deep` (100,000 tokens, its
-maximum), and refuses `lite`: its default highlight runs to about 2,000 characters. Linkup, AgentCore and
-Parallel MCP do not map it. Where a vendor's size setting
+maximum), and refuses `lite`: its default highlight runs to about 2,000 characters. Linkup, AgentCore,
+Parallel MCP, Valyu, Seltz, Keirolabs and SpecStream do not map it. Where a vendor's size setting
 does not bind (Tavily's `basic` returns up to three chunks of about 500
 characters, You.com's snippets can run past 500, Exa's highlights cap,
 Parallel's excerpt cap and Perplexity's token budget are soft, DeepSeek's default carries its whole
@@ -97,11 +97,13 @@ Unset, Exa asks for the whole text and Exa MCP for highlights, as before.
 the body in the field others use for the snippet; that is normalized away, so
 `content` is the field to read whatever the backend did.
 
-`result.description` is the provider's snippet **when it returns one as a
-separate field**. Not every backend does at every depth: Nimble at `fast`
-returns the page body and no snippet, so `description` holds that body and is
-identical to `content`. Read `description` when you want the short form and
-have checked your backend supplies one; read `content` when you want text.
+`result.description` is a snippet of at most about 500 characters. It is the
+backend's own snippet when it sends one. When it sends none, or puts the page
+body where the snippet goes (Nimble at `fast`, a long Tavily `content`), each
+backend's mapping takes a snippet from the text, cut at a word boundary with a
+trailing `…`, and the full text goes to `content`. So `description` never
+repeats a whole page. Read `description` for the short form and `content` for
+the text.
 
 ## Effort
 
@@ -143,7 +145,7 @@ date gets today (UTC) minus 1, 7, 30 or 365 days.
 | Seltz | `from_date` as an offset from now (`now-1d`, `now-7d`, `now-1M`, `now-1y`): month and year are calendar ones |
 | Octen | `time_range` (`day`, `week`, `month`, `year`) |
 
-WebIQ and Parallel MCP do not map it.
+WebIQ, Parallel MCP, Keirolabs and SpecStream do not map it.
 
 ## Values a backend refuses
 
@@ -153,7 +155,8 @@ on to the next eligible backend.
 
 | Backend | Refused |
 | --- | --- |
-| You.com, You.com MCP | A `country` off its 36 codes; a `locale` off its 51-language list (`pt` or `zh` alone; give `pt-BR`, `zh-TW`); both domain lists at once |
+| Nimble | `recency` at `search_depth="lite"`, which does not filter by it |
+| You.com, You.com MCP | A `country` off its 36 codes; a `locale` off its 51-language list (`pt` or `zh` alone; give `pt-BR`, `zh-TW`); both domain lists at once; a path in either list (`github.com/python`, not `github.com`), since You.com matches both on the host alone |
 | Brave | A `country` off its 37 codes; a `locale` off the same language list; a query past 600 characters or 75 words with its `site:` operators |
 | Tavily | A `country` off the 166 it names, or with a `topic` other than general (`country` is a ranking boost there; `locale` is a filter) |
 | Parallel | A `country` off its 37 codes; both domain lists at once; more than 200 domains |
@@ -162,4 +165,4 @@ on to the next eligible backend.
 | Keenable | More than one `include_domains` entry |
 | DeepSeek | A query past 128 characters with its operators |
 | Brave, WebIQ, DeepSeek | A domain filter that is not a host name, optionally with a path, because it goes into the query as `site:` |
-| You.com MCP | An `include_domains` entry that is not a bare host name, or a path in either list (`github.com/python`, not `github.com`): `include_domains` goes into the query as `site:`, and You.com matches `site:` and `exclude_domains` on the host alone, so a path would be dropped |
+| You.com MCP | An `include_domains` entry that is not a host name, because it goes into the query as `site:` |

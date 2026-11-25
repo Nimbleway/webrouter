@@ -1,6 +1,6 @@
 """Jina Reader provider, the keyless route to a page's contents.
 
-Extract only, and the one extract backend that needs no credential: Reader
+Extract only, and the one hosted extract backend that needs no credential: Reader
 answers anonymously at 20 requests a minute, and ``JINA_API_KEY`` raises that
 rather than unlocking anything. Install with
 the ``extract`` extra -- it needs ``httpx`` and nothing else.

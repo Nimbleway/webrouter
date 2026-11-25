@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from web_router.constants_mcp_instructions import MCP_UNTRUSTED_MARK
 from web_router.constants_vendors_mcp import MCP_MSG_VENDOR_BINARY, MCP_MSG_VENDOR_TRUNCATED
 from web_router.mcp.shaping import redact, redaction_note, render, truncate
 from web_router.vendors.credentials import CredentialSource, missing_credentials
@@ -160,6 +161,7 @@ def shape_vendor_response(response: VendorResponse, handle: str, *, budget: int)
     else:
         data, count = redact(response.data if response.data is not None else response.text)
     payload: dict[str, Any] = {
+        **MCP_UNTRUSTED_MARK,
         "vendor": response.vendor,
         "endpoint": response.endpoint,
         "status_code": response.status_code,

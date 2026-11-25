@@ -20,11 +20,11 @@ router picks it without URLs.
 
 from __future__ import annotations
 
+import asyncio
 from contextlib import ExitStack
 from time import monotonic
 from typing import Any
 
-from web_router._urls import urls_in
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_candidates import AUTO_GETTERS, ONE_PAGE_URL
 from web_router.constants_urls import MSG_PLAN_EXTRACT_NO_URL, MSG_PLAN_EXTRACT_REFUSED
@@ -45,7 +45,6 @@ from web_router.routing.record import stamp
 from web_router.routing.request_modes import runnable
 from web_router.routing.routed import AsyncRouted, SyncRouted
 from web_router.routing.router_setup import RouterSetup
-from web_router.routing.url_policy import screened
 from web_router.types import (
     BrowseResponse,
     ExtractRequest,
@@ -64,12 +63,11 @@ class _Planner(RouterSetup):
     """What both routers share for plan and run: the request a router is shown, the plan, the call it makes."""
 
     def _plan_request(
-        self, prompt: str, budget: Budget | None, tool: ToolName | None
+        self, prompt: str, budget: Budget | None, tool: ToolName | None, screen: tuple[list[str], dict[str, str]]
     ) -> tuple[RouteRequest, CandidateSet, list[str], dict[str, str]]:
         """The router's request for ``prompt``, its candidates, the URLs kept, and those the URL policy refused."""
-        assert self._url_check is not None  # set by every router's constructor
         budget = limited(budget, self)  # a shared budget in force caps the plan as it caps a call
-        kept, refused = screened(list(dict.fromkeys(urls_in(prompt))), self._url_check)  # each URL once
+        kept, refused = screen
         requests = default_requests(prompt, kept)
         if not kept and self._router is not None:
             # A router may supply the URLs itself; offered at one page, extract is chosen only if it does.
@@ -148,7 +146,8 @@ class SyncPlan(_Planner, SyncRouted):
         """Work out, without running it, the method, options and backends ``prompt`` would run with (experimental).
 
         Args:
-            prompt: What the caller asks, in words; any ``http(s)`` URL in it is read as one to fetch.
+            prompt: What the caller asks, in words. The router chooses the method; a URL can lead to billed
+                research. Set ``tool="extract"`` to require extraction.
             budget: Caps the plan's candidates and maps research's effort, as on any routed call.
             tool: Pins the method; the router then orders its backends only.
 
@@ -157,7 +156,7 @@ class SyncPlan(_Planner, SyncRouted):
                 the prompt names no URL to fetch, or ``url_policy`` refused every one it names, and no router
                 supplied one: a plan ``run`` could not execute.
         """
-        parts = self._plan_request(prompt, budget, tool)
+        parts = self._plan_request(prompt, budget, tool, self._screen(prompt))
         outcome = self._router.call(parts[0]) if self._router is not None and self._asks(parts[0]) else None
         return self._planned(parts, outcome)
 
@@ -180,7 +179,7 @@ class SyncPlan(_Planner, SyncRouted):
 class AsyncPlan(_Planner, AsyncRouted):
     async def plan(self, prompt: str, *, budget: Budget | None = None, tool: ToolName | None = None) -> Plan:
         """As :meth:`SyncPlan.plan`, asking the router without blocking the event loop."""
-        parts = self._plan_request(prompt, budget, tool)
+        parts = self._plan_request(prompt, budget, tool, await asyncio.to_thread(self._screen, prompt))
         outcome = await self._router.acall(parts[0]) if self._router is not None and self._asks(parts[0]) else None
         return self._planned(parts, outcome)
 
