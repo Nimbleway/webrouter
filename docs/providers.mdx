@@ -35,6 +35,7 @@ used here for identification only.
 | [Local Chromium](https://www.chromium.org) |  |  |  |  |  | ✓ keyless |  |
 | [Merchant](/live-data#a-stores-own-agent-interface-merchant) (a store's own agent interface) |  |  | ✓ keyless |  |  |  |  |
 | [Nimble](https://nimbleway.com) | ✓ keyless | ✓ keyless | ✓ |  | ✓ |  |  |
+| [Obscura](https://github.com/h4ckf0r0day/obscura) |  | ✓ keyless, local |  |  |  |  |  |
 | [Octen](https://docs.octen.ai) | ✓ |  |  |  |  |  |  |
 | [Oxylabs](https://oxylabs.io) | ✓ | ✓ | ✓ |  |  |  |  |
 | [Parallel](https://parallel.ai) | ✓ keyless |  |  | ✓ | ✓ |  |  |
@@ -48,7 +49,7 @@ used here for identification only.
 | [WebIQ](https://webiq.microsoft.ai) | ✓ | ✓ |  |  |  |  |  |
 | [You.com](https://you.com/platform) | ✓ keyless |  |  | ✓ | ✓ |  |  |
 
-**✓** the provider serves this method, with its key ([Configuration](/configuration) names each variable). **keyless** means it also works with no key, rate-limited. `auto` is the default for every method and picks among the providers you can use.
+**✓** the provider serves this method, with its key ([Configuration](/configuration) names each variable). **keyless** means it also works with no key, rate-limited; **local** means it runs on your machine, with no limit but your own. `auto` is the default for every method and picks among the providers you can use.
 
 ## Working with no credentials
 
@@ -126,6 +127,7 @@ which ones this environment can use.
 | `Provider.KEENABLE` | `keenable` | [Keenable Fetch](https://docs.keenable.ai/api-reference/fetch) | `KEENABLE_API_KEY`, or keyless with `allow_keyless=True` (rate-limited per IP) | `markdown` |
 | `Provider.DEEPSEEK` | `deepseek` | [DeepSeek Fetch](https://api-docs.deepseek.com/guides/search) | `DEEPSEEK_API_KEY` | `markdown` |
 | `Provider.JINA` | `jina` | [Jina Reader](https://jina.ai/reader) | **none** (`JINA_API_KEY` raises the rate limit) | `markdown`, `html`, `text` |
+| `Provider.OBSCURA` | `obscura` | [Obscura](https://github.com/h4ckf0r0day/obscura) — a headless browser run on your machine, so a page's scripts run before it is read; opt-in, in no `auto` chain | **none**: the `obscura` binary on `PATH`, or `OBSCURA_PATH` | `markdown`, `html`, `text` |
 | `Provider.BROWSERBASE` | `browserbase` | [Browserbase Fetch](https://docs.browserbase.com/features/fetch) — a plain fetch, never a rendered page; the one backend that maps `profile` | `BROWSERBASE_API_KEY` | `markdown`, `html` |
 | `Provider.SPECSTREAM` | `specstream` | [SpecStream Extract](https://specstream.ai/agents.md) | `SPECSTREAM_API_KEY` | `markdown`, `text` |
 | `Provider.AUTO` *(default)* | `auto` | — | the original backends you hold a key for, then the keyless ones, then Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase and SpecStream | `markdown` *(default)*, `html`, `text`, each routed to a member that returns it; `profile` routed to one that maps it |

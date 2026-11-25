@@ -173,7 +173,7 @@ the client exports always keeps its value over any file's.
 
 Whichever file it is, only the provider credentials listed in
 [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example) are taken from it. A switch such as
-`WEB_ROUTER_MCP_ALLOW_FILE_URLS` or `CHROME_PATH` in a file is ignored, because
+`WEB_ROUTER_MCP_ALLOW_FILE_URLS`, `CHROME_PATH` or `OBSCURA_PATH` in a file is ignored, because
 a server registered at user scope starts in any workspace and that workspace's
 file is not whoever runs the server; `${...}` is not expanded, so a file cannot
 copy another secret into a provider's key. The server never writes a
@@ -409,11 +409,21 @@ unchanged: `search`, `extract` and the rest never ask the router.
 The router is set by the operator -- whoever starts the server and sets its
 environment -- once, when the server starts:
 
-- unset, the built-in rules router (`rules`, also the library's default): a
-  prompt with an `http(s)` URL is read with `extract`; one asking for a report,
-  a comparison or an in-depth analysis runs `research`, billed per run, or
-  `search` when no research backend is configured; anything else is searched.
-  `WEB_ROUTER_MCP_ROUTER=rules` names it;
+- unset, the built-in [data-driven router](https://docs.webrouter.net/smart-routing#the-data-driven-router)
+  (`data-driven`, also the library's default): it ranks web methods and search providers from bundled
+  data without a routing model call, picking `search`, `extract` or `research`
+  from the prompt's wording. `research` is billed per run and is picked for many how, why,
+  compare, list and summarize requests; with no research backend configured,
+  the next method runs, `extract` for a prompt with a URL, else `search`. It
+  needs no key and sends the prompt nowhere. `WEB_ROUTER_MCP_ROUTER=data-driven`
+  names it. Search backend ordering follows its measured provider table;
+  `WEB_ROUTER_MCP_ROUTER_CONFIG='{"prefer": "cheap"}'` selects its cost line, cheapest by the benchmark's prices.
+  To let it pick `browse` too, set that together with
+  `WEB_ROUTER_MCP_ROUTER_CONFIG='{"browse": true}'`: a config with no router
+  named stops the server;
+- `WEB_ROUTER_MCP_ROUTER=rules` keeps the old rules behavior for one release and emits a
+  deprecation warning when built. It is removed in the following release. Use `data-driven`,
+  `off` for a plain search plan, or start a custom router from `examples/router_rules.py`;
 - `WEB_ROUTER_MCP_ROUTER=<module>:<attribute>` names a router in a module you
   installed -- any form `router=` takes on the library. It is imported before
   any `.env` file loads, so code that runs at import sees only the server's own
@@ -487,7 +497,8 @@ or a `.env` file. Set empty, it stops the server from starting.
 
 Plans hold to `url_policy="public_only"`: a URL in a prompt that names a
 loopback, private or cloud-metadata host is not sent to a backend as a URL.
-It is a check of the host as written: it resolves no DNS and follows no
+It resolves the host and refuses a name that points at a private, loopback or
+metadata address; a literal address is judged as written. It follows no
 redirect. The same check holds for the URLs an agent passes the direct tools:
 `extract`'s `urls`, `browse`'s `start_url` and any URL among `live_data`'s
 `inputs` that is not a public `http(s)` one -- `file:`, loopback, private,
@@ -562,7 +573,7 @@ These variables are read from the server's own process environment, once,
 at startup. No `.env` file and no `load_env` call can set or change them, and a
 value the server cannot read -- an empty one included -- stops it from
 starting rather than leaving the connection without the ceiling you meant. The capabilities resource reports
-all of it under `routing`: the router (`rules`, `operator` for yours -- never
+all of it under `routing`: the router (`data-driven`, `operator` for yours -- never
 its `<module>:<attribute>` -- `remote(<scheme>://<host>)` for a service, never its path, query or key,
 `fallback(<member>, ...)` for a fallback, or
 `off`), where it runs (`router_runs`: `in_process` for the built-in router or
@@ -952,7 +963,7 @@ the cloud browsers are.
 | `WEB_ROUTER_MCP_TOKEN` | unset | Under `--transport http`, the bearer token every request must carry; required on any host but `127.0.0.1`, `localhost` and `::1`. See [Serve over HTTP for a team](#serve-over-http-for-a-team). Read from the real environment only. |
 | `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value, or one of zero or less, falls back to the default rather than stopping the server. |
 | `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](#where-the-browser-may-go). |
-| `WEB_ROUTER_MCP_ROUTER` | the rules router | The router `web_run` plans with: `<module>:<attribute>`, `remote`, another built-in router such as `fallback`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
+| `WEB_ROUTER_MCP_ROUTER` | the data-driven router | The router `web_run` plans with: `<module>:<attribute>`, `remote`, another built-in router such as `fallback`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
 | `WEB_ROUTER_MCP_ROUTER_CONFIG` | unset | With `WEB_ROUTER_MCP_ROUTER` naming a built-in router (or any name registered with `register_router` in the server's process, an override of a built-in name included), its `router_config` as a JSON object; each `api_key_env` in it is read once at startup and handed to the router as `api_key`, so a router's factory gets `api_key`, never `api_key_env`. Anything but a JSON object, or a value set beside no built-in router, stops the server from starting. Read from the real environment only. |
 | `WEB_ROUTER_REMOTE_ROUTER_URL` | unset | With `WEB_ROUTER_MCP_ROUTER=remote`, your router service's URL: `https`, or `http` to a loopback host. Missing, or any other URL, stops the server from starting. Read from the real environment only. |
 | `WEB_ROUTER_REMOTE_ROUTER_API_KEY` | unset | The bearer key sent to that service, never logged or shown. Read from the real environment only -- no `.env` file and no `load_env` call sets it. |

@@ -9,6 +9,7 @@ from web_router.constants import (
     BROWSER_ENV_BY_PROVIDER,
     ENV_BY_PROVIDER,
     EXTRACT_ENV_BY_PROVIDER,
+    PROVIDER_OBSCURA,
     RESEARCH_ENV_BY_PROVIDER,
 )
 from web_router.constants_live_data import LIVE_DATA_CREDENTIAL_SETS
@@ -42,10 +43,15 @@ def configured_extract_providers() -> list[str]:
     """Every builtin extract provider you currently have credentials for, plus the keyless ones.
 
     The same caveats as :func:`configured_providers`. A backend needing more than one variable -- Oxylabs its
-    username and password, Bright Data its token and zone -- is reported only when it has all of them.
+    username and password, Bright Data its token and zone -- is reported only when it has all of them. ``obscura``
+    runs a program on this machine, so it is reported only when that program is found.
     """
+    from web_router.providers.obscura import obscura_installed  # its module imports the provider base classes
+
     return sorted(
-        name for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items() if all(is_set(env_var) for env_var in env_vars)
+        name
+        for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items()
+        if all(is_set(env_var) for env_var in env_vars) and (name != PROVIDER_OBSCURA or obscura_installed())
     )
 
 

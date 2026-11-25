@@ -1,0 +1,1 @@
+The `rules` router is deprecated, retained for one release, then removed in the following release. `router="rules"` and `WEB_ROUTER_MCP_ROUTER=rules` keep their old behavior and warn when built. Use the default `data-driven`, `router=None` for a plain search plan, or start a custom router from `examples/router_rules.py`.

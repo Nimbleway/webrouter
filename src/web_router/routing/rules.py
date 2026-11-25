@@ -1,28 +1,17 @@
-"""The built-in rules router, the routers' default: a URL is read, a clear ask for research researched, else search.
+"""Deprecated rules router, retained for one release with its original method selection.
 
-Experimental. It needs no key and calls nothing. It reads the URLs
-:meth:`~web_router.WebRouter.plan` found in the prompt (after ``url_policy``)
-and the prompt's own words, and picks ``extract`` when there is a URL;
-``research`` when the prompt asks in so many words for a report, a comparison
-or an in-depth analysis (:data:`~web_router.constants_routing.RULES_RESEARCH_PATTERN`),
-with ``search`` after it for when no research backend is configured; and
-``search`` otherwise. It never picks ``browse`` or ``answer``: a caller who wants
-them calls them. It ranks no backends: they run in ``auto``'s order, cheapest
-first under a cost cap (:mod:`~web_router.routing.cost_order`).
-
-``WebRouter()`` and ``AsyncWebRouter()`` attach it by name, ``router="rules"``,
-as :class:`RulesRouter`, which declares ``route_tools=()``: only
-:meth:`~web_router.WebRouter.plan` and :meth:`~web_router.WebRouter.run` ask
-it, and ``search()``, ``extract()`` and the other methods run as they would with
-no router. ``router=None`` attaches none. The MCP server attaches it by default
-too; ``WEB_ROUTER_MCP_ROUTER`` replaces it.
+URLs select extract; an explicit research request selects research then search;
+other prompts select search. The default router is now ``data-driven``.
+``examples/router_rules.py`` is a starting point for a custom rules router.
 """
 
 from __future__ import annotations
 
 import re
+import warnings
 
 from web_router.constants_routing import (
+    MSG_RULES_DEPRECATED,
     RULES_DEFINITION_PATTERN,
     RULES_REASON_NO_URL,
     RULES_REASON_RESEARCH,
@@ -54,6 +43,9 @@ class RulesRouter:
     route_tools: tuple[ToolName, ...] = ()
     route_modes = False
     router_name = RULES_ROUTER_NAME
+
+    def __init__(self) -> None:
+        warnings.warn(MSG_RULES_DEPRECATED, FutureWarning, stacklevel=2)
 
     def route(self, req: RouteRequest) -> RouteDecision:
         return rules(req)

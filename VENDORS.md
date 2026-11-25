@@ -19,7 +19,7 @@ The tables below are generated from `src/web_router/data/vendors/` by
 `make vendors`; edit the JSON files, never the tables.
 
 <!-- vendors -->
-472 vendors, 3479 endpoints.
+474 vendors, 3494 endpoints.
 
 ### advertising
 
@@ -343,6 +343,7 @@ Web, news and archive search.
 | [Parallel](https://docs.parallel.ai/getting-started/overview) `parallel` | People and company discovery from Parallel Web Systems: entity search and FindAll runs. | 3 read | key in header | `PARALLEL_API_KEY` | docs 2026-11-08 |
 | [Querit](https://www.querit.ai/en/docs/overview/about) `querit` | Web search API for AI agents, with highlights, optional full page text and code and finance verticals. | 1 read | key in header | `QUERIT_API_KEY` | docs 2026-11-09 |
 | [Search1API](https://s1.dev/docs) `search1api` | Web, news and Maps search, page reading, screenshots, extraction and site crawling through one API. | 12 read | key in header | `SEARCH1API_KEY` | docs 2026-11-08 |
+| [SearchApi](https://www.searchapi.io/docs/google) `searchapi` | Structured results from Google (web, News, Maps, Shopping, Images, Videos, Scholar, Jobs, Trends, Autocomplete), Bing, YouTube and Amazon as JSON, one GET per engine. | 13 read | key in header | `SEARCHAPI_API_KEY` | live 2026-11-22 |
 | [Seltz](https://docs.seltz.ai/) `seltz` | Cited answers, URL fetch, research agent runs and content monitors, scoped to web, news, wikipedia, people, companies or financial reports; web search is served by search(). | 6 read | key in header | `SELTZ_API_KEY` | docs 2026-11-09 |
 | [SerpApi](https://serpapi.com/search-api) `serpapi` | Structured search results from Google, Google News, Maps, Play and YouTube, with an archive of past searches. | 8 read | key in query | `SERPAPI_API_KEY` | docs 2026-11-08 |
 | [Tako](https://docs.tako.com/) `tako` | Knowledge search that returns sourced data cards (charts and tables), cited answers, card data exports, a browsable data graph and answer agents. | 8 read | key in header | `TAKO_API_KEY` | docs 2026-11-09 |
@@ -626,6 +627,7 @@ Vulnerabilities, advisories and threat intelligence.
 | [urlscan.io](https://docs.urlscan.io/pages/api-intro) `urlscan` | Search and read existing urlscan.io website scans (requests, IPs, domains, certificates, verdicts), hostname history, and on Pro, malicious-observable lookups and similar pages. | 6 read | key in header | `URLSCAN_API_KEY` | docs 2026-11-16 |
 | [Verisign RDAP (.com, .net)](https://www.verisign.com/news-insights/registration-data-access-protocol/help/) `verisign-rdap` | Verisign's registry RDAP service for .com and .net: domain registration status, dates, registrar and name servers, name server and registrar lookups. | 4 read | none | none | docs 2026-11-16 |
 | [VirusTotal](https://docs.virustotal.com/reference/overview) `virustotal` | Threat-intelligence reports on files, URLs, domains and IP addresses: multi-engine antivirus verdicts, reputation and relationships. | 5 read | key in header | `VIRUSTOTAL_API_KEY` | docs 2026-11-09 |
+| [VPNDetection](https://docs.vpndetection.io/api) `vpndetection` | VPN, Tor and privacy relay detection for IPv4 and IPv6 addresses, with bot, anycast and bogon flags, country, ASN and network type on the free plan, and proxy, hosting and CDN detection, the operator behind each flag, city and abuse contact on paid plans. | 2 read | key in header | `VPNDETECTION_API_KEY` | live 2026-11-24 |
 | [WhoisXML API](https://whois.whoisxmlapi.com/documentation/making-requests) `whoisxml-api` | Domain and IP registration intelligence: live WHOIS and RDAP records, WHOIS history, reverse WHOIS by registrant terms, DNS lookups and subdomain discovery. | 6 read | key in header and query | `WHOISXML_API_KEY` | docs 2026-11-16 |
 
 ### developer

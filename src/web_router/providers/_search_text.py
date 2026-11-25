@@ -53,19 +53,19 @@ def named_result(
     """One result from a hit whose fields are named here; every field not named stays in ``extra``.
 
     ``description`` is the snippet cut to a snippet's size. ``content`` is the
-    page body when ``body`` names one that came back, else the snippet, cut when
-    ``lite`` was asked for. A date comes only from ``date``, and there is never a
-    score: nothing the backend did not return is invented.
+    page body under ``body`` when one came back, else the snippet, cut when
+    ``lite`` was asked for. A date comes only from ``date``, and there is never
+    a score: nothing the backend did not return is invented.
     """
     text = str(hit.get(snippet) or "")
-    named = {link, "title", snippet, body, date}
+    page = (hit.get(body) if body else None) or text
     return SearchResult(
         url=hit[link],
         title=hit.get("title") or "",
         description=as_snippet(text),
-        content=lite_body(hit.get(body) or text if body else text, depth),
-        published_date=hit.get(date) or None if date else None,
-        extra={key: value for key, value in hit.items() if key not in named},
+        content=lite_body(page, depth),
+        published_date=(hit.get(date) or None) if date else None,
+        extra={key: value for key, value in hit.items() if key not in {link, "title", snippet, body, date}},
     )
 
 

@@ -1,6 +1,6 @@
 """Jina providers: Reader, the keyless route to a page's contents, and Search.
 
-Reader is the one extract backend that needs no credential: it answers
+Reader is the one hosted extract backend that needs no credential: it answers
 anonymously at 20 requests a minute, and ``JINA_API_KEY`` raises that rather
 than unlocking anything. Search is not keyless: ``s.jina.ai`` refuses a call
 without ``JINA_API_KEY``. Install with the ``extract`` or ``search`` extra --

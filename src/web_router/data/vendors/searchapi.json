@@ -1,0 +1,1291 @@
+{
+  "vendor": "searchapi",
+  "name": "SearchApi",
+  "category": "search",
+  "summary": "Structured results from Google (web, News, Maps, Shopping, Images, Videos, Scholar, Jobs, Trends, Autocomplete), Bing, YouTube and Amazon as JSON, one GET per engine.",
+  "docs_url": "https://www.searchapi.io/docs/google",
+  "pricing_url": "https://www.searchapi.io/pricing",
+  "base_url": "https://www.searchapi.io",
+  "auth": {
+    "credentials": {
+      "api_key": {
+        "env": [
+          "SEARCHAPI_API_KEY"
+        ],
+        "description": "a SearchApi API key (the dashboard at searchapi.io)"
+      }
+    },
+    "inject": [
+      {
+        "in": "header",
+        "name": "Authorization",
+        "value": "Bearer {api_key}"
+      }
+    ]
+  },
+  "notes": [
+    "Every engine is the same GET /api/v1/search with a different engine value; the engine's own parameters follow.",
+    "The key goes in the Authorization header as a Bearer token; the docs also accept it as an api_key query parameter, which this file does not use.",
+    "A bad key is HTTP 401 with {\"error\": \"Invalid API key.\"} (called live on 2026-11-24).",
+    "Only successful searches, those answered with HTTP 200, are billed (pricing page).",
+    "Paging is by page number (1-based). Google phased out num in September 2025, so a Google web page holds at most 10 organic results and num is left out here; Bing pages with next_page_token.",
+    "A Google result that is a redirect carries a link_token instead of a final URL; the Google Resolve API turns it into the destination.",
+    "search_metadata.status is Success or Error, and search_metadata.json_url and html_url point at the stored copy of the response."
+  ],
+  "sources": [
+    "https://www.searchapi.io/docs/google",
+    "https://www.searchapi.io/docs/google-news",
+    "https://www.searchapi.io/docs/google-maps",
+    "https://www.searchapi.io/docs/google-shopping",
+    "https://www.searchapi.io/docs/google-images",
+    "https://www.searchapi.io/docs/google-videos",
+    "https://www.searchapi.io/docs/google-scholar",
+    "https://www.searchapi.io/docs/google-jobs",
+    "https://www.searchapi.io/docs/google-trends",
+    "https://www.searchapi.io/docs/google-autocomplete",
+    "https://www.searchapi.io/docs/bing",
+    "https://www.searchapi.io/docs/youtube",
+    "https://www.searchapi.io/docs/amazon-search"
+  ],
+  "curated": "2026-11-22",
+  "endpoints": [
+    {
+      "id": "searchapi.google.search",
+      "name": "Google search",
+      "summary": "Structured Google web results (organic, knowledge graph, answer box, AI overview, related searches and more) for a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be google.",
+          "example": "google",
+          "enum": [
+            "google"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The search query; operators such as site:, inurl:, intitle:, AND and OR work.",
+          "example": "machine learning models"
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Canonical location of the search, as the Locations API names it; the most popular match wins. Cannot be combined with latitude and longitude.",
+          "example": "New York, United States"
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude of the search location in decimal degrees (-90 to 90); use with longitude, not with location."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude of the search location in decimal degrees (-180 to 180); use with latitude, not with location."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country of the search; us by default. Inferred from the coordinates when latitude and longitude are set.",
+          "example": "us"
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language of the search; en by default.",
+          "example": "en"
+        },
+        "lr": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit to documents in a language, as lang_ja; several joined with |."
+        },
+        "cr": {
+          "in": "query",
+          "type": "string",
+          "description": "Limit to documents from a country, as countryFR; several joined with |."
+        },
+        "safe": {
+          "in": "query",
+          "type": "string",
+          "description": "SafeSearch: active filters adult content, blur (default) blurs explicit images, off disables it.",
+          "enum": [
+            "active",
+            "blur",
+            "off"
+          ]
+        },
+        "time_period": {
+          "in": "query",
+          "type": "string",
+          "description": "Only results from the past period.",
+          "enum": [
+            "last_1_minute",
+            "last_5_minutes",
+            "last_15_minutes",
+            "last_30_minutes",
+            "last_hour",
+            "last_day",
+            "last_week",
+            "last_month",
+            "last_year"
+          ]
+        },
+        "time_period_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Start of a custom time period, as MM/DD/YYYY; works alone or with time_period_max.",
+          "example": "01/01/2025"
+        },
+        "time_period_max": {
+          "in": "query",
+          "type": "string",
+          "description": "End of a custom time period, as MM/DD/YYYY; works alone or with time_period_min.",
+          "example": "12/31/2025"
+        },
+        "verbatim": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true makes Google use the exact keywords, with no spelling correction, synonyms or stemming."
+        },
+        "nfpr": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 excludes results from an auto-corrected query; 0 (default) includes them.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "filter": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 (default) enables the Duplicate Content and Host Crowding filters; 0 disables them.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "device": {
+          "in": "query",
+          "type": "string",
+          "description": "Device to emulate; desktop by default.",
+          "enum": [
+            "desktop",
+            "mobile",
+            "tablet"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results, starting at 1.",
+          "example": 1
+        }
+      },
+      "notes": [
+        "Each page holds at most 10 organic results (Google phased out num in September 2025); page=2 is results 11 to 20.",
+        "organic_results[] carries position, title, link, domain, displayed_link, snippet and source; a redirect result has a link_token for the Google Resolve API instead of its destination URL."
+      ],
+      "job": "serp.google",
+      "docs_url": "https://www.searchapi.io/docs/google",
+      "verified": {
+        "docs": "https://www.searchapi.io/docs/google",
+        "live": "2026-11-22"
+      }
+    },
+    {
+      "id": "searchapi.google_news.search",
+      "name": "Google News search",
+      "summary": "Google News articles for a query, with source, date and thumbnail.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be google_news.",
+          "example": "google_news",
+          "enum": [
+            "google_news"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The search query; operators such as site:, inurl: and intitle: work.",
+          "example": "climate change"
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Canonical location of the search, as the Locations API names it.",
+          "example": "London, United Kingdom"
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country of the search; us by default.",
+          "example": "us"
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language of the search; en by default.",
+          "example": "en"
+        },
+        "time_period": {
+          "in": "query",
+          "type": "string",
+          "description": "Only articles from the past period.",
+          "enum": [
+            "last_hour",
+            "last_day",
+            "last_week",
+            "last_month",
+            "last_year"
+          ]
+        },
+        "time_period_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Start of a custom time period, as MM/DD/YYYY.",
+          "example": "01/01/2025"
+        },
+        "time_period_max": {
+          "in": "query",
+          "type": "string",
+          "description": "End of a custom time period, as MM/DD/YYYY.",
+          "example": "12/31/2025"
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "most_recent sorts by date; the default is relevance.",
+          "enum": [
+            "most_recent"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results, starting at 1.",
+          "example": 1
+        }
+      },
+      "notes": [
+        "A site: operator makes Google answer with a Google Search page instead of Google News."
+      ],
+      "job": "news.search",
+      "docs_url": "https://www.searchapi.io/docs/google-news",
+      "verified": {
+        "docs": "https://www.searchapi.io/docs/google-news"
+      }
+    },
+    {
+      "id": "searchapi.google_maps.search",
+      "name": "Google Maps search",
+      "summary": "Places on Google Maps for a query, with address, rating, hours and coordinates.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be google_maps.",
+          "example": "google_maps",
+          "enum": [
+            "google_maps"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "What to look for, as typed into Maps.",
+          "example": "Starbucks New York"
+        },
+        "ll": {
+          "in": "query",
+          "type": "string",
+          "description": "Where to apply the query: @latitude,longitude,zoom (12z) or @latitude,longitude,meters (500m).",
+          "example": "@40.7009973,-73.994778,12z"
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country of the search.",
+          "example": "us"
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language; en by default.",
+          "example": "en"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results, starting at 1.",
+          "example": 1
+        }
+      },
+      "job": "places.search",
+      "docs_url": "https://www.searchapi.io/docs/google-maps",
+      "verified": {
+        "docs": "https://www.searchapi.io/docs/google-maps"
+      }
+    },
+    {
+      "id": "searchapi.google_shopping.search",
+      "name": "Google Shopping search",
+      "summary": "Products on Google Shopping for a query, with price, seller, rating and the filters Google offers.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be google_shopping.",
+          "example": "google_shopping",
+          "enum": [
+            "google_shopping"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The product query; filters written into it are hints, not strict filters.",
+          "example": "running shoes"
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country of the search; us by default. Prices come in its local currency.",
+          "example": "us"
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language; en by default.",
+          "example": "en"
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Canonical location of the search, as the Locations API names it."
+        },
+        "price_min": {
+          "in": "query",
+          "type": "number",
+          "description": "Lowest price to return, in the gl country's currency. Ignored when shoprs is set.",
+          "example": 2.5
+        },
+        "price_max": {
+          "in": "query",
+          "type": "number",
+          "description": "Highest price to return, in the gl country's currency. Ignored when shoprs is set.",
+          "example": 100
+        },
+        "is_on_sale": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true keeps only discounted products."
+        },
+        "is_small_business": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true keeps only products sold by small businesses."
+        },
+        "is_free_delivery": {
+          "in": "query",
+          "type": "boolean",
+          "description": "true keeps only products with free shipping."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Order of the results; relevance by default.",
+          "enum": [
+            "price_low_to_high",
+            "price_high_to_low",
+            "rating_high_to_low"
+          ]
+        },
+        "condition": {
+          "in": "query",
+          "type": "string",
+          "description": "Product condition.",
+          "enum": [
+            "new",
+            "used"
+          ]
+        },
+        "shoprs": {
+          "in": "query",
+          "type": "string",
+          "description": "An encoded filter value from the filters block of an earlier response; it takes priority over the plain filters above."
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results, starting at 1.",
+          "example": 1
+        }
+      },
+      "job": "serp.google.shopping",
+      "docs_url": "https://www.searchapi.io/docs/google-shopping",
+      "verified": {
+        "docs": "https://www.searchapi.io/docs/google-shopping"
+      }
+    },
+    {
+      "id": "searchapi.google_images.search",
+      "name": "Google Images search",
+      "summary": "Images from Google Images for a query, with source page, dimensions and thumbnail.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be google_images.",
+          "example": "google_images",
+          "enum": [
+            "google_images"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The search query; operators such as site: and intitle: work.",
+          "example": "cute cats"
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country of the search; us by default.",
+          "example": "us"
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language; en by default.",
+          "example": "en"
+        },
+        "safe": {
+          "in": "query",
+          "type": "string",
+          "description": "SafeSearch setting.",
+          "enum": [
+            "active",
+            "blur",
+            "off"
+          ]
+        },
+        "size": {
+          "in": "query",
+          "type": "string",
+          "description": "Image size: large, medium, icon, or a larger_than_<width>x<height> or larger_than_<n>mp value from the docs.",
+          "example": "large"
+        },
+        "color": {
+          "in": "query",
+          "type": "string",
+          "description": "Dominant color.",
+          "enum": [
+            "black_and_white",
+            "color",
+            "transparent",
+            "red",
+            "orange",
+            "yellow",
+            "green",
+            "teal",
+            "blue",
+            "purple",
+            "pink",
+            "white",
+            "gray",
+            "black",
+            "brown"
+          ]
+        },
+        "image_type": {
+          "in": "query",
+          "type": "string",
+          "description": "Kind of image.",
+          "enum": [
+            "clipart",
+            "line_drawing",
+            "gif",
+            "face",
+            "photo"
+          ]
+        },
+        "usage_rights": {
+          "in": "query",
+          "type": "string",
+          "description": "License filter.",
+          "enum": [
+            "creative_commons_licenses",
+            "commercial_or_other_licenses"
+          ]
+        },
+        "aspect_ratio": {
+          "in": "query",
+          "type": "string",
+          "description": "Shape of the image.",
+          "enum": [
+            "square",
+            "tall",
+            "wide",
+            "panoramic"
+          ]
+        },
+        "time_period": {
+          "in": "query",
+          "type": "string",
+          "description": "Only images from the past period.",
+          "enum": [
+            "last_hour",
+            "last_day",
+            "last_week",
+            "last_month",
+            "last_year"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results, starting at 1.",
+          "example": 1
+        }
+      },
+      "job": "serp.google.images",
+      "docs_url": "https://www.searchapi.io/docs/google-images",
+      "verified": {
+        "docs": "https://www.searchapi.io/docs/google-images"
+      }
+    },
+    {
+      "id": "searchapi.google_videos.search",
+      "name": "Google Videos search",
+      "summary": "Videos from Google's video tab for a query, filtered by duration, quality, captions and source.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be google_videos.",
+          "example": "google_videos",
+          "enum": [
+            "google_videos"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The search query; operators such as site: and intitle: work.",
+          "example": "cooking tutorials"
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country of the search; us by default.",
+          "example": "us"
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language; en by default.",
+          "example": "en"
+        },
+        "safe": {
+          "in": "query",
+          "type": "string",
+          "description": "SafeSearch setting.",
+          "enum": [
+            "active",
+            "blur",
+            "off"
+          ]
+        },
+        "time_period": {
+          "in": "query",
+          "type": "string",
+          "description": "Only videos from the past period.",
+          "enum": [
+            "last_hour",
+            "last_day",
+            "last_week",
+            "last_month",
+            "last_year"
+          ]
+        },
+        "duration": {
+          "in": "query",
+          "type": "string",
+          "description": "short is under 4 minutes, medium 4 to 20, long over 20.",
+          "enum": [
+            "short",
+            "medium",
+            "long"
+          ]
+        },
+        "quality": {
+          "in": "query",
+          "type": "string",
+          "description": "high keeps only high-quality videos.",
+          "enum": [
+            "high"
+          ]
+        },
+        "captioned": {
+          "in": "query",
+          "type": "string",
+          "description": "closed keeps only videos with closed captions.",
+          "enum": [
+            "closed"
+          ]
+        },
+        "source": {
+          "in": "query",
+          "type": "string",
+          "description": "Only videos from one source, such as youtube, ted or tiktok (the docs list the accepted values).",
+          "example": "youtube"
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results, starting at 1.",
+          "example": 1
+        }
+      },
+      "job": "video.search",
+      "docs_url": "https://www.searchapi.io/docs/google-videos",
+      "verified": {
+        "docs": "https://www.searchapi.io/docs/google-videos"
+      }
+    },
+    {
+      "id": "searchapi.google_scholar.search",
+      "name": "Google Scholar search",
+      "summary": "Scholarly articles on Google Scholar for a query, or the papers citing or versioning a given article, with authors, publication and citation counts.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be google_scholar.",
+          "example": "google_scholar",
+          "enum": [
+            "google_scholar"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "The search query; operators such as author: and source: work. Not needed when cites or cluster is given.",
+          "example": "quantum computing"
+        },
+        "cites": {
+          "in": "query",
+          "type": "string",
+          "description": "An article id; returns the documents that cite it.",
+          "example": "13392090434137936466"
+        },
+        "cluster": {
+          "in": "query",
+          "type": "string",
+          "description": "An article id; returns the versions of that article. Takes priority over q."
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language; en by default.",
+          "example": "en"
+        },
+        "as_ylo": {
+          "in": "query",
+          "type": "integer",
+          "description": "Earliest publication year, as YYYY.",
+          "example": 2022
+        },
+        "as_yhi": {
+          "in": "query",
+          "type": "integer",
+          "description": "Latest publication year, as YYYY.",
+          "example": 2025
+        },
+        "scisbd": {
+          "in": "query",
+          "type": "integer",
+          "description": "0 (default) sorts by relevance; 1 keeps abstracts only, from the last year, by date; 2 keeps the last year, by date.",
+          "enum": [
+            0,
+            1,
+            2
+          ]
+        },
+        "as_rr": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 keeps only review articles; 0 (default) keeps everything.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "as_vis": {
+          "in": "query",
+          "type": "integer",
+          "description": "1 drops citation-only entries; 0 (default) keeps them.",
+          "enum": [
+            0,
+            1
+          ]
+        },
+        "as_sdt": {
+          "in": "query",
+          "type": "string",
+          "description": "Patent filter: 0 (default) excludes patents, 7 includes them; the docs list the US case-law values.",
+          "example": "0"
+        },
+        "num": {
+          "in": "query",
+          "type": "integer",
+          "description": "Results per page, 10 by default and at most 20.",
+          "example": 10
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results, starting at 1.",
+          "example": 1
+        }
+      },
+      "job": "scholar.search",
+      "docs_url": "https://www.searchapi.io/docs/google-scholar",
+      "verified": {
+        "docs": "https://www.searchapi.io/docs/google-scholar"
+      }
+    },
+    {
+      "id": "searchapi.google_jobs.search",
+      "name": "Google Jobs search",
+      "summary": "Job postings from Google Jobs for a query, with company, location, posting date and apply links.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be google_jobs.",
+          "example": "google_jobs",
+          "enum": [
+            "google_jobs"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The job query; a place in the text narrows it (software engineer jobs in San Francisco).",
+          "example": "software engineer"
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Canonical location of the search, as the Locations API names it; cannot be combined with latitude and longitude."
+        },
+        "latitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude of the search location in decimal degrees; use with longitude, not with location."
+        },
+        "longitude": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude of the search location in decimal degrees; use with latitude, not with location."
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country of the search; follows location, else us.",
+          "example": "us"
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language; follows the gl country by default.",
+          "example": "en"
+        },
+        "next_page_token": {
+          "in": "query",
+          "type": "string",
+          "description": "The next_page_token of the previous response, to fetch the page after it."
+        }
+      },
+      "notes": [
+        "Paging is by next_page_token from the previous response, not by page number."
+      ],
+      "job": "jobs.search",
+      "docs_url": "https://www.searchapi.io/docs/google-jobs",
+      "verified": {
+        "docs": "https://www.searchapi.io/docs/google-jobs"
+      }
+    },
+    {
+      "id": "searchapi.google_trends.query",
+      "name": "Google Trends",
+      "summary": "Google Trends data for up to five terms: interest over time, interest by region, or related topics and queries.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be google_trends.",
+          "example": "google_trends",
+          "enum": [
+            "google_trends"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "description": "Up to five terms separated by commas. Required unless data_type is TIMESERIES with a non-zero cat.",
+          "example": "coffee,tea"
+        },
+        "data_type": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "TIMESERIES is interest over time, GEO_MAP interest by region, RELATED_TOPICS and RELATED_QUERIES the related lists.",
+          "example": "TIMESERIES",
+          "enum": [
+            "TIMESERIES",
+            "GEO_MAP",
+            "RELATED_TOPICS",
+            "RELATED_QUERIES"
+          ]
+        },
+        "geo": {
+          "in": "query",
+          "type": "string",
+          "description": "Geographical scope, as a Trends geo code; worldwide when unset.",
+          "example": "US"
+        },
+        "region": {
+          "in": "query",
+          "type": "string",
+          "description": "Granularity of a GEO_MAP: COUNTRY (worldwide only), REGION, DMA or CITY.",
+          "enum": [
+            "COUNTRY",
+            "REGION",
+            "DMA",
+            "CITY"
+          ]
+        },
+        "time": {
+          "in": "query",
+          "type": "string",
+          "description": "Time range as Trends writes it: now 1-H, now 7-d, today 1-m, today 12-m, today 5-y, all, or two dates as YYYY-MM-DD YYYY-MM-DD.",
+          "example": "today 12-m"
+        },
+        "cat": {
+          "in": "query",
+          "type": "integer",
+          "description": "Trends category id; 0 (default) is all categories.",
+          "example": 0
+        },
+        "gprop": {
+          "in": "query",
+          "type": "string",
+          "description": "Search property: unset for web search, images, news, froogle (Shopping) or youtube.",
+          "enum": [
+            "images",
+            "news",
+            "froogle",
+            "youtube"
+          ]
+        },
+        "tz": {
+          "in": "query",
+          "type": "integer",
+          "description": "Timezone offset in minutes from UTC, -1439 to 1439; 420 by default.",
+          "example": 420
+        }
+      },
+      "job": "trends.query",
+      "docs_url": "https://www.searchapi.io/docs/google-trends",
+      "verified": {
+        "docs": "https://www.searchapi.io/docs/google-trends"
+      }
+    },
+    {
+      "id": "searchapi.google_autocomplete.suggest",
+      "name": "Google Autocomplete",
+      "summary": "The suggestions Google's search box offers for a partial query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be google_autocomplete.",
+          "example": "google_autocomplete",
+          "enum": [
+            "google_autocomplete"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The partial query, up to 100 characters.",
+          "example": "how to make"
+        },
+        "cp": {
+          "in": "query",
+          "type": "integer",
+          "description": "Cursor position within q; 0 is the start, unset is the end.",
+          "example": 0
+        },
+        "client": {
+          "in": "query",
+          "type": "string",
+          "description": "The client the request pretends to come from (chrome, say); it changes the shape of the suggestions.",
+          "example": "chrome"
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country of the search; us by default.",
+          "example": "us"
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language; en by default.",
+          "example": "en"
+        }
+      },
+      "job": "serp.google.autocomplete",
+      "docs_url": "https://www.searchapi.io/docs/google-autocomplete",
+      "verified": {
+        "docs": "https://www.searchapi.io/docs/google-autocomplete"
+      }
+    },
+    {
+      "id": "searchapi.bing.search",
+      "name": "Bing search",
+      "summary": "Structured Bing web results (organic, related searches and more) for a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be bing.",
+          "example": "bing",
+          "enum": [
+            "bing"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "The search query; operators such as site:, feed:, AND and OR work.",
+          "example": "machine learning models"
+        },
+        "location": {
+          "in": "query",
+          "type": "string",
+          "description": "Canonical location of the search, as the Locations API names it."
+        },
+        "lat": {
+          "in": "query",
+          "type": "number",
+          "description": "Latitude of the search location."
+        },
+        "lon": {
+          "in": "query",
+          "type": "number",
+          "description": "Longitude of the search location."
+        },
+        "market_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Market as language-country, such as en-US; cannot be combined with country_code.",
+          "example": "en-US"
+        },
+        "country_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country when market_code is not set; US by default.",
+          "example": "US"
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language, as a 2-letter or language-region code; en by default.",
+          "example": "en"
+        },
+        "safe_search": {
+          "in": "query",
+          "type": "string",
+          "description": "Adult-content filtering; moderate by default.",
+          "enum": [
+            "off",
+            "moderate",
+            "strict"
+          ]
+        },
+        "time_period": {
+          "in": "query",
+          "type": "string",
+          "description": "Only results from the past period.",
+          "enum": [
+            "last_day",
+            "last_week",
+            "last_month",
+            "last_year"
+          ]
+        },
+        "time_period_min": {
+          "in": "query",
+          "type": "string",
+          "description": "Start of a custom time period, as MM/DD/YYYY or YYYY-MM-DD.",
+          "example": "2025-01-01"
+        },
+        "time_period_max": {
+          "in": "query",
+          "type": "string",
+          "description": "End of a custom time period, as MM/DD/YYYY or YYYY-MM-DD.",
+          "example": "2025-12-31"
+        },
+        "device": {
+          "in": "query",
+          "type": "string",
+          "description": "Device to emulate; desktop by default.",
+          "enum": [
+            "desktop",
+            "mobile"
+          ]
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results, starting at 1; page=2 always starts at result 11.",
+          "example": 1
+        },
+        "next_page_token": {
+          "in": "query",
+          "type": "string",
+          "description": "pagination.next_page_token from the previous response; continues right after its last organic result."
+        }
+      },
+      "notes": [
+        "Bing's first page can hold fewer than 10 organic results, so page=2 may skip some; next_page_token continues exactly where the last response ended.",
+        "num has no effect on Bing any more and is left out."
+      ],
+      "job": "serp.bing",
+      "docs_url": "https://www.searchapi.io/docs/bing",
+      "verified": {
+        "docs": "https://www.searchapi.io/docs/bing"
+      }
+    },
+    {
+      "id": "searchapi.youtube.search",
+      "name": "YouTube search",
+      "summary": "Videos, channels, playlists and shorts from YouTube search for a query.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be youtube.",
+          "example": "youtube",
+          "enum": [
+            "youtube"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "What to search for on YouTube.",
+          "example": "cooking tutorials"
+        },
+        "sp": {
+          "in": "query",
+          "type": "string",
+          "description": "YouTube's encoded filter and paging value: a filter such as CAI (recently uploaded), or the next-page token from the previous response.",
+          "example": "CAI"
+        },
+        "gl": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country of the search; us by default.",
+          "example": "us"
+        },
+        "hl": {
+          "in": "query",
+          "type": "string",
+          "description": "Interface language; en by default.",
+          "example": "en"
+        }
+      },
+      "notes": [
+        "Paging goes through sp: send the next-page value from the previous response as sp."
+      ],
+      "job": "video.search",
+      "docs_url": "https://www.searchapi.io/docs/youtube",
+      "verified": {
+        "docs": "https://www.searchapi.io/docs/youtube"
+      }
+    },
+    {
+      "id": "searchapi.amazon.search",
+      "name": "Amazon search",
+      "summary": "Products from an Amazon marketplace's search for a query, with price, rating, Prime status and sponsored flags.",
+      "kind": "read",
+      "method": "GET",
+      "path": "/api/v1/search",
+      "params": {
+        "engine": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "Must be amazon_search.",
+          "example": "amazon_search",
+          "enum": [
+            "amazon_search"
+          ]
+        },
+        "q": {
+          "in": "query",
+          "type": "string",
+          "required": true,
+          "description": "What to search for on Amazon.",
+          "example": "wireless headphones"
+        },
+        "amazon_domain": {
+          "in": "query",
+          "type": "string",
+          "description": "The marketplace; amazon.com by default (the docs list the supported domains).",
+          "example": "amazon.de"
+        },
+        "language": {
+          "in": "query",
+          "type": "string",
+          "description": "Display language of the Amazon page, from the domain's supported list.",
+          "example": "en_US"
+        },
+        "currency": {
+          "in": "query",
+          "type": "string",
+          "description": "Currency of the displayed prices (EUR, say), where the domain supports it.",
+          "example": "EUR"
+        },
+        "postal_code": {
+          "in": "query",
+          "type": "string",
+          "description": "Delivery postal code for postal-code countries; search_metadata.delivery_location says whether it was applied.",
+          "example": "10001"
+        },
+        "delivery_country": {
+          "in": "query",
+          "type": "string",
+          "description": "Two-letter country of the delivery address; the domain's country by default.",
+          "example": "de"
+        },
+        "category_id": {
+          "in": "query",
+          "type": "string",
+          "description": "An Amazon browse node id that limits results to one category."
+        },
+        "rh": {
+          "in": "query",
+          "type": "string",
+          "description": "Amazon's own refinement string, as found in an Amazon URL or an earlier response (brand, rating, price range)."
+        },
+        "sort_by": {
+          "in": "query",
+          "type": "string",
+          "description": "Order of the results; featured by default.",
+          "enum": [
+            "featured",
+            "price_low_to_high",
+            "price_high_to_low",
+            "average_review",
+            "newest_arrivals",
+            "bestsellers"
+          ]
+        },
+        "price_min": {
+          "in": "query",
+          "type": "number",
+          "description": "Lowest price to return, in the marketplace's own currency even when currency is set.",
+          "example": 10
+        },
+        "price_max": {
+          "in": "query",
+          "type": "number",
+          "description": "Highest price to return, in the marketplace's own currency even when currency is set.",
+          "example": 20.5
+        },
+        "page": {
+          "in": "query",
+          "type": "integer",
+          "description": "Page of results, starting at 1.",
+          "example": 1
+        }
+      },
+      "job": "products.search",
+      "docs_url": "https://www.searchapi.io/docs/amazon-search",
+      "verified": {
+        "docs": "https://www.searchapi.io/docs/amazon-search"
+      }
+    }
+  ]
+}

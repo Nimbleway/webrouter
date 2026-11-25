@@ -28,7 +28,7 @@ from web_router.mcp.shaping import render, shape_research
 from web_router.mcp.tools import WebRouterTools
 from web_router.types import ResearchResponse
 
-TOOL_LIST_BUDGET = 26_740  # +20: Firecrawl, Jina, Bright Data and Oxylabs join the search tool's provider list
+TOOL_LIST_BUDGET = 26_750  # +30: Firecrawl, Jina, Bright Data and Oxylabs join the search tool's provider list
 """Bytes of compact JSON the whole tool list may take with every backend configured -- about 6.6k tokens.
 
 It was 31,051 (about 7.8k tokens) before descriptions were cut down and the
