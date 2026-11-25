@@ -27,7 +27,7 @@ DEPTHS: tuple[SearchDepth, ...] = ("lite", "fast", "deep")
 
 
 def maps_depth(name: str) -> bool:
-    """Brave, Exa, Parallel and Perplexity have no content-depth control at all."""
+    """Whether the backend maps ``search_depth``; one that does not refuses it."""
     return "search_depth" in get_provider_class(name).supported_parameters
 
 

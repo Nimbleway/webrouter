@@ -61,6 +61,7 @@ def test_a_backend_held_with_a_key_is_not_tried_again_as_keyless(monkeypatch: py
         PROVIDER_EXA_MCP,
         PROVIDER_PARALLEL_MCP,
         PROVIDER_KEENABLE,
+        PROVIDER_FIRECRAWL,
     ]
     assert extract == [PROVIDER_TAVILY, PROVIDER_FIRECRAWL, PROVIDER_NIMBLE, PROVIDER_JINA, PROVIDER_KEENABLE]
 

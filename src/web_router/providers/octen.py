@@ -31,7 +31,7 @@ from web_router.constants_octen import (
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._language import language_code
-from web_router.providers._utils import best_text, build_payload, mapped
+from web_router.providers._utils import best_text, build_payload, field_names, mapped
 from web_router.snippet import as_snippet
 from web_router.types import SearchDepth, SearchRequest, SearchResponse, SearchResult
 
@@ -79,7 +79,7 @@ class OctenProvider(HttpSearchProvider):
             raise ProviderError(self.name, MSG_OCTEN_UNSUCCESSFUL.format(code=code, msg=payload.get("msg")))
         data = payload.get("data")
         if not isinstance(data, dict):
-            raise ProviderError(self.name, MSG_OCTEN_NO_DATA.format(fields=", ".join(sorted(payload)) or "none"))
+            raise ProviderError(self.name, MSG_OCTEN_NO_DATA.format(fields=field_names(payload)))
         return SearchResponse(
             provider=self.name,
             query=request.query,

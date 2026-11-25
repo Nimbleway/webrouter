@@ -1070,20 +1070,20 @@ def backend_lines(config: dict[str, Any]) -> list[tuple[str, str, str]]:
     Shared with ``page.py`` so the report and the page describe a request the same way.
     """
     lines = []
+    routed = (config.get("router") or {}).get("router")
     for tool in ("search", "extract"):
-        entry = config.get(tool)
-        if not entry:
+        if not (entry := config.get(tool)):
             continue
-        # A member auto passes over for this request is sent nothing, so it is left out of the order.
+        # A member auto passes over is sent nothing; a routed arm's search tries its router's picks first.
         chain = [m for m in entry.get("chain") or [] if "skipped" not in m]
         if chain:
             first, rest = chain[0], [m["provider"] for m in chain[1:]]
-            backend = f"auto: {first['provider']} first" + (f", then {', '.join(rest)}" if rest else "")
-            lines.append((tool, backend, _request(first)))
+            picks = f"{routed}: per-call picks if available; fallback " if tool == "search" and routed else ""
+            backend = picks + f"auto: {first['provider']} first" + (f", then {', '.join(rest)}" if rest else "")
+            lines.append((tool, backend, "per-call routed requests are not recorded" if picks else _request(first)))
         else:
             lines.append((tool, entry["provider"], _request(entry)))
-    # An mcp: arm: each of its servers, with the tools the agent was given.
-    lines += [("mcp", entry["provider"], _request(entry)) for entry in config.get("mcp") or []]
+    lines += [("mcp", entry["provider"], _request(entry)) for entry in config.get("mcp") or []]  # an mcp: arm's servers
     return lines
 
 
@@ -1099,11 +1099,11 @@ def _request(entry: dict[str, Any]) -> str:
 
 
 def _write_backends(w: Callable[[str], None], backends: dict[str, dict[str, Any]]) -> None:
-    w("### What each backend was sent\n")
+    w("### Backend request setup\n")
     w(
-        "The request body each web-router arm's backends received, built by the providers' own translation with "
-        "the model's query or URL as a placeholder. A field that is not here was not sent, so the backend's own "
-        "default decided it — Nimble's search depth, for one. Page reads go to the arm's own backend when it "
+        "Static requests built by the providers' translation; routed search requests vary per call and are not "
+        "recorded here. Described bodies use query or URL placeholders; absent fields use the backend's own "
+        "defaults — Nimble's search depth, for one. Page reads go to the arm's own backend when it "
         "reads pages, else to `auto`, which tries its members in order. An `mcp:` arm's row is its server and the "
         "tools the agent was given: the platform builds that request, and the model picks its arguments.\n"
     )
@@ -1205,13 +1205,13 @@ def _describe(arm: str, text: dict[str, str], setup: dict[str, Any]) -> str:
         vendor = arm.removeprefix(DIRECT)
         return (
             f"`{vendor}`'s own REST API as two plain tools, search and page read, its JSON returned as it comes "
-            "back -- no web-router, no routing guide; the request is under what each backend was sent"
+            "back -- no web-router, no routing guide; the request is under backend request setup"
         )
     spec = arm.removeprefix("web-router:")
     provider, _, extra = spec.partition(":")
     tools = f"web-router `web_router_search` + `web_router_extract`, provider `{provider}`"
     if provider.startswith("auto"):
-        tools += " (tries its chain in order, falls back on failure; the order is under what each backend was sent)"
+        tools += " (tries its chain in order, falls back on failure; the order is under backend request setup)"
     return tools + (", no routing guide" if extra == "no-guide" else ", with `routing_guide()` in the system prompt")
 
 

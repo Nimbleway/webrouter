@@ -124,4 +124,6 @@ they fetched — Jina Reader may answer from a cached snapshot rather than
 fetching, and says so in an unmapped `warning` field that reaches you through
 `ExtractedDocument.extra`. Treat an extracted page as having passed through the
 vendor, not as something you fetched yourself, and read `extra` when it matters
-whether the fetch was live.
+whether the fetch was live. The opt-in `obscura` backend is the exception: it
+fetches from your own machine and IP address, and runs the page's scripts there,
+in the Obscura binary you installed.

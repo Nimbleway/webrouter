@@ -14,6 +14,8 @@ from typing import Any
 
 from tests.examples.helpers import load_example
 from web_router import RouteDecision, RouteRequest
+from web_router.constants_data_driven import DATA_DRIVEN_MANIFEST_FILE
+from web_router.routing.data_driven.table import read_release
 from web_router.routing.remote import RemoteRouter
 from web_router.routing.wire import request_from_wire
 
@@ -115,6 +117,13 @@ def canned(answer: Canned) -> Iterator[str]:
 
 
 URL_PROMPT = "read https://en.wikipedia.org/wiki/Web_scraping"
+
+
+def url_reason() -> str:
+    """What the shipped release says of ``URL_PROMPT``, with the version its manifest names."""
+    version = read_release(DATA_DRIVEN_MANIFEST_FILE)["version"]
+    return f"data-driven {version}: extract for verb=other, url_target=page, plural=no, kw_research=no, ui_action=no"
+
 
 SLOW_CLOSE_S = 5.0
 """How long a stuck pool takes to close: far past any wait a test allows."""

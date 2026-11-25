@@ -251,6 +251,11 @@ def mapped(table: Mapping[_K, _V], key: _K | None) -> _V | None:
     return None if key is None else table.get(key)
 
 
+def field_names(payload: Mapping[str, Any]) -> str:
+    """A reply's top-level fields, for an error saying what came back in place of what was read: ``none`` if empty."""
+    return ", ".join(sorted(payload)) or "none"
+
+
 def compact(mapping: dict[str, Any]) -> dict[str, Any]:
     """Drop ``None`` values so unset parameters never reach the provider."""
     return {key: value for key, value in mapping.items() if value is not None}

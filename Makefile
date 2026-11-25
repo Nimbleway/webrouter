@@ -69,8 +69,8 @@ chains: ## Regenerate src/web_router/data/chains.json, the default auto orders, 
 efforts: ## Regenerate src/web_router/data/efforts.json, the research effort table, from the frozen results
 	uv run --all-extras python benchmarks/providers/efforts.py
 
-data-driven-router: ## Import a data-driven router release: SOURCE=<delivered folder> VERSION=0.2.0
-	uv run python -m scripts.data_driven_router --source $(SOURCE) --version $(VERSION)
+data-driven-router: ## Import a data-driven router release: SOURCE=<delivered folder> VERSION=0.2.0 [LOOKUP=<lookup table>]
+	uv run --all-extras python -m scripts.data_driven_router --source $(SOURCE) --version $(VERSION) $(if $(LOOKUP),--lookup $(LOOKUP))
 
 changelog: ## Move the changelog.d/ fragments under [Unreleased] in CHANGELOG.md (at release)
 	uv run python -m scripts.changelog

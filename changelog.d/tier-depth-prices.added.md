@@ -1,0 +1,1 @@
+Estimated prices for six search tiers at the `fast` depth (Exa `exa-lite` and `exa-deep-lite`, Parallel `parallel-turbo` and `parallel-advanced`, Keenable `keenable-realtime` and `keenable-pro`), and for `exa:exa-lite` itself, so a cost cap can admit them.

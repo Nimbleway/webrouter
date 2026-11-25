@@ -570,7 +570,7 @@ async def test_each_arm_records_the_request_its_backends_were_sent(
     setup = {**SETUP, "arms": ["openai-native", "web-router:linkup"], "platform": "openai", "backends": {}}
     setup["backends"]["web-router:linkup"] = linkup
     _, markdown = report.build(rows, setup)
-    assert "### What each backend was sent" in markdown and '"depth": "fast"' in markdown
+    assert "### Backend request setup" in markdown and '"depth": "fast"' in markdown
 
 
 def _winner(summary: dict[str, Any], axis: str, platform: str = "claude") -> dict[str, Any]:

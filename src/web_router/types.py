@@ -64,12 +64,11 @@ class Provider(str, Enum):
     discoverable from an editor rather than remembered. Backends added with :func:`web_router.register_provider`
     are named by string, which is why the string form is never going away.
 
-    Not every name serves every method: ``oxylabs``, ``brightdata``, ``firecrawl`` and ``jina`` extract but do not
-    search, and most search backends do not extract. ``steel``, ``browserbase``, ``hyperbrowser``, ``anchor``,
+    Not every name serves every method: ``oxylabs``, ``brightdata``, ``firecrawl``, ``jina`` and ``obscura`` only
+    extract, and most search backends do not extract. ``steel``, ``browserbase``, ``hyperbrowser``, ``anchor``,
     ``kernel`` and ``local`` only open browser sessions, ``browser-use`` and ``skyvern`` only run browse tasks, and
     ``apify`` only runs live data. :func:`web_router.available_providers` and its per-method counterparts list each
-    method's own set. ``auto`` serves every method by trying its backends in turn; ``max`` serves extract alone, by
-    trying every backend at once and returning the first document back.
+    method's own set. ``auto`` tries its backends in turn for every method; ``max`` races them all, for extract alone.
     """
 
     NIMBLE = "nimble"
@@ -99,6 +98,7 @@ class Provider(str, Enum):
     BRIGHTDATA = "brightdata"
     FIRECRAWL = "firecrawl"
     JINA = "jina"
+    OBSCURA = "obscura"
     STEEL = "steel"
     BROWSERBASE = "browserbase"
     HYPERBROWSER = "hyperbrowser"

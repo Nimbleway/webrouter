@@ -67,11 +67,13 @@ class ToolTable:
         return Row((), dict(zip(self.labels, self.tables[0][""], strict=False)))
 
 
-def _read(name: str, *, sha256: str | None = None) -> Any:
+def read_release(name: str, *, sha256: str | None = None, message: str = MSG_DATA_DRIVEN_TABLE) -> Any:
+    """One JSON file of the shipped release, refused with ``message`` when ``sha256`` is given and is not its
+    checksum."""
     folder = resources.files("web_router").joinpath(*DATA_DRIVEN_DATA_DIR)
     content = (folder / name).read_bytes()
     if sha256 is not None and hashlib.sha256(content).hexdigest() != sha256:
-        raise ConfigurationError(MSG_DATA_DRIVEN_TABLE.format(why=MSG_DATA_DRIVEN_CHECKSUM))
+        raise ConfigurationError(message.format(why=MSG_DATA_DRIVEN_CHECKSUM))
     return json.loads(content)
 
 
@@ -100,11 +102,11 @@ def checked_table(version: str, data: Mapping[str, Any]) -> ToolTable:
 def shipped_table() -> ToolTable:
     """The tool table of the release this package ships, checked once."""
     try:
-        manifest = _read(DATA_DRIVEN_MANIFEST_FILE)
+        manifest = read_release(DATA_DRIVEN_MANIFEST_FILE)
         if manifest.get("schema") != DATA_DRIVEN_SCHEMA:
             raise ConfigurationError(MSG_DATA_DRIVEN_SCHEMA.format(got=manifest.get("schema"), want=DATA_DRIVEN_SCHEMA))
         table = manifest["tool_table"]
-        return checked_table(manifest["version"], _read(table["file"], sha256=table["sha256"]))
+        return checked_table(manifest["version"], read_release(table["file"], sha256=table["sha256"]))
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
         # The default router reads these on every construction: a stripped or damaged install says so plainly.
         why = MSG_DATA_DRIVEN_UNREADABLE.format(error=type(exc).__name__)

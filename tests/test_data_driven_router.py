@@ -126,7 +126,7 @@ def test_a_table_this_version_cannot_use_is_refused(change: dict[str, Any], why:
 
 
 def test_a_manifest_with_another_schema_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(table_module, "_read", lambda name: {"schema": 2, "version": "2.0.0"})
+    monkeypatch.setattr(table_module, "read_release", lambda name: {"schema": 2, "version": "2.0.0"})
     shipped_table.cache_clear()
     try:
         with pytest.raises(ConfigurationError, match=r"schema 2.*reads schema 1"):

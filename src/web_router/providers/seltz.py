@@ -26,7 +26,7 @@ from web_router.constants_seltz import (
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpSearchProvider
-from web_router.providers._utils import build_payload, mapped
+from web_router.providers._utils import build_payload, field_names, mapped
 from web_router.snippet import as_snippet
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
@@ -61,7 +61,7 @@ class SeltzProvider(HttpSearchProvider):
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         documents = payload.get("documents")
         if not isinstance(documents, list):
-            raise ProviderError(self.name, MSG_SELTZ_NO_DOCUMENTS.format(fields=", ".join(sorted(payload)) or "none"))
+            raise ProviderError(self.name, MSG_SELTZ_NO_DOCUMENTS.format(fields=field_names(payload)))
         return SearchResponse(
             provider=self.name,
             query=request.query,

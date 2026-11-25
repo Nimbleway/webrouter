@@ -170,7 +170,9 @@ wr = WebRouter(router="preferred", router_config={"prefer": "cheap"})  # the sam
 The model routers take one too --
 `llm_router(..., prefer="cheap")`, or `prefer` in their `router_config` -- and
 so does `remote`, which sends it as `RouteRequest.prefer`. Each member of a
-`fallback` keeps its own. The record names the preference of the router whose
+`fallback` keeps its own. The experimental `data-driven` router takes
+`prefer` too, and ranks search by its own provider table: see
+[Which search backend](/smart-routing#which-search-backend). The record names the preference of the router whose
 ranking the call used: `None` when that router has none, failed or decided
 nothing.
 
@@ -256,11 +258,12 @@ results against the static order. The default search and answer orders come
 from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/README.md#route-eval-replaying-a-router).
 
-The library ships one keyless router, `data-driven`, attached unless you pass
+The built-in keyless router, `data-driven`, is attached unless you pass
 `router=` (`router="data-driven"` names it, `router=None` attaches none). It ranks
-web methods from bundled data without a routing model call: see
-[The data-driven router](/smart-routing#the-data-driven-router). It ranks no
-backends, so under a cost cap they run cheapest first. It also ships
+web methods and search providers from bundled data without a routing model call: see
+[The data-driven router](/smart-routing#the-data-driven-router). It orders measured search
+candidates by its provider table. Other methods keep `auto`'s order; a cost cap
+orders answer backends by cost within their accuracy tiers. The library also ships
 three model routers,
 `router="llm"`, `router="systemone"` and `router="gemini"`: see
 [Decision APIs](/smart-routing#decision-apis).
@@ -278,11 +281,13 @@ sets: see [the MCP guide](/mcp-server#routing-and-budgets-web_run-budget_start-b
 
 ## The data-driven router
 
-`router="data-driven"` ranks web methods from bundled data without a routing
-model call. The data is a table built from 1,600 requests from public
-benchmarks and 1,078 synthetic requests, all labelled by the trainers. It is
-experimental, needs no key, calls nothing and answers in microseconds. It is
-the default: only `plan()` and `run()` ask it, and it ranks no backends.
+The default `data-driven` router ranks web methods and providers from bundled data
+without a routing model call. The method data is a table built from 1,600
+requests from public benchmarks and 1,078 synthetic requests, all labelled by
+the trainers. It is experimental, needs no key, calls nothing and answers in
+microseconds. Only `plan()` and `run()` ask it by default. When the call
+searches, it also orders the search candidates a benchmark measured: see
+[Which search backend](/smart-routing#which-search-backend).
 
 It replaces `rules` as the default. That deprecated router reads a prompt with a URL,
 researches one asking in so many words for a report or a comparison, and
@@ -311,7 +316,7 @@ from web_router import WebRouter
 router = WebRouter(router="data-driven")
 plan = router.plan("compare the pricing plans of the top 5 CRM tools")
 plan.tool             # "research", with a research backend configured
-plan.decision.reason  # "data-driven 0.1.1: research for verb=analyze, url_target=none"
+plan.decision.reason  # "data-driven 0.1.2: research for verb=analyze, url_target=none"
 ```
 
 It reads five things in the prompt, each with a regular expression:
@@ -340,17 +345,91 @@ Three methods are treated apart:
   [URL policy](/smart-routing#url-policy).
 - `answer` is not a method the table was trained on, so it is never picked.
 
-The table ships as a versioned release, apart from the
+### Which search backend
+
+By default, `plan()`, `run()` and MCP `web_run` ask this router. When the method
+is search, it orders the backends by a second table:
+search backends and vendor tiers, each with the quality
+[webench.net](https://webench.net) measured for it (0 to 100, scored by WCE
+judge v2.8, with a 95% confidence interval), its price per thousand requests
+and its median latency. A row ships only when web-router can send the same
+request it was measured with, so the router names each as a candidate, such as
+`search:parallel:parallel-turbo+fast`
+([`extra_modes`](/vendor-modes#showing-modes-to-a-router)).
+
+From the rows the call can run -- the backends you hold keys for, within the
+budget -- it keeps a *line*: the points no other point beats on both quality
+and price (the cost line) or quality and latency (the speed line). What you
+prefer picks the line and the direction. The cost line uses the benchmark's
+prices, not the price list a budget charges:
+
+| `prefer` | Order |
+|---|---|
+| `"cheap"` | the cost line, cheapest first by the benchmark's prices |
+| `"fast"` | the speed line, fastest first |
+| `"accurate"` or unset | the cost line, best quality first; when cheaper points overlap the best one within their confidence intervals, the cheapest of them by the benchmark's prices goes first |
+
+```python
+router = WebRouter(router="data-driven", router_config={"prefer": "cheap"})
+```
+
+A failed attempt moves to the next point of the same line. After the line,
+every other backend runs at its default mode, in `auto`'s order; a backend
+tried in a measured mode is not tried again at its default. To order plain
+`search()` calls too, pass `route_tools=("search",)`.
+
+Most rows were measured at the `fast` depth and name a vendor mode. So the
+router has fewer of them to order when the call cannot be shown those modes,
+and with fewer than two left it orders none: one measured candidate alone is no
+ranking, so search keeps `auto`'s order.
+
+- your own `route_modes=False` leaves only the rows at a backend's default.
+  The shipped table has one, so search keeps `auto`'s order;
+- a `search_depth` or `effort` you set leaves the rows that agree with it,
+  and at `search_depth="fast"` the single-tier backends are shown at their
+  default, which the table does not name;
+- a time limit drops a row whose median latency is over it.
+
+Read the numbers for what they are:
+
+- **They rank, they do not predict.** The questions are the 150 where backends
+  differ most, so scores on everyday traffic will be higher. The order is what
+  carries over.
+- **Search was scored on an answer.** One fixed model wrote an answer from each
+  backend's top 10 results, and that answer was judged, not the raw results.
+- **The same request, not always the same text.** A row is matched by the
+  request sent to the backend. Brave was measured at the `lite` depth and
+  sends the same request at every depth, so its row is the plain backend,
+  where web-router keeps a different amount of each result's snippet.
+- **The lines use the table's own prices and latencies**, measured with the
+  quality. A budget still filters on the library's
+  [price list](/smart-routing#estimated-prices), whose estimates run higher
+  for backends that bill for page text. For example, `cheap` can try Exa lite
+  (benchmark $4 per 1,000; budget estimate $14 with page text) before Parallel
+  advanced ($5 in both). Use a cost cap to filter what fits the budget's prices;
+  `cheap` itself does not promise the lowest estimated bill.
+- **A dated snapshot, not the live leaderboard.** The table is dated
+  2026-11-23 and covers that 150-question subset. webench.net has since been refreshed
+  with newer models, so its published search scores differ from these by up to
+  2.5 points a row, and these cannot be checked against it. The next table is
+  planned to carry scores that match a published page.
+- **Search only.** Research, extract and browse backends keep `auto`'s order.
+
+### The release
+
+The tables ship as a versioned release, apart from the
 library's own version: `src/web_router/data/data_driven/manifest.json` names the
 version, and every decision's `reason` starts with it. The version changes only
-when a newly trained table ships. A golden file of two thousand requests, with
+when newly trained or newly measured tables ship. Release `0.1.2` holds tool
+table `0.1.1`, whose own version the manifest keeps beside it, and the first
+provider table. A golden file of two thousand requests, with
 the features and method the training code gave each one, is replayed in the
 tests, so the shipped expressions cannot drift from the ones the table was
 trained with.
 
 ### Trained on
 
-The training owner reports these sources for release `0.1.1`, and the release's
+The training owner reports these sources for tool table `0.1.1`, and the release's
 manifest lists them under `tool_table.sources`. Counts describe requests used,
 not each dataset's size. The trainers assigned the method labels; the source
 datasets do not supply those labels. The shipped table contains aggregate
@@ -376,7 +455,7 @@ DeepResearch Bench's were fetched from `main` and frozen on 2026-11-08, and the
 manifest records a SHA-256 for each file: a freeze date and a checksum, not a
 dataset revision.
 
-Release `0.1.1` was retrained without three sources an earlier, unreleased
+Tool table `0.1.1` was retrained without three sources an earlier, unreleased
 table used, because their terms for derived data were unclear: NQ-Open
 (CC-BY-SA-3.0, share-alike), WideSearch (no licence text) and a FreshQA mirror
 that states no licence. The most common method of every row is unchanged,

@@ -80,7 +80,8 @@ def test_a_router_shown_only_modes_is_asked_and_its_attempts_give_the_order(keys
     with WebRouter(provider_config={"auto": {"chain": {"search": ["exa"]}}}, router=router, route_modes=True) as wr:
         found = build_candidates(wr, SEARCH, budget=cap, modes=True)
         plan = wr.plan("q", tool="search", budget=cap)
-    assert ids(found) == ["search:exa:exa-instant"], "Exa's default is over the cap, its instant mode is not"
+    fit = ["search:exa:exa-instant", "search:exa:exa-lite"]
+    assert ids(found) == fit, "Exa's default is over the cap, its two $14 tiers are not"
     assert router.ids == ids(found) and plan.providers["search"] == ("exa:exa-instant",)
 
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal
 
 DATA_DRIVEN_ROUTER_NAME = "data-driven"
-"""The built-in router that picks a request's method from a table trained on labelled requests."""
+"""The built-in router that ranks web methods and providers from bundled data, with no routing model call."""
 
 DATA_DRIVEN_DATA_DIR = ("data", "data_driven")
 """Where the data-driven router's release ships inside the package."""
@@ -29,6 +29,30 @@ DATA_DRIVEN_REASON_LAST_RESORT = (
     "data-driven {version}: search, which no training request with {features} ran, as the last resort"
 )
 """The reason when every method of the row is held back: a browse not opted into, an extract with no URL."""
+
+DATA_DRIVEN_REASON_BACKENDS = "{reason}; search backends {order}, by the {measured} measures"
+"""The reason's tail when the router ranks search's backends from its provider table."""
+
+DATA_DRIVEN_ORDERS = {
+    "cheap": "cheapest first by benchmark prices",
+    "fast": "fastest first",
+    None: "by measured quality, the cheapest of the best first by benchmark prices",
+}
+"""How the search backends are ranked, by the preference: what :data:`DATA_DRIVEN_REASON_BACKENDS` says."""
+
+DATA_DRIVEN_REASON_NO_BACKEND = "{reason}; {tool} has no backend here, so search runs"
+"""The reason's middle when the row's first method cannot run and the call searches instead."""
+
+DATA_DRIVEN_SEARCH_ID = "search:"
+"""What every provider-table row's candidate id starts with: the table measures search alone."""
+
+MSG_DATA_DRIVEN_PROVIDERS = "the data-driven router's provider table is not usable: {why}."
+
+MSG_DATA_DRIVEN_POINT = (
+    "the row {row!r} needs a search candidate's id and four measures, each a finite number of 0 or more"
+)
+MSG_DATA_DRIVEN_POINT_ID = "it names {ids} more than once"
+MSG_DATA_DRIVEN_PROVIDERS_READ = "it could not be read ({error})"
 
 MSG_DATA_DRIVEN_BROWSE = "the data-driven router takes browse=True or browse=False; got {got!r}."
 

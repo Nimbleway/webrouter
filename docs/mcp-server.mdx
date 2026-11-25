@@ -173,7 +173,7 @@ the client exports always keeps its value over any file's.
 
 Whichever file it is, only the provider credentials listed in
 [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example) are taken from it. A switch such as
-`WEB_ROUTER_MCP_ALLOW_FILE_URLS` or `CHROME_PATH` in a file is ignored, because
+`WEB_ROUTER_MCP_ALLOW_FILE_URLS`, `CHROME_PATH` or `OBSCURA_PATH` in a file is ignored, because
 a server registered at user scope starts in any workspace and that workspace's
 file is not whoever runs the server; `${...}` is not expanded, so a file cannot
 copy another secret into a provider's key. The server never writes a
@@ -433,13 +433,15 @@ The router is set by the operator -- whoever starts the server and sets its
 environment -- once, when the server starts:
 
 - unset, the built-in [data-driven router](https://docs.webrouter.net/smart-routing#the-data-driven-router)
-  (`data-driven`, also the library's default): it ranks web methods from bundled
+  (`data-driven`, also the library's default): it ranks web methods and search providers from bundled
   data without a routing model call, picking `search`, `extract` or `research`
   from the prompt's wording. `research` is billed per run and is picked for many how, why,
   compare, list and summarize requests; with no research backend configured,
   the next method runs, `extract` for a prompt with a URL, else `search`. It
   needs no key and sends the prompt nowhere. `WEB_ROUTER_MCP_ROUTER=data-driven`
-  names it. To let it pick `browse` too, set that together with
+  names it. Search backend ordering follows its measured provider table;
+  `WEB_ROUTER_MCP_ROUTER_CONFIG='{"prefer": "cheap"}'` selects its cost line, cheapest by the benchmark's prices.
+  To let it pick `browse` too, set that together with
   `WEB_ROUTER_MCP_ROUTER_CONFIG='{"browse": true}'`: a config with no router
   named stops the server;
 - `WEB_ROUTER_MCP_ROUTER=rules` keeps the old rules behavior for one release and emits a

@@ -1,13 +1,15 @@
-"""What search providers share on text: a body cut to a snippet, and domain filters as ``site:`` operators."""
+"""What search providers share on text: a body cut to a snippet, a result read from named fields, and domain filters
+as ``site:`` operators."""
 
 from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from typing import Any
 
 from web_router.constants_search import EXCLUDE_SITE_OPERATOR, MSG_NOT_A_DOMAIN, SITE_DOMAIN_PATTERN, SITE_OPERATOR
 from web_router.snippet import as_snippet as as_snippet
-from web_router.types import SearchDepth, SearchRequest
+from web_router.types import SearchDepth, SearchRequest, SearchResult
 
 DOMAIN_LISTS = ("include_domains", "exclude_domains")
 """The two domain filters a search request carries."""
@@ -23,6 +25,26 @@ def lite_body(text: str, depth: SearchDepth | None) -> str:
     served it. The vendor's full text stays in ``raw``.
     """
     return as_snippet(text) if depth == "lite" else text
+
+
+def named_result(hit: dict[str, Any], depth: SearchDepth | None = None, *, body: str | None = None) -> SearchResult:
+    """One result from a hit carrying ``url``, ``title`` and ``description``; every other field stays in ``extra``.
+
+    ``description`` is cut to a snippet's size. ``content`` is the page body
+    under ``body`` when one came back, else the description, cut when ``lite``
+    was asked for. There is never a score or a date: nothing the backend did
+    not return is invented.
+    """
+    snippet = str(hit.get("description") or "")
+    text = (hit.get(body) if body else None) or snippet
+    return SearchResult(
+        url=hit["url"],
+        title=hit.get("title") or "",
+        description=as_snippet(snippet),
+        content=lite_body(text, depth),
+        published_date=None,
+        extra={key: value for key, value in hit.items() if key not in {"url", "title", "description", body}},
+    )
 
 
 def site_operators(
