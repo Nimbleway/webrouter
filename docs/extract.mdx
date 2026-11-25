@@ -23,10 +23,11 @@ the answer has the same shape. Backends that take a single URL per request are
 fanned out for you, concurrently on `AsyncWebRouter`, and the documents come back
 in the order you asked for them.
 
-Each URL is a full `http://` or `https://` one. Anything else, a bare domain such
-as `example.com` included, raises `InvalidParameterError` naming its position
-(`urls.1`) before any backend is called: backends disagree on what to do with
-one, so none is asked.
+Explicit URLs must use `http://` or `https://` and include a host. Otherwise
+`extract()` raises `InvalidParameterError` naming the URL's position (for
+example, `urls.1`) before contacting any backend. Bare domains such as
+`example.com` and host-and-port inputs such as `example.com:443` still reach
+the backend unchanged. Whether they work depends on the backend.
 
 ## Formats
 

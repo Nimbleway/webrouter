@@ -8,6 +8,7 @@ sync router's check of its ``provider_config``, lives here for the same reason.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
@@ -50,6 +51,10 @@ def build_search_request(
     return SearchRequest(query=query, provider_options=provider_options or {}, **options)
 
 
+_EXTRACT_SCHEME = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*:")
+_EXTRACT_HOST_PORT = re.compile(r"(?:localhost|[a-z0-9-]+(?:\.[a-z0-9-]+)+\.?):[0-9]+(?:[/?#]|$)", re.IGNORECASE)
+
+
 @refused_as_parameter(ExtractRequest)
 def build_extract_request(
     urls: str | list[str],
@@ -67,10 +72,12 @@ def build_extract_request(
         profile=profile,
         provider_options=provider_options or {},
     )
-    # Backends disagree on anything else: a bare domain is fetched over https by some, over http by another and
-    # refused by a third.
     for position, url in enumerate(request.urls):
-        if reason := any_web_url(url):
+        # Keep bare hosts unchanged, including host:port forms that look like a scheme to urlsplit.
+        candidate = url.lstrip()
+        if not _EXTRACT_SCHEME.match(candidate) or _EXTRACT_HOST_PORT.match(candidate):
+            continue
+        if reason := any_web_url(candidate):
             raise InvalidParameterError(f"urls.{position}", f"{reason}.")
     return request
 
