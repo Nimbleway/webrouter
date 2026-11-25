@@ -1,0 +1,86 @@
+{
+  "provider": "jina",
+  "method": "search",
+  "class": "web_router.providers.jina.JinaProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://s.jina.ai",
+    "paths": {
+      "search_path": "/"
+    },
+    "method": "GET",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "JINA_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "headers.X-Respond-With": "no-content",
+    "query.q": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "query.num": 3
+      }
+    },
+    "search_depth": {
+      "lite": {
+        "unchanged": "no wire change"
+      },
+      "fast": {
+        "refused": "UnsupportedParameterError"
+      },
+      "deep": {
+        "headers.X-Respond-With": "<removed>"
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "effort",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "recency"
+  ],
+  "source": [
+    "https://s.jina.ai/openapi.json",
+    "https://jina.ai/reader"
+  ],
+  "verified": {
+    "max_results": "docs: https://s.jina.ai/openapi.json",
+    "search_depth": "docs: https://s.jina.ai/openapi.json"
+  },
+  "vendor_options": {
+    "gl": {
+      "status": "passthrough",
+      "note": "Two-letter country code, sent as a query parameter; not yet mapped from country."
+    },
+    "hl": {
+      "status": "passthrough",
+      "note": "Two-letter language code, sent as a query parameter; not yet mapped from locale."
+    },
+    "location": {
+      "status": "passthrough",
+      "note": "Where the search originates, ideally a city."
+    },
+    "site": {
+      "status": "passthrough",
+      "note": "A domain to search within; repeatable."
+    },
+    "page": {
+      "status": "passthrough",
+      "note": "The result offset, for paging."
+    },
+    "count": {
+      "status": "passthrough",
+      "note": "Another spelling of num."
+    },
+    "X-Engine": {
+      "status": "not_supported",
+      "note": "A header choosing how pages are read; provider_options reach the query string, not headers."
+    }
+  }
+}

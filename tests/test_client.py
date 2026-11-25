@@ -186,9 +186,9 @@ def test_a_backend_that_only_searches_says_so_when_asked_to_extract(fake_provide
 
 def test_a_backend_that_only_extracts_is_still_a_valid_default() -> None:
     """A router defaulted to an extract-only backend still searches through `provider=`."""
-    router = WebRouter("oxylabs")
+    router = WebRouter("browserbase")
 
-    assert router.default_provider == "oxylabs"
+    assert router.default_provider == "browserbase"
     with pytest.raises(ProviderNotFoundError, match="brave"):
         router.search("hello")
 

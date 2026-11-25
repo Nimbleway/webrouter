@@ -93,7 +93,7 @@ def test_billed_keys_with_no_ceiling_are_said(
 
 
 @pytest.mark.parametrize("echo", ["invalid key {key}", "Authorization: Bearer {key}", "url?k={key}&x=1"])
-@pytest.mark.parametrize("variable", [ENV_BRAVE_API_KEY, ENV_JINA_API_KEY], ids=["billed", "optional"])
+@pytest.mark.parametrize("variable", [ENV_BRAVE_API_KEY, ENV_JINA_API_KEY], ids=["brave", "jina"])
 def test_an_error_that_echoes_a_configured_key_in_plain_text_masks_it(
     no_keys: None, monkeypatch: pytest.MonkeyPatch, echo: str, variable: str
 ) -> None:

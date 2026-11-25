@@ -224,12 +224,12 @@ def test_the_default_comparison_is_every_configured_backend_but_auto(
     _member(registered, "keyed-here")
 
     defaults = WebRouter(
-        "keyed-here", provider_config={"keyed-here": {"api_key": "k"}, "oxylabs": {"username": "u"}}
+        "keyed-here", provider_config={"keyed-here": {"api_key": "k"}, "browserbase": {"api_key": "k"}}
     )._default_benchmark_providers()
 
     assert "auto" in configured_providers() and "auto" not in defaults
     assert set(defaults) == (set(configured_providers()) - {"auto"}) | {"keyed-here"}
-    assert "oxylabs" not in defaults, "extract-only: a search comparison cannot use it"
+    assert "browserbase" not in defaults, "extract-only: a search comparison cannot use it"
     assert "nimble" in defaults and "you-mcp" in defaults
     assert defaults == sorted(defaults)
 

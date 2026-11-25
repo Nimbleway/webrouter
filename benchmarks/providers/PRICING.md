@@ -294,6 +294,41 @@ top-ups and down to $1 per 1k on Scale. The keyless tier bills nothing.
 | `deep` | `firecrawl:deep` | `scrapeOptions.formats=["markdown"]` | The whole page | $60 per 1k; estimate is derived: 2 credits per 10 results plus each result's scrape at 1 credit a page, 10 results assumed, so 12 credits at $5 per 1k credits = $60 per 1k (derived, not stated by Firecrawl; seen live, 2 results cost 4 credits) | [www.firecrawl.dev](https://www.firecrawl.dev/pricing.md) | 2026-11-24 |
 <!-- /prices -->
 
+### Jina
+
+Billed by tokens from one balance shared with Reader ([pricing](https://jina.ai/reader)): each search costs a
+fixed number, from 10,000; reading each result's page adds the tokens it returns. Unlike Reader, search
+needs a key.
+
+<!-- prices: method=search provider=jina -->
+| Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|---|
+| `lite` (default) | `jina`, `jina:lite` | `X-Respond-With: no-content` (the default) | Titles, URLs and descriptions; no page read | billed by tokens; a fixed number of tokens per search, from 10,000, at about $50 per 1B tokens (Standard); 10M free tokens with a new key | [jina.ai](https://jina.ai/reader) | 2026-11-24 |
+| `deep` | `jina:deep` | No `X-Respond-With` | The whole page | billed by tokens; each result's page is read, and billed by the tokens it returns on top of the search's own | [jina.ai](https://jina.ai/reader) | 2026-11-24 |
+<!-- /prices -->
+
+### Bright Data (SERP API)
+
+Per successful request ([pricing](https://brightdata.com/pricing/serp)): $1.50 per 1k pay-as-you-go, $1.30 to
+$1.00 per 1k on Scale plans. One request is one parsed Google page.
+
+<!-- prices: method=search provider=brightdata -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `brightdata` | One Google page, parsed (`brd_json=1`) | Titles, URLs and Google's snippets | $1.50 per 1k; SERP API pay-as-you-go, successes only; $1.30–1.00 per 1k on Scale plans | [brightdata.com](https://brightdata.com/pricing/serp) | 2026-11-24 |
+<!-- /prices -->
+
+### Oxylabs (Web Scraper API)
+
+Per successful result ([pricing](https://oxylabs.io/products/scraper-api/serps)): one parsed Google page of the
+`google_search` source is $1.00 per 1k without JavaScript rendering on the entry plan, less on larger plans.
+
+<!-- prices: method=search provider=oxylabs -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `oxylabs` | `google_search`, parsed | Titles, URLs and Google's snippets | $1 per 1k; Google without JavaScript rendering, $1.00 per 1k on the entry plan and less on larger plans; the estimate takes the top | [oxylabs.io](https://oxylabs.io/products/scraper-api/serps) | 2026-11-24 |
+<!-- /prices -->
+
 ### AWS AgentCore Web Search
 
 Billed by AWS to the account that owns the gateway: per query, plus the

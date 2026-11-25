@@ -202,6 +202,9 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_VALYU: ENV_VALYU_API_KEY,
     PROVIDER_SPECSTREAM: ENV_SPECSTREAM_API_KEY,
     PROVIDER_FIRECRAWL: ENV_FIRECRAWL_API_KEY,
+    PROVIDER_JINA: ENV_JINA_API_KEY,
+    PROVIDER_BRIGHTDATA: ENV_BRIGHTDATA_API_KEY,
+    PROVIDER_OXYLABS: ENV_OXYLABS_PASSWORD,
     # Not a credential: the AWS one comes from botocore's chain. The gateway is
     # what has to exist before a call can be worth trying.
     PROVIDER_AGENTCORE: ENV_AGENTCORE_GATEWAY_URL,
@@ -567,8 +570,8 @@ for that request, not kept out of the chain.
 AUTO_APPENDED: tuple[str, ...] = _chain("search", "appended")
 """Keyed members the frozen results do not rank, tried after the keyless tier, with a credential, in joining order.
 
-From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz``, ``octen``,
-``keirolabs``, ``specstream`` and ``firecrawl`` joined after the scan that set the order, unranked by it. A
+From ``data/chains.json``, unmeasured: every member there, from ``keenable`` to ``specstream`` and the four that only
+extracted before (``firecrawl``, ``jina``, ``brightdata``, ``oxylabs``), joined after the scan that set the order. A
 backend that joins later goes at the end of the file's ``appended``, so joining changes no environment's routing;
 ``make chains`` moves it ahead of the keyless tier only once frozen results rank it.
 """
@@ -3032,120 +3035,13 @@ KEENABLE_TITLE = "web-router"
 
 # DeepSeek's endpoints, limits and query operators are in constants_deepseek.py.
 
-# --- Oxylabs ----------------------------------------------------------------
-# Extract only: Oxylabs' Web Scraper API fetches a URL, it does not rank the web.
-# Verified live on 2026-11-03. See tests/providers/test_oxylabs.py.
+# Oxylabs' realtime endpoint, extract formats and search source are in constants_oxylabs.py.
 
-OXYLABS_BASE_URL = "https://realtime.oxylabs.io"
-OXYLABS_EXTRACT_PATH = "/v1/queries"
-"""The realtime endpoint, the only one that returns content in the response.
-
-The push-pull endpoint at ``data.oxylabs.io`` submits a job and hands back an id
-to poll, which is a different shape of integration than ``extract()`` promises.
-"""
-
-OXYLABS_UNIVERSAL_SOURCE = "universal"
-"""The ``source`` that means "any website", as opposed to a per-site parser."""
-
-OXYLABS_MARKDOWN_PARAM = "markdown"
-
-OXYLABS_EXTRACT_FORMATS: dict[ExtractFormat, str] = {
-    # Normalized format -> the `type` Oxylabs tags the matching result with. A
-    # request can ask for several representations at once and each comes back as
-    # its own entry in `results`, in no guaranteed order, so the reply is picked
-    # by `type` rather than by position.
-    "html": "raw",
-    "markdown": "markdown",
-}
-
-OXYLABS_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "html"
-"""Without the ``markdown`` flag Oxylabs returns the raw HTML it fetched."""
-
-# --- Bright Data ------------------------------------------------------------
-# Extract only: the Web Unlocker fetches a URL through Bright Data's network.
-# Verified live on 2026-11-03. See tests/providers/test_brightdata.py.
-
-BRIGHTDATA_BASE_URL = "https://api.brightdata.com"
-BRIGHTDATA_EXTRACT_PATH = "/request"
-BRIGHTDATA_API_KEY_PREFIX = "Bearer "
-
-BRIGHTDATA_RESPONSE_FORMAT = "json"
-"""Always ask for the JSON envelope, never ``format="raw"``.
-
-``raw`` returns the fetched page as the HTTP body itself -- no status code, no
-headers, and not JSON, so decoding it would fail. The envelope carries the same
-body under ``body`` plus the target's status and headers, which is strictly more
-to normalize from. Bright Data's own reference shows the envelope beside a
-``raw`` request, which reads as though ``raw`` returned it too; it does not.
-"""
-
-BRIGHTDATA_EXTRACT_FORMATS: dict[ExtractFormat, dict[str, Any]] = {
-    # `data_format` post-processes what the unlocker fetched; absent, the
-    # envelope's `body` holds the page's own HTML.
-    "html": {},
-    "markdown": {"data_format": "markdown"},
-}
-
-BRIGHTDATA_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "html"
-
-BRIGHTDATA_ERROR_HEADER = "x-brd-error"
-"""The envelope header in which the unlocker says why it could not fetch the page.
-
-Seen live on 2026-10-16: an unresolvable host answers 200 with an envelope whose
-``status_code`` is 502, ``body`` is empty, and this header holds the reason. A
-target that answers an error page of its own carries no such header -- that page
-was fetched, and stays a document with the target's status.
-"""
-
-BRIGHTDATA_ERROR_CODE_HEADER = "x-brd-error-code"
-"""The short code beside :data:`BRIGHTDATA_ERROR_HEADER` (``proxy_error`` live).
-
-Read on its own too, so a failure that names only a code is still a failure.
-"""
+# Bright Data's endpoint, extract formats and SERP request are in constants_brightdata.py.
 
 # Firecrawl's endpoints, extract formats and search options are in constants_firecrawl.py.
 
-# --- Jina Reader, the keyless route -----------------------------------------
-# A key only raises the rate limit: 20 requests a minute without one, 500 with.
-# Verified live, keyless.
-
-JINA_BASE_URL = "https://r.jina.ai"
-JINA_EXTRACT_PATH = "/"
-JINA_API_KEY_PREFIX = "Bearer "
-JINA_ACCEPT = "application/json"
-"""Without it the reply is the page itself rather than a JSON envelope.
-
-``Accept`` chooses the envelope and ``X-Return-Format`` chooses what is inside
-it; they are independent, and asking only for a format returns bare text.
-"""
-
-JINA_RETURN_FORMAT_HEADER = "X-Return-Format"
-
-JINA_EXTRACT_FORMATS: dict[ExtractFormat, str] = {
-    # Normalized format -> the X-Return-Format value, which is also the key the
-    # body lands under inside `data` -- except for markdown, which arrives as
-    # `content`. Verified live: asking for html returns `data.html` and omits
-    # `data.content` entirely, so the key has to follow the format.
-    "markdown": "markdown",
-    "html": "html",
-    "text": "text",
-}
-
-JINA_BODY_FIELDS: dict[ExtractFormat, str] = {
-    "markdown": "content",
-    "html": "html",
-    "text": "text",
-}
-
-JINA_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "markdown"
-"""Verified live: with no ``X-Return-Format`` the body arrives as ``data.content``."""
-
-# Reader may answer from its own cache rather than fetching, and says so in an
-# unmapped `data.warning` -- verified live: "This is a cached snapshot of the
-# original page, consider retry with caching opt-out." That reaches the caller
-# through ExtractedDocument.extra, which is where SECURITY.md points for it.
-# Not mapped onto a normalized field: no other backend reports anything
-# comparable, so there is nothing to normalize it against yet.
+# Jina's Reader and Search endpoints and formats are in constants_jina.py.
 
 
 # --- MCP server -------------------------------------------------------------

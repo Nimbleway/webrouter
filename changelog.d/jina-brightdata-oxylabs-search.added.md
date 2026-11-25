@@ -1,0 +1,1 @@
+Jina, Bright Data and Oxylabs now search as well as extract: `search(provider="jina")` (`search_depth` `lite` or `deep`; needs `JINA_API_KEY`, which Reader does not), `"brightdata"` (one parsed Google page through the SERP API) and `"oxylabs"` (its `google_search` source). `auto` appends each after the keyless tier when its credentials are set.

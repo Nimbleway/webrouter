@@ -20,14 +20,14 @@ used here for identification only.
 | [Anchor](https://anchorbrowser.io) |  |  |  |  |  | ✓ |  |
 | [Apify](https://apify.com) |  |  | ✓ |  |  |  |  |
 | [Brave](https://brave.com/search/api/) | ✓ |  |  | ✓ |  |  |  |
-| [Bright Data](https://brightdata.com) |  | ✓ | ✓ |  |  |  |  |
+| [Bright Data](https://brightdata.com) | ✓ | ✓ | ✓ |  |  |  |  |
 | [Browser Use](https://browser-use.com) |  |  |  |  |  |  | ✓ |
 | [Browserbase](https://www.browserbase.com) |  | ✓ |  |  |  | ✓ | ✓ |
 | [DeepSeek](https://api-docs.deepseek.com) | ✓ | ✓ |  |  |  |  |  |
 | [Exa](https://exa.ai) | ✓ keyless | ✓ |  | ✓ |  |  |  |
 | [Firecrawl](https://firecrawl.dev) | ✓ | ✓ keyless |  |  |  |  |  |
 | [Hyperbrowser](https://hyperbrowser.ai) |  |  |  |  |  | ✓ |  |
-| [Jina Reader](https://jina.ai/reader) |  | ✓ keyless |  |  |  |  |  |
+| [Jina](https://jina.ai) (Reader extracts) | ✓ | ✓ keyless |  |  |  |  |  |
 | [Keenable](https://docs.keenable.ai) | ✓ keyless | ✓ keyless |  |  |  |  |  |
 | [Keirolabs](https://keirolabs.cloud) | ✓ |  |  |  |  |  |  |
 | [Kernel](https://kernel.sh) |  |  |  |  |  | ✓ |  |
@@ -36,7 +36,7 @@ used here for identification only.
 | [Merchant](/live-data#a-stores-own-agent-interface-merchant) (a store's own agent interface) |  |  | ✓ keyless |  |  |  |  |
 | [Nimble](https://nimbleway.com) | ✓ keyless | ✓ keyless | ✓ |  | ✓ |  |  |
 | [Octen](https://docs.octen.ai) | ✓ |  |  |  |  |  |  |
-| [Oxylabs](https://oxylabs.io) |  | ✓ | ✓ |  |  |  |  |
+| [Oxylabs](https://oxylabs.io) | ✓ | ✓ | ✓ |  |  |  |  |
 | [Parallel](https://parallel.ai) | ✓ keyless |  |  | ✓ | ✓ |  |  |
 | [Perplexity](https://docs.perplexity.ai) | ✓ |  |  | ✓ | ✓ |  |  |
 | [Seltz](https://docs.seltz.ai) | ✓ |  |  |  |  |  |  |
@@ -91,6 +91,9 @@ and what `response.provider` and `configured_providers()` report back.
 | `Provider.KEIROLABS` | `keirolabs` | [Keirolabs](https://keirolabs.cloud) lite search | direct HTTP | `max_results`. Titles, links and snippets, billed per search whatever the count |
 | `Provider.SPECSTREAM` | `specstream` | [SpecStream Search](https://specstream.ai/agents.md) | direct HTTP, `GET /v1/web-search` | `max_results` (sent as `num`, at most 100). `passages=true` through `provider_options` puts each page's excerpt in `content` |
 | `Provider.FIRECRAWL` | `firecrawl` | [Firecrawl Search](https://docs.firecrawl.dev/api-reference/endpoint/search) | direct HTTP, `POST /v2/search`; keyless with `allow_keyless=True` | `max_results` (sent as `limit`, at most 100), `search_depth` (`lite`, `deep`: `deep` scrapes each result's page as markdown). The description is often the page's opening markdown |
+| `Provider.JINA` | `jina` | [Jina Search](https://s.jina.ai/openapi.json) | direct HTTP, `GET s.jina.ai`; needs `JINA_API_KEY`, unlike Reader | `max_results` (sent as `num`), `search_depth` (`lite`, `deep`: unless `deep`, `X-Respond-With: no-content`, so Jina reads no page) |
+| `Provider.BRIGHTDATA` | `brightdata` | [Bright Data SERP API](https://docs.brightdata.com/scraping-automation/serp-api/send-your-first-request), on Google | direct HTTP, one parsed Google page through `BRIGHTDATA_ZONE` | `max_results` (sent as `num`, which Google ignores, and applied to the results). Organic results only; the rest of the page stays in `raw` |
+| `Provider.OXYLABS` | `oxylabs` | [Oxylabs Web Scraper API](https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/search/web-search), its `google_search` source | direct HTTP, one parsed Google page | `max_results` (sent as `limit`, and applied to the results). Organic results only; the rest of the page stays in `raw` |
 | `Provider.YOU_MCP` | `you-mcp` | [You.com MCP](https://api.you.com/mcp) | direct HTTP, **no key** | all but `effort` |
 | `Provider.EXA_MCP` | `exa-mcp` | [Exa MCP](https://exa.ai/docs/reference/exa-mcp), its `web_search_advanced_exa` tool | direct HTTP, **no key** | all but `locale` |
 | `Provider.EXA_LITELLM` | `exa-litellm` | [Exa](https://exa.ai) through your [LiteLLM proxy](https://docs.litellm.ai/docs/search) | direct HTTP to the proxy's `/v1/search/exa`, its key (`LITELLM_PROXY_API_KEY`) | as `exa` |
@@ -258,7 +261,7 @@ Every backend you hold a key for is a candidate, in a fixed order:
 
 | Method | Keyed members, in order | Then keyless | Then members added since, with a key |
 | --- | --- | --- | --- |
-| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Nimble keyless, Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore, Exa LiteLLM, Tavily LiteLLM, Parallel LiteLLM, Valyu, Seltz, Octen, Keirolabs, SpecStream, Firecrawl |
+| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Nimble keyless, Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore, Exa LiteLLM, Tavily LiteLLM, Parallel LiteLLM, Valyu, Seltz, Octen, Keirolabs, SpecStream, Firecrawl, Jina, Bright Data, Oxylabs |
 | `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Nimble keyless, Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase, SpecStream |
 | `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
 
@@ -268,8 +271,8 @@ accuracy to tell apart are ordered by cost, then speed.
 [`benchmarks/providers/`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/README.md#the-default-auto-orders-make-chains)
 explains the method, and how close the top backends are. Every
 key you hold comes before the free tier — so a key you hold only for research,
-Perplexity's say, serves your plain searches too. Keenable, DeepSeek, AgentCore, Valyu, Seltz, Octen, Keirolabs, SpecStream and
-Firecrawl have no rows in those results, so they come after the keyless tier until a scan places them: with a gateway set up, a plain
+Perplexity's say, serves your plain searches too. Keenable, DeepSeek, AgentCore, Valyu, Seltz, Octen, Keirolabs, SpecStream,
+Firecrawl, Jina, Bright Data and Oxylabs have no rows in those results, so they come after the keyless tier until a scan places them: with a gateway set up, a plain
 `WebRouter().search()` is still served by a keyless member first, so name `Provider.AGENTCORE` to reach it. For extract, the backends that
 joined later come after the keyless tier, so holding one more key never moves a
 call that was already being served. Research has no free tier, so Linkup and then

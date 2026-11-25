@@ -36,6 +36,7 @@ from web_router.constants import (
     PROVIDER_YOU_MCP,
     RESEARCH_ENV_BY_PROVIDER,
 )
+from web_router.constants_search_settings import SEARCH_SETTINGS_BY_PROVIDER as SETTINGS
 from web_router.exceptions import (
     ConfigurationError,
     ProviderError,
@@ -69,7 +70,7 @@ from web_router.types import (
     SearchResult,
 )
 
-_EVERY_SEARCH_KEY = [env_var for env_var in ENV_BY_PROVIDER.values() if env_var] + ["LITELLM_PROXY_API_BASE"]
+_EVERY_SEARCH_KEY = [var for var in ENV_BY_PROVIDER.values() if var] + [v for vs in SETTINGS.values() for v in vs]
 _EVERY_RESEARCH_KEY = sorted({env_var for env_vars in RESEARCH_ENV_BY_PROVIDER.values() for env_var in env_vars})
 _EVERY_EXTRACT_KEY = sorted({env_var for env_vars in EXTRACT_ENV_BY_PROVIDER.values() for env_var in env_vars})
 
@@ -623,9 +624,8 @@ def test_a_failing_extract_member_falls_through_to_the_next(extract_chain_member
 def test_the_format_is_pinned_before_delegating(extract_chain_members: _Recorder) -> None:
     """Members default differently -- Nimble to HTML, Tavily to markdown.
 
-    Letting the default fall through would make the shape of the content depend
-    on which backend happened to answer, which is the one thing the package
-    exists to prevent.
+    Letting the default fall through would make the shape of the content depend on which backend happened to answer,
+    which is the one thing the package exists to prevent.
     """
     _extract_member(extract_chain_members, "first")
 

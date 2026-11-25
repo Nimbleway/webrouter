@@ -9,7 +9,8 @@ Guidance for AI coding agents working in this repository. Humans: see
 web APIs, across seven methods.
 
 **`search`** — Nimble, Tavily, You.com, Brave, Exa, Parallel, Perplexity,
-Linkup, WebIQ, Keenable, DeepSeek, AWS AgentCore Web Search, Keirolabs, SpecStream and Firecrawl, plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
+Linkup, WebIQ, Keenable, DeepSeek, AWS AgentCore Web Search, Keirolabs, SpecStream, Firecrawl, Jina, Bright Data
+and Oxylabs (one page of Google, for the last two), plus the keyless `you-mcp`, `exa-mcp` and `parallel-mcp`, and `auto`, the default, which
 tries the backends you hold keys for and falls back to the keyless ones.
 
 **`extract`** — page contents for a URL you already have: Nimble, Tavily, Exa,
@@ -85,7 +86,7 @@ JSON file each in `src/web_router/data/vendors/`, read by vendor-blind code in
 `web_router/vendors/`. See "Adding a vendor" below.
 
 A name does not imply every method. `brave` searches and cannot extract,
-`oxylabs` extracts and cannot search, `nimble` searches, extracts, runs
+`keirolabs` searches and nothing else, `nimble` searches, extracts, runs
 live data and researches through four classes, and `browserbase` opens
 sessions, runs browse tasks and extracts through three. Each method has its own registry,
 and asking one for another's backend reports it as unknown.
@@ -1657,7 +1658,7 @@ not a secret either and comes from the real environment only, since no file can
 set it. `ENV_BY_PROVIDER`, `EXTRACT_ENV_BY_PROVIDER`,
 `RESEARCH_ENV_BY_PROVIDER`, `ANSWER_ENV_BY_PROVIDER`, `BROWSER_ENV_BY_PROVIDER` and
 `BROWSE_ENV_BY_PROVIDER` in `constants.py` are the machine-readable versions.
-`auto`, `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina` and `local` need none, and
+`auto`, `max`, `you-mcp`, `exa-mcp`, `parallel-mcp`, `jina`'s Reader and `local` need none (Jina search does), and
 Nimble, Tavily, Firecrawl and Keenable run keyless with `allow_keyless`, as `auto` uses them. `OPENAI_API_KEY` and
 `ANTHROPIC_API_KEY` are the two library keys that are not a provider's: each is
 read only by its judge behind `evaluate()` (the `evals` extra) —
@@ -1698,7 +1699,7 @@ keys but never replace the user's; the capabilities resource's `env` object
 names the file each variable came from, and reports a `WEB_ROUTER_ENV_FILE`
 naming no file, never skipping it silently. Every file, from
 wherever, is read on the same terms: only `credential_variables()` — every
-variable `ALL_ENV_TABLES` in `mcp/env_credentials.py` names, and Jina's optional key — a user-scoped server can be started from any
+variable `ALL_ENV_TABLES` in `mcp/env_credentials.py` names — a user-scoped server can be started from any
 workspace, and a foreign `.env` must not flip `WEB_ROUTER_MCP_ALLOW_FILE_URLS`
 or aim `CHROME_PATH` at its own binary; a variable already set wins; nothing is
 interpolated, so `${OTHER}` cannot copy another secret into a provider's key;

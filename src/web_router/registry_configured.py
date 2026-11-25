@@ -11,8 +11,8 @@ from web_router.constants import (
     EXTRACT_ENV_BY_PROVIDER,
     RESEARCH_ENV_BY_PROVIDER,
 )
-from web_router.constants_litellm import LITELLM_SEARCH_SETTINGS_BY_PROVIDER as SEARCH_SETTINGS
 from web_router.constants_live_data import LIVE_DATA_CREDENTIAL_SETS
+from web_router.constants_search_settings import SEARCH_SETTINGS_BY_PROVIDER as SEARCH_SETTINGS
 
 
 def is_set(env_var: str) -> bool:
@@ -29,7 +29,7 @@ def configured_providers() -> list[str]:
     This reads environment variables only. A key passed as ``provider_config`` is invisible here, and a key that is
     present may still be rejected by the service -- so treat this as "worth trying", not as a guarantee, and let the
     provider itself raise when a credential is actually missing or bad. A backend that needs a setting beside its
-    credential -- a LiteLLM proxy's URL -- is reported only when it has both.
+    credential -- Oxylabs' username, Bright Data's zone, a LiteLLM proxy's URL -- is reported only when it has both.
     """
     return sorted(
         name

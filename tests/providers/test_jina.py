@@ -9,7 +9,9 @@ from __future__ import annotations
 import pytest
 
 from web_router import WebRouter
-from web_router.constants import JINA_RETURN_FORMAT_HEADER
+from web_router.constants_jina import (
+    JINA_RETURN_FORMAT_HEADER,
+)
 from web_router.exceptions import ProviderError
 from web_router.providers.jina import JinaExtractProvider
 from web_router.types import ExtractFormat, ExtractRequest

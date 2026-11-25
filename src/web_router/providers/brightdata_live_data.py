@@ -36,10 +36,12 @@ from __future__ import annotations
 from typing import Any, ClassVar
 
 from web_router.constants import (
-    BRIGHTDATA_API_KEY_PREFIX,
-    BRIGHTDATA_BASE_URL,
     ENV_BRIGHTDATA_API_KEY,
     PROVIDER_BRIGHTDATA,
+)
+from web_router.constants_brightdata import (
+    BRIGHTDATA_API_KEY_PREFIX,
+    BRIGHTDATA_BASE_URL,
 )
 from web_router.constants_live_data_vendors import (
     BRIGHTDATA_DEFAULT_METHOD,

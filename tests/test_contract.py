@@ -79,7 +79,10 @@ ENV_VARS = (
     "EXA_API_KEY",
     "PARALLEL_API_KEY",
     "PERPLEXITY_API_KEY",
+    "OXYLABS_USERNAME",
+    "BRIGHTDATA_ZONE",
 )
+"""Set before building every backend: the keys, and the settings Oxylabs and Bright Data need beside theirs."""
 
 
 @pytest.mark.parametrize("method", [WebRouter.search, AsyncWebRouter.search], ids=["sync", "async"])
@@ -201,8 +204,10 @@ def test_every_depth_level_is_a_distinct_request(name: str, monkeypatch: pytest.
 
     provider = get_provider_class(name)(api_key="test-key")
     served = [depth for depth in DEPTHS if depth in provider.depth_levels]
+    # The whole call where a provider builds one, since a depth can travel as a header (Jina search's does).
+    build = getattr(provider, "_call_kwargs", provider._build_payload)
     try:
-        payloads = {depth: provider._build_payload(SearchRequest(query="hi", search_depth=depth)) for depth in served}
+        payloads = {depth: build(SearchRequest(query="hi", search_depth=depth)) for depth in served}
     finally:
         provider.close()
 
@@ -287,6 +292,8 @@ def test_provider_repr_never_leaks_a_credential(name: str, monkeypatch: pytest.M
     secret = "SEKRIT-0123456789abcdef"
     for env_var in ("NIMBLE_API_KEY", "TAVILY_API_KEY", "YOU_API_KEY"):
         monkeypatch.setenv(env_var, secret)
+    monkeypatch.setenv("OXYLABS_USERNAME", "user")
+    monkeypatch.setenv("BRIGHTDATA_ZONE", "zone")
 
     provider = get_provider_class(name)(api_key=secret)
     try:

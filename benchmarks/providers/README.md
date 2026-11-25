@@ -635,7 +635,7 @@ On `answer-simpleqa-300`, judged by `openai:gpt-4o`, frozen from the run of
 Exa (281) does not. The order this replaced, cheapest first at list price, was
 Perplexity, Exa, You.com, Linkup, Parallel, Brave.
 
-A member the set has no rows for (Keenable, DeepSeek, AgentCore, Seltz and Keirolabs for
+A member the set has no rows for (Keenable, DeepSeek, AgentCore, Seltz, Keirolabs and Firecrawl, for instance, for
 search, Brave for answer) keeps its place after the ranked ones and is listed as
 `unmeasured`; the keyless search tier stays in `constants.py`, unranked.
 Extract's order is measured on pages returned, not graded, and research's and

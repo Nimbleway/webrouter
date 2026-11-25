@@ -368,13 +368,13 @@ def test_a_key_takes_the_hint_away(tools: WebRouterTools, no_keys: None, monkeyp
     assert "hint" not in tools.capabilities()["env"]
 
 
-def test_a_keyless_backends_optional_key_is_not_a_configured_key(
+def test_jinas_key_configures_jina_search(
     tools: WebRouterTools, no_keys: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Jina answers without one; a key only raises its rate limit, and configures nothing new.
+    # Reader answers without one, but search does not: the key configures a backend Reader alone never needed it for.
     monkeypatch.setenv(ENV_JINA_API_KEY, "x")
 
-    assert tools.keyed() is False
+    assert tools.keyed() is True
 
 
 def test_with_no_key_search_and_the_instructions_say_so(

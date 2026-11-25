@@ -17,8 +17,7 @@ if TYPE_CHECKING:
 def foreign_files(searched: list[EnvLookup], startup: list[EnvLoad]) -> list[Path]:
     """The remembered files from outside the working directory that loaded a billed key: keys from another project.
 
-    A file that set only free names -- Jina's optional key, which raises a
-    keyless backend's rate limit, or a vendor setting such as ``DD_SITE`` --
+    A file that set only free names -- a vendor setting such as ``DD_SITE`` --
     bills nothing, as the read-only tool hints say.
     """
     return [path for path in remembered_billed(searched, startup) if not in_project(path)]

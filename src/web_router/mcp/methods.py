@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from web_router.constants import (
@@ -35,6 +35,7 @@ from web_router.constants_live_data import (
     MCP_TOOL_LIVE_DATA_SOURCE,
     MCP_TOOL_LIVE_DATA_SOURCES,
 )
+from web_router.constants_search_settings import SEARCH_SETTINGS_BY_PROVIDER
 from web_router.live_data_backends import custom_live_data_backends
 from web_router.mcp.env_credentials import env_names
 from web_router.providers.base import _BaseProvider
@@ -73,6 +74,8 @@ class Method:
     """The method's ``*_ENV_BY_PROVIDER`` table."""
     options: frozenset[str] = frozenset()
     """The arguments a backend may or may not map, as opposed to the ones every backend takes."""
+    settings: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    """What a backend needs beside its credential before it counts as configured: Oxylabs' username for search."""
 
 
 _LIVE_DATA_METHOD = Method(
@@ -89,6 +92,7 @@ METHODS: dict[str, Method] = {
         get_provider_class,
         ENV_BY_PROVIDER,
         NORMALIZED_PARAMETERS,
+        SEARCH_SETTINGS_BY_PROVIDER,
     ),
     MCP_TOOL_EXTRACT: Method(
         MCP_TOOL_EXTRACT,
@@ -165,7 +169,7 @@ def unlock() -> dict[str, dict[str, list[str]]]:
     for method in EACH_METHOD:
         configured = set(method.configured())
         missing = {
-            provider: [name for name in env_names(env) if not os.environ.get(name)]
+            provider: [name for name in variables(method, provider, env) if not os.environ.get(name)]
             for provider, env in method.env.items()
             if env and provider not in configured
         }
@@ -194,4 +198,9 @@ def usable(method: Method) -> bool:
 
 def env_vars(method: Method) -> list[str]:
     """Every variable that would configure a backend for this method."""
-    return sorted({name for env in method.env.values() for name in env_names(env)})
+    return sorted({name for provider, env in method.env.items() for name in variables(method, provider, env)})
+
+
+def variables(method: Method, provider: str, env: Any) -> tuple[str, ...]:
+    """Every variable ``provider`` needs set to serve ``method``: its credential, then any setting beside it."""
+    return (*env_names(env), *method.settings.get(provider, ()))

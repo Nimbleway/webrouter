@@ -37,7 +37,10 @@
       "octen",
       "keirolabs",
       "specstream",
-      "firecrawl"
+      "firecrawl",
+      "jina",
+      "brightdata",
+      "oxylabs"
     ],
     "unmeasured": [
       "keenable",
@@ -51,7 +54,10 @@
       "octen",
       "keirolabs",
       "specstream",
-      "firecrawl"
+      "firecrawl",
+      "jina",
+      "brightdata",
+      "oxylabs"
     ],
     "too_few_questions": [],
     "no_row_served": [],
