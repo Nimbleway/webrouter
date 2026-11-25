@@ -41,6 +41,7 @@ from web_router.constants import (
 )
 from web_router.constants_extract import MSG_EXTRACT_FETCHED_NOTHING
 from web_router.constants_mode_parts_extract import NIMBLE_EXTRACT_TIERS
+from web_router.constants_nimble import MSG_NIMBLE_LITE_RECENCY
 from web_router.exceptions import ProviderError
 from web_router.providers._cost import keyless_cost
 from web_router.providers._deadline import research_budget
@@ -72,6 +73,11 @@ class NimbleProvider(_NimbleKeyless, SearchProvider):
 
     name: ClassVar[str] = PROVIDER_NIMBLE
     supported_parameters: ClassVar[frozenset[str]] = frozenset(NIMBLE_PARAM_NAMES) | {"search_depth"}
+    refusal_reasons: ClassVar[dict[str, str]] = {"recency": MSG_NIMBLE_LITE_RECENCY}
+
+    @classmethod
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        return {"recency": request.recency} if request.recency and request.search_depth == "lite" else {}
 
     def _search(self, request: SearchRequest) -> SearchResponse:
         raw = self._within_deadline(self._sync_client).search(**self._authed(self._build_payload(request)))
