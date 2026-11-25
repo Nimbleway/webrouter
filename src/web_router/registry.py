@@ -34,6 +34,8 @@ from web_router.constants import (
     PROVIDER_KEENABLE,
     PROVIDER_KEIROLABS,
     PROVIDER_LINKUP,
+    PROVIDER_LITEPARSE,
+    PROVIDER_LLAMAPARSE,
     PROVIDER_MAX,
     PROVIDER_NIMBLE,
     PROVIDER_OCTEN,
@@ -117,13 +119,14 @@ _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_DEEPSEEK: ("web_router.providers.deepseek", "DeepSeekExtractProvider", EXTRA_EXTRACT),
     PROVIDER_SPECSTREAM: ("web_router.providers.specstream", "SpecStreamExtractProvider", EXTRA_EXTRACT),
     PROVIDER_JINA: ("web_router.providers.jina", "JinaExtractProvider", EXTRA_EXTRACT),
+    PROVIDER_LITEPARSE: ("web_router.providers.liteparse", "LiteParseExtractProvider", EXTRA_EXTRACT),
+    PROVIDER_LLAMAPARSE: ("web_router.providers.llamaparse", "LlamaParseExtractProvider", EXTRA_EXTRACT),
     PROVIDER_BROWSERBASE: ("web_router.providers.browserbase_extract", "BrowserbaseExtractProvider", EXTRA_EXTRACT),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoExtractProvider", AUTO_EXTRA),
     PROVIDER_MAX: ("web_router.providers.max", "MaxExtractProvider", AUTO_EXTRA),
 }
 
-# A template run is the Extract API's, so the class ships with the extract extra.
-# No `auto`: a template's name belongs to one vendor, so there is nothing to route.
+# A template run is the Extract API's, so it ships with the extract extra. No `auto`: a template is one vendor's.
 _BUILTIN_LIVE_DATA_PROVIDERS = BUILTIN_LIVE_DATA_PROVIDERS
 
 _BUILTIN_RESEARCH_PROVIDERS: dict[str, tuple[str, str, str]] = {
@@ -274,9 +277,8 @@ def _resolve(
     try:
         module = importlib.import_module(module_path)
     except ImportError as exc:
-        # Only the missing SDK means "not installed". An ImportError from inside
-        # the provider module is a bug, and reporting it as a missing extra would
-        # send the reader looking in entirely the wrong place.
+        # Only the missing SDK means "not installed". An ImportError from inside the provider module is a bug, and
+        # reporting it as a missing extra would send the reader looking in entirely the wrong place.
         if exc.name and exc.name.startswith("web_router"):
             raise
         raise ProviderNotInstalledError(key, extra) from exc

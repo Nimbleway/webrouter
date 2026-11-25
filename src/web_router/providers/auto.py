@@ -1,18 +1,15 @@
 """The providers used when the caller named none, one per method.
 
-Tries providers in order and returns the first answer: the ones you have a
-credential for first, then the keyless tiers. A key in the environment says
-which backend you want, so reaching for an anonymous rate-limited tier while
-one sits configured would be perverse -- but with no key at all the router
-still searches, rather than raising about a credential nobody mentioned.
+Tries providers in order and returns the first answer: the ones you have a credential for first, then the keyless tiers.
+A key in the environment says which backend you want, so reaching for an anonymous rate-limited tier while one sits
+configured would be perverse -- but with no key at all the router still searches, rather than raising about a credential
+nobody mentioned.
 
-The order is fixed rather than random. A router that picked a different backend
-each run would return different result counts and content lengths for the same
-query, and a bug reported against it could not be reproduced -- in a package
-whose promise is that a query behaves the same whichever backend serves it, the
-backend is the last thing that should be a coin flip. The chain still delivers
-what a random pick was reaching for: when one anonymous tier is rate-limited,
-the next one answers.
+The order is fixed rather than random. A router that picked a different backend each run would return different result
+counts and content lengths for the same query, and a bug reported against it could not be reproduced -- in a package
+whose promise is that a query behaves the same whichever backend serves it, the backend is the last thing that should be
+a coin flip. The chain still delivers what a random pick was reaching for: when one anonymous tier is rate-limited, the
+next one answers.
 
 ``SearchResponse.provider`` and ``ExtractResponse.provider`` name the backend that actually served the call, never
 ``"auto"``, so a caller can always tell who answered.
@@ -31,13 +28,11 @@ returns the first answer, empty or not.
 ``chain`` replaces the default order, as a list for every method's ``auto`` or keyed by method for one alone --
 ``provider_config={"auto": {"chain": {"search": ["perplexity", "nimble"]}}}`` on the router.
 
-Research is the exception to the fallback: there is no keyless tier after the
-credentialed ones, because every research backend bills for the run. It is also
-the one method where the choice outlives the call -- a run is a job, so the
-member that accepted it is the one every later poll goes back to. A live data
-run has no keyless tier either -- it fetches and parses on the
-backend's account -- but it is a call, not a job, so a member that refused
-falls through to the next as a search does.
+Research is the exception to the fallback: there is no keyless tier after the credentialed ones, because every research
+backend bills for the run. It is also the one method where the choice outlives the call -- a run is a job, so the member
+that accepted it is the one every later poll goes back to. A live data run has no keyless tier either -- it fetches and
+parses on the backend's account -- but it is a call, not a job, so a member that refused falls through to the next as a
+search does.
 
 A browser session outlives the call too, and bills while it does, so ``auto``
 falls through only while no session exists: once a member has opened one, the
@@ -100,6 +95,7 @@ from web_router.exceptions import (
     WebRouterError,
 )
 from web_router.providers._attempt_loop import MODE_CLASHES, Walk, answered_unless, arun, held_or_raise, raising, run
+from web_router.providers._auto_documents import DocumentsFirst
 from web_router.providers._auto_extract import extract_eligible
 from web_router.providers._auto_extract_chain import aextract_down_chain, extract_down_chain
 from web_router.providers._chain import (
@@ -276,7 +272,7 @@ class AutoProvider(BuiltMembers, SearchProvider):
             await member.aclose()
 
 
-class AutoExtractProvider(BuiltMembers, ExtractProvider):
+class AutoExtractProvider(BuiltMembers, DocumentsFirst, ExtractProvider):
     """Extracts through the first backend that answers, credentialed ones first.
 
     Declares every format some member returns, and sends each request only to
@@ -306,7 +302,7 @@ class AutoExtractProvider(BuiltMembers, ExtractProvider):
                 by method, this reads the ``"extract"`` entry.
             fallback_on_empty: Whether a member whose every document is blank
                 is passed over for the next, as a failure is.
-            **kwargs: Ignored, as on :class:`AutoProvider`.
+            **kwargs: ``document_parser``, as on :class:`DocumentsFirst`; the rest ignored, as on :class:`AutoProvider`.
         """
         super().__init__(**kwargs)
         self._members_config, self._chain = _members_and_chain(
@@ -350,10 +346,12 @@ class AutoExtractProvider(BuiltMembers, ExtractProvider):
 
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         """The first answer, with each URL it failed tried on the members after it; see :mod:`._auto_extract_chain`."""
-        return extract_down_chain(self._walk(request), self._delegated(request, urls), urls)
+        sent = self._delegated(request, urls)
+        return self._documents_first(sent, urls, partial(extract_down_chain, self._walk(request), sent))
 
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
-        return await aextract_down_chain(self._walk(request), self._delegated(request, urls), urls)
+        sent = self._delegated(request, urls)
+        return await self._adocuments_first(sent, urls, partial(aextract_down_chain, self._walk(request), sent))
 
     def _eligible(self, request: ExtractRequest) -> list[tuple[int, str]]:
         """The chain members that return the format and map every other option set; see :func:`extract_eligible`."""
@@ -369,10 +367,12 @@ class AutoExtractProvider(BuiltMembers, ExtractProvider):
         return request.model_copy(update={"format": self.format_of(request), "urls": urls})
 
     def close(self) -> None:
+        self._close_parser()
         for member in self._members.values():
             member.close()
 
     async def aclose(self) -> None:
+        await self._aclose_parser()
         for member in self._members.values():
             await member.aclose()
 

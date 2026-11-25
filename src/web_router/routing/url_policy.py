@@ -115,6 +115,15 @@ def _as_browser_host(host: str) -> str | None:
 
 def public_only(url: str) -> str | None:
     """Why ``url`` is refused under ``"public_only"``, or ``None`` when its host may be public."""
+    return _public_refusal(url, resolve=True)
+
+
+def public_as_written(url: str) -> str | None:
+    """:func:`public_only` without the lookup: a name is judged as written, for a caller that pins its own answer."""
+    return _public_refusal(url, resolve=False)
+
+
+def _public_refusal(url: str, *, resolve: bool) -> str | None:
     if _ambiguous(url):
         return MSG_URL_AMBIGUOUS
     why, written = _scheme_refusal(url)
@@ -131,7 +140,7 @@ def public_only(url: str) -> str | None:
         # 010.0.0.1: a browser reads octal, macOS's getaddrinfo decimal; 127.0.0.09, no octal, decimal there too.
         # No public URL needs such a spelling, whether or not inet_aton reads it.
         return MSG_URL_AMBIGUOUS
-    if host_address(host) is None:
+    if resolve and host_address(host) is None:
         # A name is only as public as the addresses it resolves to; a literal address was judged as it stands.
         return _resolved_refusal(host)
     return None

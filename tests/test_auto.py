@@ -29,6 +29,7 @@ from web_router.constants import (
     PROVIDER_EXA_MCP,
     PROVIDER_JINA,
     PROVIDER_KEENABLE,
+    PROVIDER_LLAMAPARSE,
     PROVIDER_NIMBLE,
     PROVIDER_PARALLEL_MCP,
     PROVIDER_PERPLEXITY,
@@ -623,9 +624,8 @@ def test_a_failing_extract_member_falls_through_to_the_next(extract_chain_member
 def test_the_format_is_pinned_before_delegating(extract_chain_members: _Recorder) -> None:
     """Members default differently -- Nimble to HTML, Tavily to markdown.
 
-    Letting the default fall through would make the shape of the content depend
-    on which backend happened to answer, which is the one thing the package
-    exists to prevent.
+    Letting the default fall through would make the shape of the content depend on which backend happened to answer,
+    which is the one thing the package exists to prevent.
     """
     _extract_member(extract_chain_members, "first")
 
@@ -731,7 +731,7 @@ def test_every_extract_backend_is_a_member(monkeypatch: pytest.MonkeyPatch) -> N
     keyless = [name for name, _ in AUTO_EXTRACT_KEYLESS if name not in held]
     assert chain == [*AUTO_EXTRACT_PREFERRED, *keyless, *AUTO_EXTRACT_APPENDED]
     keyed = {name for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items() if env_vars}
-    assert set(AUTO_EXTRACT_PREFERRED) | set(AUTO_EXTRACT_APPENDED) == keyed
+    assert set(AUTO_EXTRACT_PREFERRED) | set(AUTO_EXTRACT_APPENDED) == keyed - {PROVIDER_LLAMAPARSE}
 
 
 def test_with_no_credentials_the_extract_chain_is_the_keyless_one(monkeypatch: pytest.MonkeyPatch) -> None:

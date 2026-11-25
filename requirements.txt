@@ -148,6 +148,8 @@ langsmith==0.14.17
     # via langchain-core
 litellm==1.110.2
     # via webrouter
+liteparse==2.19.0
+    # via webrouter
 markupsafe==3.0.4
     # via jinja2
 mcp==2.3.0
