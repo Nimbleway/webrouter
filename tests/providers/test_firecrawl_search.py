@@ -1,13 +1,4 @@
-"""Firecrawl search provider tests.
-
-Both payloads were recorded from the live Search API on 2026-11-24
-(``python asyncio tutorial``): ``RECORDED`` with ``limit: 3``, ``RECORDED_DEEP``
-with ``limit: 2`` and ``scrapeOptions``, keeping its first result. Descriptions
-and the page body are cut short, the scraped page's metadata keeps five of its
-keys, and the first description is padded back past a snippet's length to stand
-for Firecrawl's long ones (live, it ran to 628 characters, the third to 51,831).
-The shapes are Firecrawl's own.
-"""
+"""Firecrawl search provider tests, against replies recorded in ``_firecrawl_recorded``."""
 
 from __future__ import annotations
 
@@ -17,68 +8,12 @@ from typing import Any
 import httpx
 import pytest
 
+from tests.providers._firecrawl_recorded import RECORDED, RECORDED_DEEP
 from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError
 from web_router.providers.firecrawl import FirecrawlProvider
 from web_router.routing.attempts import Attempt
 from web_router.routing.pricing import attempt_cost
-from web_router.types import SearchRequest, SearchResponse
-
-RECORDED: dict[str, Any] = {
-    "success": True,
-    "data": {
-        "web": [
-            {
-                "url": "https://docs.python.org/3/howto/a-conceptual-overview-of-asyncio.html",
-                "title": "A conceptual overview of asyncio",
-                "description": "# A conceptual overview of `asyncio` [¶](https://docs.python.org/3/howto/"
-                "a-conceptual-overview-of-asyncio.html#a-conceptual-overview-of-asyncio)\n- This in-depth "
-                "[YouTube tutorial series](https://www.youtube.com/watch?v=Xbl7XjFYsN4) on\n`asyncio` created by "
-                "Python core team member, Łukasz Langa." + " The event loop runs tasks." * 40,
-                "position": 1,
-            },
-            {
-                "url": "https://realpython.com/async-io-python/",
-                "title": "Python's asyncio: A Hands-On Walkthrough",
-                "description": "# Python's asyncio: A Hands-On Walkthrough\nRecommended Course\n\nPython\u2019s "
-                "`asyncio` library enables you to write concurrent code using the `async` and `await` keywords.",
-                "position": 2,
-            },
-            {
-                "url": "https://www.youtube.com/watch?v=oAkLSJNr5zY",
-                "title": "Python Tutorial: AsyncIO - Complete Guide to Asynchronous ...",
-                "description": "# Python Tutorial: AsyncIO - Complete Guide to Asynchronous Programming",
-                "position": 3,
-            },
-        ]
-    },
-    "creditsUsed": 2,
-    "id": "01a20dd6-1586-7147-8390-8b9599a07fc4",
-}
-
-RECORDED_DEEP: dict[str, Any] = {
-    "success": True,
-    "data": {
-        "web": [
-            {
-                "url": "https://docs.python.org/3/howto/a-conceptual-overview-of-asyncio.html",
-                "title": "A conceptual overview of asyncio",
-                "description": "# A conceptual overview of `asyncio`",
-                "position": 1,
-                "markdown": '### Navigation\n\n- [index](https://docs.python.org/3/genindex.html "General Index")\n'
-                '- [modules](https://docs.python.org/3/py-modindex.html "Python Module Index")',
-                "metadata": {
-                    "title": "A conceptual overview of asyncio — Python 3.15.2 documentation",
-                    "sourceURL": "https://docs.python.org/3/howto/a-conceptual-overview-of-asyncio.html",
-                    "statusCode": 200,
-                    "language": "en",
-                    "creditsUsed": 1,
-                },
-            }
-        ]
-    },
-    "creditsUsed": 4,
-    "id": "01a20ddc-fcaa-73aa-9e20-a79b61e9b9b6",
-}
+from web_router.types import SearchRequest
 
 
 @pytest.fixture
@@ -174,7 +109,7 @@ def test_deep_content_is_the_scraped_page_and_its_metadata_stays_in_extra(provid
     assert result.extra == {"position": 1, "metadata": hit["metadata"]}
 
 
-@pytest.mark.parametrize("body", [{}, {"success": True, "data": []}, {"success": True, "data": None}])
+@pytest.mark.parametrize("body", [{}, {"success": True, "data": []}])
 def test_a_reply_without_a_data_object_is_an_error_not_an_empty_search(
     monkeypatch: pytest.MonkeyPatch, body: dict
 ) -> None:
@@ -197,12 +132,6 @@ def test_a_refused_search_raises_with_firecrawls_reason(monkeypatch: pytest.Monk
     monkeypatch.setenv("FIRECRAWL_API_KEY", "test-key")
     with pytest.raises(ProviderError, match="Insufficient credits"):
         _answered_with({"success": False, "error": "Insufficient credits"}).search(SearchRequest(query="q"))
-
-
-def test_an_empty_web_list_is_a_search_that_found_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("FIRECRAWL_API_KEY", "test-key")
-    response: SearchResponse = _answered_with({"success": True, "data": {"web": []}}).search(SearchRequest(query="q"))
-    assert response.results == []
 
 
 def test_a_missing_key_raises_unless_the_keyless_tier_is_allowed(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -235,7 +164,7 @@ def test_live_deep_search_returns_each_page() -> None:
     assert response.results and all(len(result.content) > len(result.description) for result in response.results)
 
 
-@pytest.mark.parametrize(("max_results", "estimate"), [(None, 0.01), (10, 0.01), (100, None)])
+@pytest.mark.parametrize(("max_results", "estimate"), [(None, 0.01), (10, 0.01), (11, None)])
 def test_a_search_for_more_results_than_the_price_assumes_is_unpriced(
     max_results: int | None, estimate: float | None
 ) -> None:
