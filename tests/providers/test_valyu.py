@@ -151,6 +151,15 @@ def test_with_no_description_the_snippet_is_the_opening_of_the_body(provider: Va
     assert body.startswith(result.description.rstrip("\u2026")) and len(result.description) < len(body)
 
 
+def test_a_structured_hits_rows_are_kept_in_extra_not_dropped(provider: ValyuProvider) -> None:
+    # The shape a valyu/valyu-stocks hit takes under search_type="all".
+    rows = [{"datetime": "2024-06-14 00:00:00", "open": 1.0, "close": 2.0, "volume": 100}]
+    hit = {"url": "https://e.com/stocks", "title": "Stocks", "content": rows, "data_type": "structured"}
+    (result,) = provider._to_response(SearchRequest(query="q"), {"success": True, "results": [hit]}).results
+    assert (result.content, result.description) == ("", "")
+    assert result.extra["content"] == rows and result.extra["data_type"] == "structured"
+
+
 def test_an_unsuccessful_answer_raises(provider: ValyuProvider) -> None:
     with pytest.raises(ProviderError, match="without success: tier_insufficient"):
         provider._to_response(SearchRequest(query="hi"), {"success": False, "error": "tier_insufficient"})
