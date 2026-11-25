@@ -807,7 +807,7 @@ async def test_a_claude_mcp_arm_gets_a_vault_for_its_key_and_the_state_file_neve
     assert "pplx-rotated" not in state.read_text()
 
 
-async def test_an_environment_from_before_mcp_arms_is_opened_to_their_servers(
+async def test_an_environment_with_an_older_config_is_opened_so_native_search_works(
     bench: tuple[ModuleType, ModuleType], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     _, run = bench
@@ -820,7 +820,7 @@ async def test_an_environment_from_before_mcp_arms_is_opened_to_their_servers(
     await run.ensure_setup(client, [], "claude-opus-5")
 
     ((args, update),) = client.named("env.update")  # once: the config is recorded after it
-    assert args == ("env_old",) and update["config"]["networking"]["allow_mcp_servers"] is True
+    assert args == ("env_old",) and update["config"]["networking"] == {"type": "unrestricted"}
 
 
 def _use(use_id: str, server: str, tool: str, arguments: dict[str, Any]) -> SimpleNamespace:
