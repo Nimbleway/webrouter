@@ -8,6 +8,7 @@ keyed account hand a vendor a ``file:``, loopback, private or metadata URL.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from collections.abc import Iterable, Mapping
 
@@ -40,6 +41,11 @@ def screen(tool: str, urls: object) -> object:
     if refused:
         raise ValueError(MCP_MSG_URL_REFUSED.format(tool=tool, refused="; ".join(refused)))
     return urls
+
+
+async def ascreen(tool: str, urls: object) -> object:
+    """:func:`screen` on a worker thread: screening resolves names, which can take seconds."""
+    return await asyncio.to_thread(screen, tool, urls)
 
 
 def url_values(inputs: object) -> list[str]:

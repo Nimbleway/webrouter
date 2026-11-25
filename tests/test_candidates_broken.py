@@ -42,4 +42,7 @@ def test_a_plain_list_chain_naming_other_methods_backends_leaves_those_methods_w
     assert "research" not in {c.tool for c in found.candidates}
     assert found.dropped["research:tavily"] == "not a backend for this method"
     plan = router.plan("who won the cup")
-    assert plan.tool == "search" and set(plan.providers["search"]) == {"exa", "tavily"}
+    assert plan.tool == "search" and {entry.partition(":")[0] for entry in plan.providers["search"]} == {
+        "exa",
+        "tavily",
+    }

@@ -87,6 +87,7 @@ PROVIDER_OXYLABS = Provider.OXYLABS.value
 PROVIDER_BRIGHTDATA = Provider.BRIGHTDATA.value
 PROVIDER_FIRECRAWL = Provider.FIRECRAWL.value
 PROVIDER_JINA = Provider.JINA.value
+PROVIDER_OBSCURA = Provider.OBSCURA.value
 PROVIDER_STEEL = Provider.STEEL.value
 PROVIDER_BROWSERBASE = Provider.BROWSERBASE.value
 PROVIDER_HYPERBROWSER = Provider.HYPERBROWSER.value
@@ -176,6 +177,7 @@ ENV_BRIGHTDATA_API_KEY = "BRIGHTDATA_API_TOKEN"
 ENV_BRIGHTDATA_ZONE = "BRIGHTDATA_ZONE"
 ENV_FIRECRAWL_API_KEY = "FIRECRAWL_API_KEY"
 ENV_JINA_API_KEY = "JINA_API_KEY"
+ENV_OBSCURA_PATH = "OBSCURA_PATH"
 ENV_STEEL_API_KEY = "STEEL_API_KEY"
 ENV_BROWSERBASE_API_KEY = "BROWSERBASE_API_KEY"
 ENV_HYPERBROWSER_API_KEY = "HYPERBROWSER_API_KEY"
@@ -234,6 +236,7 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_DEEPSEEK: (ENV_DEEPSEEK_API_KEY,),
     PROVIDER_SPECSTREAM: (ENV_SPECSTREAM_API_KEY,),
     PROVIDER_JINA: (),
+    PROVIDER_OBSCURA: (),
     PROVIDER_BROWSERBASE: (ENV_BROWSERBASE_API_KEY,),
     PROVIDER_AUTO: (),
     PROVIDER_MAX: (),
@@ -3131,11 +3134,7 @@ JINA_EXTRACT_FORMATS: dict[ExtractFormat, str] = {
     "text": "text",
 }
 
-JINA_BODY_FIELDS: dict[ExtractFormat, str] = {
-    "markdown": "content",
-    "html": "html",
-    "text": "text",
-}
+JINA_BODY_FIELDS: dict[ExtractFormat, str] = {"markdown": "content", "html": "html", "text": "text"}
 
 JINA_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "markdown"
 """Verified live: with no ``X-Return-Format`` the body arrives as ``data.content``."""

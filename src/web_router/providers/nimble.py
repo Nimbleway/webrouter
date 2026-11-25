@@ -41,6 +41,7 @@ from web_router.constants import (
 )
 from web_router.constants_extract import MSG_EXTRACT_FETCHED_NOTHING
 from web_router.constants_mode_parts_extract import NIMBLE_EXTRACT_TIERS
+from web_router.constants_nimble import MSG_NIMBLE_LITE_RECENCY
 from web_router.exceptions import ProviderError
 from web_router.providers._cost import keyless_cost
 from web_router.providers._deadline import research_budget
@@ -66,12 +67,19 @@ from web_router.types import (
     SearchResult,
 )
 
+_MAPPED_RESULT_FIELDS = frozenset({"url", "title", "description", "content", "metadata", "additional_data"})
+
 
 class NimbleProvider(_NimbleKeyless, SearchProvider):
     """Routes searches to the Nimble Search API."""
 
     name: ClassVar[str] = PROVIDER_NIMBLE
     supported_parameters: ClassVar[frozenset[str]] = frozenset(NIMBLE_PARAM_NAMES) | {"search_depth"}
+    refusal_reasons: ClassVar[dict[str, str]] = {"recency": MSG_NIMBLE_LITE_RECENCY}
+
+    @classmethod
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        return {"recency": request.recency} if request.recency and request.search_depth == "lite" else {}
 
     def _search(self, request: SearchRequest) -> SearchResponse:
         raw = self._within_deadline(self._sync_client).search(**self._authed(self._build_payload(request)))
@@ -98,7 +106,11 @@ class NimbleProvider(_NimbleKeyless, SearchProvider):
                     description=description,
                     content=best_text(item.get("content"), description),
                     published_date=additional.get("publish_date") or additional.get("published_date"),
-                    extra={"metadata": item.get("metadata") or {}, **additional},
+                    extra={
+                        **{key: value for key, value in item.items() if key not in _MAPPED_RESULT_FIELDS},
+                        "metadata": item.get("metadata") or {},
+                        **additional,
+                    },
                 )
             )
 
