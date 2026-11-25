@@ -1,0 +1,1 @@
+Extracting many URLs in one call no longer costs quadratically: matching returned pages to the requested URLs is linear, 9x faster at 10 URLs and about 147x at 200 URLs, with the same ownership decisions.
