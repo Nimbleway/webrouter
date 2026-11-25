@@ -14,7 +14,8 @@ FAKE = """\
 import json, os, sys, time
 here = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(here, "calls.jsonl"), "a") as log:
-    log.write(json.dumps({"argv": sys.argv[1:], "pid": os.getpid()}) + "\\n")
+    log.write(json.dumps({"argv": sys.argv[1:], "pid": os.getpid(),
+                         "allow_private_network": os.environ.get("OBSCURA_ALLOW_PRIVATE_NETWORK")}) + "\\n")
 mode = os.environ.get("FAKE_OBSCURA", "page")
 if mode == "page":
     sys.stdout.write("# Fetched\\n\\n" + sys.argv[-1])
@@ -41,6 +42,6 @@ def make_fake(directory: Path) -> Path:
 
 
 def calls(fake: Path) -> list[dict[str, object]]:
-    """Each run of ``fake``: its arguments and pid, oldest first."""
+    """Each run of ``fake``: its arguments, pid and private-network setting, oldest first."""
     log = fake.parent / "calls.jsonl"
     return [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []

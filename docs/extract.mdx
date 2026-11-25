@@ -160,7 +160,8 @@ response = router.extract("https://quotes.toscrape.com/js/", provider="obscura")
 
 It is opt-in: no `auto` chain holds it, and the MCP server offers it only once the
 binary is found. Only `http` and `https` URLs are fetched, and Obscura refuses
-loopback and private addresses itself. A PDF or other file is a failure rather
+loopback and private addresses itself. Fetches ignore the parent's
+`OBSCURA_ALLOW_PRIVATE_NETWORK` setting to keep that guard enabled. A PDF or other file is a failure rather
 than a page, `provider_options` is refused, and a call's `timeout` becomes the
 binary's own. It returns no title or status code.
 

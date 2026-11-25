@@ -21,6 +21,7 @@ from urllib.parse import urlsplit
 
 from web_router.constants import ENV_OBSCURA_PATH, PROVIDER_OBSCURA
 from web_router.constants_obscura import (
+    ENV_OBSCURA_ALLOW_PRIVATE_NETWORK,
     MSG_OBSCURA_BAD_PATH,
     MSG_OBSCURA_EMPTY,
     MSG_OBSCURA_EXITED,
@@ -81,7 +82,9 @@ class ObscuraExtractProvider(ExtractProvider):
     def _extract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         command, wait = self._command(request, urls[0])
         try:
-            done = subprocess.run(command, stdin=subprocess.DEVNULL, capture_output=True, timeout=wait)
+            done = subprocess.run(
+                command, stdin=subprocess.DEVNULL, capture_output=True, timeout=wait, env=_fetch_environment()
+            )
         except subprocess.TimeoutExpired as exc:
             deadline = current_deadline()
             if deadline is not None:
@@ -92,7 +95,7 @@ class ObscuraExtractProvider(ExtractProvider):
     async def _aextract(self, request: ExtractRequest, urls: list[str]) -> ExtractResponse:
         command, wait = self._command(request, urls[0])
         process = await asyncio.create_subprocess_exec(
-            *command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            *command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_fetch_environment()
         )
         try:
             stdout, stderr = await asyncio.wait_for(process.communicate(), wait)
@@ -148,6 +151,11 @@ class ObscuraExtractProvider(ExtractProvider):
         return ProviderError(
             self.name, MSG_OBSCURA_TIMED_OUT.format(seconds=seconds), original=exc, kind=ERROR_KIND_TIMEOUT
         )
+
+
+def _fetch_environment() -> dict[str, str]:
+    # The inherited variable bypasses the same guard as the refused --allow-private-network flag.
+    return {key: value for key, value in os.environ.items() if key != ENV_OBSCURA_ALLOW_PRIVATE_NETWORK}
 
 
 def find_obscura(explicit: str | None = None) -> str:

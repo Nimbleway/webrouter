@@ -12,6 +12,9 @@ from web_router.types import ExtractFormat
 OBSCURA_COMMAND = "obscura"
 """The executable looked up on ``PATH`` when neither ``executable_path`` nor ``OBSCURA_PATH`` names one."""
 
+ENV_OBSCURA_ALLOW_PRIVATE_NETWORK = "OBSCURA_ALLOW_PRIVATE_NETWORK"
+"""The binary's private-network opt-out, removed from each fetch's environment so its guard stays on."""
+
 OBSCURA_EXTRACT_FORMATS: dict[ExtractFormat, str] = {"markdown": "markdown", "html": "html", "text": "text"}
 """Normalized format -> the ``--dump`` value that prints it, after the page's scripts have run."""
 
