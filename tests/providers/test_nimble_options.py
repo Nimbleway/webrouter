@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from web_router.exceptions import UnsupportedParameterError
-from web_router.types import Recency, SearchRequest
+from web_router.types import Recency, SearchDepth, SearchRequest
 
 pytest.importorskip("nimble_python", reason="nimble extra not installed")
 
@@ -28,7 +28,9 @@ def test_recency_is_sent_as_time_range(provider: NimbleProvider, recency: Recenc
 def test_recency_is_refused_at_lite_which_does_not_filter_by_it(provider: NimbleProvider, recency: Recency) -> None:
     lite = SearchRequest(query="hi", search_depth="lite", recency=recency)
     assert NimbleProvider.refused_values(lite) == {"recency": recency}
-    assert NimbleProvider.refused_values(SearchRequest(query="hi", search_depth="fast", recency=recency)) == {}
+    depths: tuple[SearchDepth | None, ...] = (None, "fast", "deep")
+    for depth in depths:
+        assert NimbleProvider.refused_values(SearchRequest(query="hi", search_depth=depth, recency=recency)) == {}
     with pytest.raises(UnsupportedParameterError, match="recency"):
         provider.search(lite)
 
