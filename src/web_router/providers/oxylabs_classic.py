@@ -29,9 +29,11 @@ from typing import Any, ClassVar
 from web_router.constants import (
     ENV_OXYLABS_PASSWORD,
     ENV_OXYLABS_USERNAME,
+    PROVIDER_OXYLABS,
+)
+from web_router.constants_oxylabs import (
     OXYLABS_BASE_URL,
     OXYLABS_EXTRACT_PATH,
-    PROVIDER_OXYLABS,
 )
 from web_router.constants_oxylabs_classic import (
     OXYLABS_CLASSIC_API,

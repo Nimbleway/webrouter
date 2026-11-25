@@ -59,7 +59,7 @@ def test_the_tools_read_the_same_tables_the_loader_does() -> None:
 
 
 @pytest.mark.parametrize("name", [ENV_BRAVE_ANSWER_API_KEY, ENV_JINA_API_KEY])
-def test_an_answer_only_key_and_an_optional_key_load_from_a_file(isolated_home: Path, name: str) -> None:
+def test_an_answer_only_key_and_jinas_key_load_from_a_file(isolated_home: Path, name: str) -> None:
     env_file = isolated_home / "keys.env"
     env_file.write_text(f"{name}=not-a-real-key\n", encoding="utf-8")
 

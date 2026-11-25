@@ -112,16 +112,13 @@ def test_a_remembered_pointer_to_a_missing_file_is_not_foreign(isolated_home: Pa
     assert "warning" not in EnvSources.at_startup().report()
 
 
-def test_a_remembered_file_with_only_the_free_jina_key_is_not_foreign(isolated_home: Path) -> None:
-    """Jina's key only raises a keyless backend's rate limit: the tool hints call it free, and so does the warning."""
+def test_a_remembered_file_with_only_the_jina_key_is_foreign(isolated_home: Path) -> None:
+    """Jina's key raises Reader's rate limit, and bills Jina search: from another project, it is someone's account."""
     elsewhere = write(isolated_home / "other-project" / ".env", f"{ENV_JINA_API_KEY}={KEY}\n")
     EnvSources().load(str(elsewhere), remember=True)
     os.environ.pop(ENV_JINA_API_KEY)
 
-    sources = EnvSources.at_startup()
-
-    assert sources.foreign() == []
-    assert "warning" not in sources.report()
+    assert EnvSources.at_startup().foreign() == [elsewhere]
 
 
 def test_a_remembered_file_with_only_a_vendor_setting_is_not_foreign(isolated_home: Path) -> None:

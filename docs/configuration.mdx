@@ -33,13 +33,13 @@ Keys are read from the environment, or passed explicitly through
 | SpecStream | `SPECSTREAM_API_KEY` | search, extract |
 | AgentCore Web Search | `AGENTCORE_GATEWAY_URL`, plus an AWS credential from botocore's usual chain *(not a key: see [setup](https://github.com/Nimbleway/webrouter/blob/main/docs/agentcore-setup.md))* | search |
 | Firecrawl | `FIRECRAWL_API_KEY` | search, extract |
-| Oxylabs | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | extract |
+| Oxylabs | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | search, extract |
 | Oxylabs | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` *(Web Scraper API)* | live data |
 | Oxylabs Web API | `OXYLABS_WEB_API_KEY` | live data |
-| Bright Data | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | extract |
+| Bright Data | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` *(search needs a zone that reaches Google, such as a SERP API zone)* | search, extract |
 | Bright Data | `BRIGHTDATA_API_TOKEN` *(the token alone, no zone)* | live data |
 | Apify | `APIFY_TOKEN` | live data |
-| Jina Reader | `JINA_API_KEY` *(optional: raises the rate limit)* | extract |
+| Jina | `JINA_API_KEY` *(required for search; optional for Reader, where it raises the rate limit)* | search, extract |
 | Steel | `STEEL_API_KEY` | open_browser |
 | Browserbase | `BROWSERBASE_API_KEY` | extract, open_browser, browse |
 | Hyperbrowser | `HYPERBROWSER_API_KEY` | open_browser |

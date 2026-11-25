@@ -1,0 +1,69 @@
+{
+  "provider": "brightdata",
+  "method": "search",
+  "class": "web_router.providers.brightdata.BrightDataProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.brightdata.com",
+    "paths": {
+      "search_path": "/request"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "BRIGHTDATA_API_TOKEN"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.format": "raw",
+    "body.url": "https://www.google.com/search?q=probe+query&brd_json=1",
+    "body.zone": "contract-probe-zone"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.url": "https://www.google.com/search?q=probe+query&num=3&brd_json=1"
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "effort",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "recency",
+    "search_depth"
+  ],
+  "source": [
+    "https://docs.brightdata.com/scraping-automation/serp-api/send-your-first-request",
+    "https://docs.brightdata.com/scraping-automation/serp-api/query-parameters/google",
+    "https://docs.brightdata.com/scraping-automation/serp-api/parsed-json-results"
+  ],
+  "verified": {
+    "max_results": "docs: https://docs.brightdata.com/scraping-automation/serp-api/query-parameters/google"
+  },
+  "vendor_options": {
+    "gl": {
+      "status": "not_supported",
+      "note": "A Google parameter rides in the search URL, which provider_options can replace only whole (as url); not mapped."
+    },
+    "hl": {
+      "status": "not_supported",
+      "note": "A Google parameter rides in the search URL, which provider_options can replace only whole (as url); not mapped."
+    },
+    "tbs": {
+      "status": "not_supported",
+      "note": "A Google parameter rides in the search URL, which provider_options can replace only whole (as url); not mapped."
+    },
+    "start": {
+      "status": "not_supported",
+      "note": "A Google parameter rides in the search URL, which provider_options can replace only whole (as url); not mapped."
+    },
+    "uule": {
+      "status": "not_supported",
+      "note": "A Google parameter rides in the search URL, which provider_options can replace only whole (as url); not mapped."
+    }
+  }
+}

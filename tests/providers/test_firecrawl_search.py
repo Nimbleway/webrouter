@@ -19,6 +19,8 @@ import pytest
 
 from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError
 from web_router.providers.firecrawl import FirecrawlProvider
+from web_router.routing.attempts import Attempt
+from web_router.routing.pricing import attempt_cost
 from web_router.types import SearchRequest, SearchResponse
 
 RECORDED: dict[str, Any] = {
@@ -231,3 +233,12 @@ def test_live_deep_search_returns_each_page() -> None:
     request = SearchRequest(query="python asyncio tutorial", max_results=2, search_depth="deep")
     response = FirecrawlProvider().search(request)
     assert response.results and all(len(result.content) > len(result.description) for result in response.results)
+
+
+@pytest.mark.parametrize(("max_results", "estimate"), [(None, 0.01), (10, 0.01), (100, None)])
+def test_a_search_for_more_results_than_the_price_assumes_is_unpriced(
+    max_results: int | None, estimate: float | None
+) -> None:
+    request = SearchRequest(query="q", max_results=max_results)
+    cost = attempt_cost(Attempt(tool="search", provider="firecrawl", request=request))
+    assert cost == (pytest.approx(estimate) if estimate is not None else None)

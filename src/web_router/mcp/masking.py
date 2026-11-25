@@ -16,7 +16,7 @@ from typing import Any
 
 from web_router.constants import ENV_AGENTCORE_GATEWAY_URL
 from web_router.constants_vendors import VENDOR_MASK, VENDOR_MASK_INSIDE_MIN
-from web_router.mcp.env_credentials import OPTIONAL_KEYS, credential_variables, free_variables
+from web_router.mcp.env_credentials import credential_variables, free_variables
 from web_router.mcp.masking_forms import encoded_pattern, mask_encoded
 from web_router.mcp.shaping import render
 from web_router.vendors.masking import answer_masker, map_strings, mask
@@ -29,10 +29,9 @@ credential, and an error about a malformed one must show it."""
 def configured_secrets() -> list[str]:
     """The value of every credential variable set here, less a vendor's settings -- a region like ``us5`` is no secret.
 
-    An optional key, such as Jina's, bills nothing but is still a key, so it is masked;
-    a setting in :data:`_NOT_SECRET` is not, so an error can still show it.
+    A setting in :data:`_NOT_SECRET` is not masked, so an error can still show it.
     """
-    names = credential_variables() - (free_variables() - set(OPTIONAL_KEYS)) - _NOT_SECRET
+    names = credential_variables() - free_variables() - _NOT_SECRET
     return [value for name in sorted(names) if (value := os.environ.get(name))]
 
 

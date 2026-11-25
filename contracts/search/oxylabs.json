@@ -1,0 +1,88 @@
+{
+  "provider": "oxylabs",
+  "method": "search",
+  "class": "web_router.providers.oxylabs.OxylabsProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://realtime.oxylabs.io",
+    "paths": {
+      "search_path": "/v1/queries"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "OXYLABS_PASSWORD"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.parse": true,
+    "body.query": "probe query",
+    "body.source": "google_search"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.limit": 3
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "effort",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "recency",
+    "search_depth"
+  ],
+  "source": [
+    "https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/search/web-search",
+    "https://oxylabs.io/products/scraper-api/serps"
+  ],
+  "verified": {
+    "max_results": "docs: https://developers.oxylabs.io/products/web-scraper-api/targets/search-engines/google/search/web-search"
+  },
+  "vendor_options": {
+    "geo_location": {
+      "status": "passthrough",
+      "note": "Where the search originates; not yet mapped from country."
+    },
+    "locale": {
+      "status": "passthrough",
+      "note": "Google's interface language; not yet mapped from locale."
+    },
+    "domain": {
+      "status": "passthrough",
+      "note": "The Google domain, com by default."
+    },
+    "start_page": {
+      "status": "passthrough",
+      "note": "1 by default."
+    },
+    "pages": {
+      "status": "passthrough",
+      "note": "1 by default; more pages answer as more results, of which only the first is read."
+    },
+    "limit_per_page": {
+      "status": "passthrough",
+      "note": "A context option: results per page when pages is set."
+    },
+    "render": {
+      "status": "passthrough",
+      "note": "html renders JavaScript, at the rendered price."
+    },
+    "user_agent_type": {
+      "status": "passthrough",
+      "note": "desktop by default."
+    },
+    "context": {
+      "status": "passthrough",
+      "note": "filter, nfpr, safe_search, tbm, tbs, udm, fpstate and expand_aio, each as {key, value}."
+    },
+    "callback_url": {
+      "status": "not_supported",
+      "note": "A search is one synchronous answer, not a webhook."
+    }
+  }
+}
