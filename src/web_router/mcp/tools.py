@@ -100,9 +100,9 @@ from web_router.mcp.shaping import (
     HandleStore,
     Record,
     ToolOutput,
-    max_response_chars,
     redact,
     redaction_note,
+    result_budget,
     shape_browse,
     shape_extract,
     shape_pending,
@@ -284,14 +284,14 @@ class WebRouterTools:
     async def _search(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         response = await self.router.search(**self.arguments(MCP_TOOL_SEARCH, arguments))
         record = self.store.add(MCP_TOOL_SEARCH, raw=response.raw)
-        return shape_search(response, record.handle, budget=max_response_chars())
+        return shape_search(response, record.handle, budget=result_budget(MCP_TOOL_SEARCH))
 
     async def _extract(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         kwargs = self.arguments(MCP_TOOL_EXTRACT, arguments)
         kwargs["urls"] = await ascreen(MCP_TOOL_EXTRACT, kwargs["urls"])
         response = await self.router.extract(**kwargs)
         record = self.store.add(MCP_TOOL_EXTRACT, raw=response.raw)
-        return shape_extract(response, record.handle, budget=max_response_chars())
+        return shape_extract(response, record.handle, budget=result_budget(MCP_TOOL_EXTRACT))
 
     async def _research(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         job = await self.router.submit_research(**self.arguments(MCP_TOOL_RESEARCH, arguments))
@@ -303,7 +303,7 @@ class WebRouterTools:
             handle = self.store.add(MCP_TOOL_RESEARCH, job=job).handle
             return shape_pending(job, handle, wait=waited, note=MCP_MSG_RESEARCH_PENDING)
         record = self.store.add(MCP_TOOL_RESEARCH, raw=response.raw, job=job)
-        return shape_research(response, record.handle, budget=max_response_chars())
+        return shape_research(response, record.handle, budget=result_budget(MCP_TOOL_RESEARCH))
 
     async def _research_status(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         record = self.record(MCP_TOOL_RESEARCH_STATUS, arguments)
@@ -313,7 +313,7 @@ class WebRouterTools:
         if progress.response is None:
             return shape_progress(progress, record.handle)
         record.raw = progress.response.raw
-        return shape_research(progress.response, record.handle, budget=max_response_chars())
+        return shape_research(progress.response, record.handle, budget=result_budget(MCP_TOOL_RESEARCH))
 
     async def _browse(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         kwargs = self.arguments(MCP_TOOL_BROWSE, arguments)
@@ -326,7 +326,7 @@ class WebRouterTools:
             handle = self.store.add(MCP_TOOL_BROWSE, job=job).handle
             return shape_pending(job, handle, wait=waited, note=MCP_MSG_BROWSE_PENDING)
         record = self.store.add(MCP_TOOL_BROWSE, raw=response.raw, job=job)
-        return shape_browse(response, record.handle, budget=max_response_chars())
+        return shape_browse(response, record.handle, budget=result_budget(MCP_TOOL_BROWSE))
 
     async def _browse_status(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         record = self.record(MCP_TOOL_BROWSE_STATUS, arguments)
@@ -340,7 +340,7 @@ class WebRouterTools:
                 shaped["note"] = redaction_note(count).strip()
             return dict(shaped)
         record.raw = progress.response.raw
-        return shape_browse(progress.response, record.handle, budget=max_response_chars())
+        return shape_browse(progress.response, record.handle, budget=result_budget(MCP_TOOL_BROWSE))
 
     def rebuild(self) -> None:
         """Hand every later call to a router built from the environment as it is now.
@@ -436,7 +436,7 @@ class WebRouterTools:
             provider=self.browsers.provider_of(session_id), documents=[type(document).model_validate(raw)], raw=[raw]
         )
         record = self.store.add(MCP_TOOL_BROWSER_READ, raw=raw)
-        shaped = shape_extract(response, record.handle, budget=max_response_chars())
+        shaped = shape_extract(response, record.handle, budget=result_budget(MCP_TOOL_EXTRACT))
         return {MCP_ARG_SESSION_ID: session_id, **self._scrubbed(shaped, count, lowered)}
 
     async def _browser_close(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
