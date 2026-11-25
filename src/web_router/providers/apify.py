@@ -62,6 +62,7 @@ from web_router.live_data_search import NativeSourceSearch
 from web_router.providers._clock import recency_start
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
 from web_router.providers._http_live_data import HttpLiveDataProvider
+from web_router.providers._search_text import DOMAIN_LISTS, refused_domains
 from web_router.providers._utils import build_payload
 from web_router.types import (
     EXTRACT_FORMAT_ONLY,
@@ -235,6 +236,7 @@ class ApifySearchProvider(HttpSearchProvider):
     name: ClassVar[str] = Provider.APIFY.value
     supported_parameters: ClassVar[frozenset[str]] = APIFY_WEB_SEARCH_PARAMETERS
     depth_levels: ClassVar[frozenset[SearchDepth]] = frozenset({"lite"})
+    refusal_reasons: ClassVar[dict[str, str]] = dict.fromkeys(DOMAIN_LISTS, MSG_APIFY_TOO_MANY_DOMAINS)
 
     base_url: ClassVar[str] = APIFY_WEB_SEARCH_BASE_URL
     search_path: ClassVar[str] = APIFY_WEB_SEARCH_PATH
@@ -242,12 +244,12 @@ class ApifySearchProvider(HttpSearchProvider):
     api_key_prefix: ClassVar[str] = "Bearer "
     http_method: ClassVar[Literal["GET", "POST"]] = "POST"
 
+    @classmethod
+    def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
+        """A domain list longer than Web Search's cap; it takes both lists at once."""
+        return refused_domains(request, limit=APIFY_WEB_SEARCH_MAX_DOMAINS, both=())
+
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
-        for field in ("include_domains", "exclude_domains"):
-            domains = getattr(request, field) or []
-            if len(domains) > APIFY_WEB_SEARCH_MAX_DOMAINS:
-                limit, count = APIFY_WEB_SEARCH_MAX_DOMAINS, len(domains)
-                raise ProviderError(self.name, MSG_APIFY_TOO_MANY_DOMAINS.format(limit=limit, count=count, field=field))
         since = recency_start(request.recency)
         return build_payload(
             request,

@@ -17,7 +17,7 @@ from typing import Any
 import httpx
 import pytest
 
-from web_router.exceptions import ProviderError, UnsupportedParameterError
+from web_router.exceptions import UnsupportedParameterError
 from web_router.exceptions_typed import ExtractFailedError
 from web_router.providers.apify import ApifyExtractProvider, ApifySearchProvider
 from web_router.types import ExtractRequest, SearchRequest
@@ -70,9 +70,18 @@ def test_search_sends_a_bearer_token_to_the_server_interface() -> None:
     assert second.published_date == "2020-12-11"
 
 
-def test_search_refuses_more_than_ten_domains() -> None:
-    with pytest.raises(ProviderError):
-        ApifySearchProvider()._build_payload(SearchRequest(query="q", include_domains=[f"d{i}.com" for i in range(11)]))
+@pytest.mark.parametrize("field", ["include_domains", "exclude_domains"])
+def test_search_refuses_more_than_ten_domains_before_the_call(field: str) -> None:
+    request = SearchRequest(query="q", **{field: [f"d{i}.com" for i in range(11)]})
+    assert set(ApifySearchProvider.refused_values(request)) == {field}
+    with pytest.raises(UnsupportedParameterError, match=field):
+        ApifySearchProvider(transport=httpx.MockTransport(lambda r: pytest.fail("sent"))).search(request)
+
+
+def test_search_takes_both_domain_lists_at_once() -> None:
+    assert not ApifySearchProvider.refused_values(
+        SearchRequest(query="q", include_domains=["a.com"], exclude_domains=["b.com"])
+    )
 
 
 @pytest.mark.parametrize("depth", ["fast", "deep"])

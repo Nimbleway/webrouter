@@ -3366,7 +3366,6 @@
       "price_usd": 1.5,
       "unit": "per_1k",
       "note": "per search of one results page, on the Starter plan's Bronze Store tier; $5 per 1k on the Free plan, $1.25 on Silver, $1 on Gold and above; DuckDuckGo through provider_options is charged the same",
-      "results_assumed": 10,
       "source_url": "https://apify.com/apify/web-search",
       "checked": "2026-11-25",
       "setup": "`apify`",

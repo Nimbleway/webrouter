@@ -69,6 +69,5 @@ MSG_APIFY_NO_RESULTS: Final = "Apify Web Search answered without a results list 
 MSG_APIFY_NO_CONTENT: Final = "Apify Web Fetch returned no content in the requested format"
 
 MSG_APIFY_TOO_MANY_DOMAINS: Final = (
-    "Apify Web Search takes at most {limit} domains per list; got {count} in {field}. Shorten the list, or name "
-    "another provider -- see https://docs.webrouter.net/providers#search."
+    f"Apify Web Search filters on at most {APIFY_WEB_SEARCH_MAX_DOMAINS} domains per list."
 )
