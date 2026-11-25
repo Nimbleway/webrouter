@@ -1,0 +1,1 @@
+`WebRouter(provider)` and `AsyncWebRouter(provider)` now check the id when built: a mode typo (`"exa:exa-instnat"`) raises `InvalidParameterError`, and an id naming a method that does not serve its backend (`"extract:parallel"`) raises `ProviderNotFoundError`, not on first use. `check_provider_id(provider_id, tool=None)` runs the same check without building a router.
