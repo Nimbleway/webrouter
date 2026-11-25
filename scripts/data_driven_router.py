@@ -1,4 +1,4 @@
-"""Import a data-driven router release: ``make data-driven-router SOURCE=<folder> VERSION=0.2.0``.
+"""Import a data-driven router release: ``make data-driven-router SOURCE=<folder> VERSION=0.2.0 [LOOKUP=<file>]``.
 
 ``SOURCE`` is the folder a training run delivers: a ``webrouter`` package with ``features.py``, ``router1.py``
 and ``artifacts/router1.json``. This script
@@ -7,7 +7,11 @@ and ``artifacts/router1.json``. This script
    ``tests/data/data_driven/golden.jsonl.gz``;
 2. copies the table to ``src/web_router/data/data_driven/tool_table.json`` and writes ``manifest.json`` beside it,
    with the version, table checksum and delivered training-source metadata;
-3. replays the golden file against web-router's own features and table, and exits non-zero with the first
+3. with ``LOOKUP``, the delivered lookup table, writes ``provider_table.json``: each search row web-router can
+   run as measured, by candidate id (:mod:`scripts.data_driven_providers`), named in the manifest by checksum.
+   Without it the shipped provider table stays. ``VERSION`` is the delivered table's own; to refresh the provider
+   table alone, pass the shipped ``SOURCE`` again with ``LOOKUP`` and a higher version;
+4. replays the golden file against web-router's own features and table, and exits non-zero with the first
    differences when they disagree: then ``routing/data_driven/patterns.py`` no longer matches the training code
    and has to be updated from it.
 
@@ -18,7 +22,6 @@ from __future__ import annotations
 
 import argparse
 import gzip
-import hashlib
 import importlib
 import json
 import sys
@@ -27,6 +30,18 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+from scripts.data_driven_manifest import (
+    PROVIDER_ENTRY,
+    PROVIDER_FILE,
+    TABLE_FILE,
+    carried,
+    check_provider_version,
+    check_version,
+    left_out,
+    provider_entry,
+    shipped,
+    tool_entry,
+)
 from scripts.data_driven_prompts import prompts
 from web_router.constants_data_driven import (
     DATA_DRIVEN_DATA_DIR,
@@ -39,7 +54,6 @@ from web_router.routing.data_driven.table import ToolTable, checked_table
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT.joinpath("src", "web_router", *DATA_DRIVEN_DATA_DIR)
 GOLDEN = ROOT / "tests" / "data" / "data_driven" / "golden.jsonl.gz"
-TABLE_FILE = "tool_table.json"
 SOURCE_TABLE = Path("webrouter") / "artifacts" / "router1.json"
 SHOWN = 10
 
@@ -56,17 +70,14 @@ def golden_rows(source: Path) -> list[list[Any]]:
     return rows
 
 
-def write_release(source: Path, version: str, *, destination: Path | None = None) -> None:
-    """Copy the table and write the manifest that names it."""
+def write_release(source: Path, version: str, *, destination: Path | None = None, lookup: Path | None = None) -> None:
+    """Copy the tool table, build the provider table from ``lookup`` when given, and write the manifest naming them.
+
+    With no ``lookup``, the shipped provider table is kept as it is.
+    """
     table = (source / SOURCE_TABLE).read_bytes()
-    data = json.loads(table)
-    if data["version"] != version:
-        raise ValueError("the requested release version must match the delivered table version")
-    requests = data["tables"][0][""][-1]
-    provenance = {name: data[name] for name in ("version", "trained_at", "sources")}
-    counts = [entry["examples"] for entry in provenance["sources"]]
-    if any(type(count) is not int or count < 0 for count in counts) or sum(counts) != requests:
-        raise ValueError("source examples must be non-negative integers summing to the table's request count")
+    entry, before = tool_entry(table), shipped(DATA)
+    check_version(entry, version, before, lookup is not None)
     destination = DATA if destination is None else destination
     destination.mkdir(parents=True, exist_ok=True)
     (destination / TABLE_FILE).write_bytes(table)
@@ -77,13 +88,12 @@ def write_release(source: Path, version: str, *, destination: Path | None = None
         "version": version,
         "schema": DATA_DRIVEN_SCHEMA,
         "built": datetime.now(UTC).date().isoformat(),
-        "tool_table": {
-            "file": TABLE_FILE,
-            "sha256": hashlib.sha256(table).hexdigest(),
-            "requests": requests,
-            **provenance,
-        },
+        "tool_table": entry,
     }
+    providers = provider_entry(lookup, destination) if lookup is not None else carried(before, DATA)
+    if providers is not None:
+        check_provider_version(before, providers, version)
+        manifest[PROVIDER_ENTRY] = providers
     (destination / DATA_DRIVEN_MANIFEST_FILE).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
 
@@ -129,11 +139,11 @@ def _publish(outputs: list[tuple[Path, Path]], backups: dict[Path, Path]) -> Non
         raise
 
 
-def import_release(source: Path, version: str, rows: list[list[Any]]) -> list[str]:
+def import_release(source: Path, version: str, rows: list[list[Any]], lookup: Path | None = None) -> list[str]:
     """Stage and compare every output before replacing any file in the existing release."""
     with TemporaryDirectory(dir=DATA.parent) as temporary:
         staged = Path(temporary)
-        write_release(source, version, destination=staged)
+        write_release(source, version, destination=staged, lookup=lookup)
         lines = "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
         golden = staged / GOLDEN.name
         golden.write_bytes(gzip.compress(lines.encode("utf-8"), mtime=0))
@@ -143,7 +153,8 @@ def import_release(source: Path, version: str, rows: list[list[Any]]) -> list[st
             return wrong
         DATA.mkdir(parents=True, exist_ok=True)
         GOLDEN.parent.mkdir(parents=True, exist_ok=True)
-        outputs = [(staged / name, DATA / name) for name in (TABLE_FILE, DATA_DRIVEN_MANIFEST_FILE)]
+        names = (TABLE_FILE, DATA_DRIVEN_MANIFEST_FILE, *((PROVIDER_FILE,) if lookup is not None else ()))
+        outputs = [(staged / name, DATA / name) for name in names]
         outputs.append((golden, GOLDEN))
         _publish(outputs, _backup(outputs, staged))
     return []
@@ -153,11 +164,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--source", type=Path, required=True, help="the delivered folder holding webrouter/")
     parser.add_argument("--version", required=True, help="the release's version, such as 0.2.0")
+    parser.add_argument("--lookup", type=Path, help="the delivered lookup table, to rebuild the provider table")
     args = parser.parse_args()
     rows = golden_rows(args.source.resolve())
-    wrong = import_release(args.source.resolve(), args.version, rows)
+    wrong = import_release(args.source.resolve(), args.version, rows, args.lookup)
     for line in wrong[:SHOWN]:
         print(line, file=sys.stderr)
+    for row in left_out(DATA) if args.lookup is not None and not wrong else ():
+        print(f"left out {row['arm']}: {row['why']}", file=sys.stderr)
     print(f"data-driven router {args.version}: {len(rows)} golden requests, {len(wrong)} differences")
     return 1 if wrong else 0
 

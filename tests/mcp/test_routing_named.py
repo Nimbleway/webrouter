@@ -7,10 +7,12 @@ from typing import Any
 
 import pytest
 
+from tests.mcp.conftest import ok_on, routed
 from web_router.constants_mcp import ENV_MCP_ROUTER
 from web_router.constants_mcp_router import ENV_MCP_ROUTER_CONFIG
 from web_router.exceptions import ConfigurationError
 from web_router.mcp.routing_config import McpRouting
+from web_router.routing.registry import register_router, unregister_router
 
 SECRET = "s3cret-router-key"
 
@@ -90,3 +92,34 @@ def test_the_data_driven_router_runs_in_process_and_carries_no_note_about_a_mode
     section = McpRouting.from_environ(named("data-driven", {"browse": True})).capabilities(None)
     assert (section["router"], section["router_runs"]) == ("data-driven", "in_process")
     assert "router_note" not in section
+
+
+@pytest.mark.parametrize("name", ["data-driven", "rules"])
+def test_a_router_registered_over_the_built_in_name_is_not_reported_as_in_process(name: str) -> None:
+    register_router(name, lambda **config: lambda req: None)
+    try:
+        env = {} if name == "data-driven" else {ENV_MCP_ROUTER: name}
+        section = McpRouting.from_environ(env).capabilities(None)
+    finally:
+        unregister_router(name)
+    assert (section["router"], section["router_runs"]) == (name, "built_in") and "model" in section["router_note"]
+    assert McpRouting.from_environ({}).capabilities(None)["router_runs"] == "in_process"
+
+
+def test_an_unknown_router_name_stops_the_server_and_lists_the_known_ones() -> None:
+    with pytest.raises(ConfigurationError, match=r"names no router.*Known: .*data-driven"):
+        McpRouting.from_environ({ENV_MCP_ROUTER: "missing-router"})
+
+
+async def test_the_mcp_rules_router_builds_and_warns_once(members: list[str]) -> None:
+    with pytest.warns(FutureWarning, match="rules.*one release.*data-driven.*router=None") as seen:
+        tools = routed(**{ENV_MCP_ROUTER: "rules"})
+        try:
+            for _ in range(2):
+                plan = await ok_on(tools, "web_run", prompt="summarize https://example.com/a", dry_run=True)
+                assert (plan["tool"], plan["decision"]["router"]) == ("extract", "rules")
+            section = tools.capabilities()["routing"]
+            assert (section["router"], section["router_runs"]) == ("rules", "in_process")
+        finally:
+            await tools.router.aclose()
+    assert len(seen) == 1 and members == []

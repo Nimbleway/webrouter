@@ -11,6 +11,11 @@ from typing import Any
 import pytest
 
 from scripts import data_driven_router as importer
+from scripts.data_driven_manifest import PROVIDER_FILE
+from tests.data_driven_lookup_helpers import lookup as lookup_table
+from tests.data_driven_lookup_helpers import row
+
+LOOKUP = lookup_table(row("brave"))
 
 
 def _delivery(tmp_path: Path, counts: list[Any]) -> tuple[Path, dict[str, Any]]:
@@ -54,7 +59,7 @@ def _installed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, P
     output.mkdir()
     table, manifest = output / importer.TABLE_FILE, output / importer.DATA_DRIVEN_MANIFEST_FILE
     table.write_bytes(b"existing table")
-    manifest.write_bytes(b"existing manifest")
+    manifest.write_bytes(b'{"existing": "manifest"}')
     golden = tmp_path / "golden.gz"
     golden.write_bytes(b"existing golden")
     monkeypatch.setattr(importer, "DATA", output)
@@ -63,7 +68,11 @@ def _installed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, P
 
 
 def _assert_unchanged(files: tuple[Path, Path, Path]) -> None:
-    assert tuple(path.read_bytes() for path in files) == (b"existing table", b"existing manifest", b"existing golden")
+    assert tuple(path.read_bytes() for path in files) == (
+        b"existing table",
+        b'{"existing": "manifest"}',
+        b"existing golden",
+    )
 
 
 @pytest.mark.parametrize("counts", [[1, 1], [True, 2], [-1, 4], [1.5, 1.5], ["1", 2]])
@@ -120,14 +129,18 @@ def test_a_matching_staged_release_publishes_the_replay(tmp_path: Path, monkeypa
     assert [json.loads(line) for line in gzip.decompress(golden.read_bytes()).splitlines()] == rows
 
 
-@pytest.mark.parametrize("existing", [True, False])
+@pytest.mark.parametrize(("existing", "with_lookup"), [(True, False), (False, False), (True, True), (False, True)])
 def test_a_failed_replacement_rolls_back_publication(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, existing: bool
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, existing: bool, with_lookup: bool
 ) -> None:
     source, _ = _delivery(tmp_path, [1, 2])
     files = _installed(tmp_path, monkeypatch)
+    provider_table = files[0].parent / PROVIDER_FILE
+    provider_table.write_bytes(b"existing providers")
+    lookup = tmp_path / "lookup.json"
+    lookup.write_text(json.dumps(LOOKUP), encoding="utf-8")
     if not existing:
-        for path in files:
+        for path in (*files, provider_table):
             path.unlink()
     replace = Path.replace
 
@@ -138,8 +151,38 @@ def test_a_failed_replacement_rolls_back_publication(
 
     monkeypatch.setattr(Path, "replace", fail_golden_replacement)
     with pytest.raises(OSError, match="golden replacement failed"):
-        importer.import_release(source, "0.1.0", [["weather", [], "search"]])
+        importer.import_release(source, "0.1.0", [["weather", [], "search"]], lookup if with_lookup else None)
     if existing:
         _assert_unchanged(files)
+        assert provider_table.read_bytes() == b"existing providers"
     else:
-        assert not any(path.exists() for path in files)
+        assert not any(path.exists() for path in (*files, provider_table))
+
+
+@pytest.mark.parametrize("entry", ["provider_table.json", {}])
+def test_a_malformed_named_provider_table_cannot_drop_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, entry: Any
+) -> None:
+    source, _ = _delivery(tmp_path, [1, 2])
+    files = _installed(tmp_path, monkeypatch)
+    files[1].write_text(json.dumps({"provider_table": entry}), encoding="utf-8")
+    before = tuple(path.read_bytes() for path in files)
+    with pytest.raises(ValueError, match="names the provider table"):
+        importer.import_release(source, "0.1.0", [])
+    assert tuple(path.read_bytes() for path in files) == before
+
+
+def test_changed_tool_bytes_need_a_higher_version(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    source, data = _delivery(tmp_path, [1, 2])
+    files = _installed(tmp_path, monkeypatch)
+    importer.import_release(source, "0.1.0", [])
+    before = tuple(path.read_bytes() for path in files)
+    data["trained_at"] = "2030-01-01"
+    (source / importer.SOURCE_TABLE).write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(ValueError, match="tool table differs from the shipped one"):
+        importer.import_release(source, "0.1.0", [])
+    assert tuple(path.read_bytes() for path in files) == before
+    data["version"] = "0.1.1"
+    (source / importer.SOURCE_TABLE).write_text(json.dumps(data), encoding="utf-8")
+    importer.import_release(source, "0.1.1", [])
+    assert json.loads(files[1].read_bytes())["version"] == "0.1.1"

@@ -1,13 +1,12 @@
-"""A router service in the standard library: what `router="remote"` asks, answered by the built-in rules router.
+"""A router service in the standard library: what `router="remote"` asks, answered by the built-in data-driven router.
 
 `WebRouter(router="remote", router_config={"url": ...})` posts each routed
 call's `RouteRequest` as JSON and reads a `RouteDecision` back -- the wire
 format, schema 1, whose JSON Schema files ship in the package under
 `web_router/data/schemas/router/v1/`. This server implements it in a few
-lines: it checks the bearer key, reads the request, asks
-`web_router.routing.rules.rules` (a URL extracts, a clear ask for research researches, else search) and
-answers. Swap `decide` for your own logic, or port it to any language: a
-service reads `"schema": 1` JSON, ignores request fields it does not know, and
+lines: it checks the bearer key, reads the request, asks the built-in data-driven router
+(`web_router.routing.data_driven.DataDrivenRouter`, the library's default) and answers. Swap `decide` for your own
+logic, or port it to any language: a service reads `"schema": 1` JSON, ignores request fields it does not know, and
 answers `{"schema": 1, ...}` with any of the decision's optional fields.
 
 A service is shown the prompt, its URLs, the budget and the candidates, named `tool:provider` -- which
@@ -39,7 +38,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 from web_router import WebRouter
-from web_router.routing.rules import rules
+from web_router.routing.data_driven import DataDrivenRouter
 from web_router.routing.wire import decision_to_wire, request_from_wire
 
 PATH = "/route"
@@ -53,12 +52,13 @@ PROMPTS = (
     "compare the EU and US rules on AI training data",
 )
 
+ROUTER = DataDrivenRouter()
 Decide = Callable[[dict[str, Any]], dict[str, Any]]
 
 
 def decide(body: dict[str, Any]) -> dict[str, Any]:
-    """One request in, one decision out: the wire format around the built-in rules router."""
-    return decision_to_wire(rules(request_from_wire(body)))
+    """One request in, one decision out: the wire format around the built-in data-driven router."""
+    return decision_to_wire(ROUTER.route(request_from_wire(body)))
 
 
 class RouterServer(ThreadingHTTPServer):

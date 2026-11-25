@@ -1,0 +1,149 @@
+---
+title: "Free web access, with no API key"
+sidebarTitle: "Free web access"
+description: "Search the web and read pages for $0, with no key: WebRouter combines the free calls eight vendors offer, falls back between them, and keeps them behind any key you add later."
+icon: "gift"
+---
+
+Several web API vendors let you call them for free, with no key. Each one alone
+gives you a single vendor's allowance, its own SDK and its own limits.
+**WebRouter puts all of them behind one call**, so your agent gets more free
+web access than any one vendor gives alone: search and page reading for $0,
+from eight vendors at once.
+
+- **Eight vendors, one interface.** Nimble, Tavily, You.com, Exa, Parallel,
+  Keenable, Jina Reader and Firecrawl, through one `search` and one `extract`,
+  with the same result shape whichever vendor answers.
+- **When one runs out, the next answers.** A vendor that is rate-limited, down
+  or returns nothing passes the call to the next free one. One vendor's limit
+  doesn't stop your agent, and you write no fallback code.
+- **Free to start, paid when you choose.** Add a key for any vendor and the same
+  code uses it first, with the free vendors still behind it as the fallback.
+
+## Try it in a minute
+
+The one prerequisite is [uv](https://docs.astral.sh/uv/getting-started/installation/), or pip.
+
+<Tabs>
+  <Tab title="Command line">
+    ```bash
+    uvx --from "webrouter[search,extract]" webrouter search "rust async runtimes" -n 5
+    uvx --from "webrouter[search,extract]" webrouter extract https://example.com
+    ```
+
+    Each prints JSON, with `provider` naming the vendor that answered. See
+    [Command line](/cli).
+  </Tab>
+  <Tab title="Python">
+    ```bash
+    pip install "webrouter[search,extract]"
+    ```
+
+    ```python free.py
+    from web_router import WebRouter
+
+    with WebRouter() as router:  # no key anywhere
+        results = router.search("what is retrieval augmented generation", max_results=5, timeout=10)
+        if results.urls:
+            page = router.extract(results.urls[0], timeout=15)
+
+    print(results.provider, results.cost_usd)  # e.g. nimble 0.0
+    ```
+  </Tab>
+  <Tab title="Your agent (MCP)">
+    ```bash
+    claude mcp add web-router -- uvx --from "webrouter[mcp]" web-router-mcp
+    ```
+
+    Your agent gets `search` and `extract` tools that work with no key. Cursor,
+    Codex and other clients: see [MCP server](/mcp-server).
+  </Tab>
+</Tabs>
+
+## What you get for free
+
+| Method | Free vendors, in the order WebRouter tries them |
+| --- | --- |
+| [`search`](/search) | Nimble, Tavily, then You.com, Exa and Parallel (their open MCP servers), then Keenable |
+| [`extract`](/extract) | Nimble, Tavily, Jina Reader, Firecrawl, then Keenable |
+
+## How it works
+
+**`auto` picks for you.** `auto` is the default provider. With no keys set,
+every `search` and `extract` goes to the free vendors in the order above. If
+one is rate-limited, down or returns nothing, the next one answers.
+
+**Every response says who answered and what it cost.** `response.provider`
+names the vendor that served the call, and a free call reports
+`cost_usd == 0.0`.
+
+**Nothing can bill you without a key.** A vendor charges an account, and with
+no key there is no account. With keys set, the vendors you hold keys for come
+first, so those calls bill; to try the free vendors first, see
+[Free backends first](/budgets#free-backends-first).
+
+## When you want more: free plans with a key
+
+Most vendors also give you a free monthly allowance once you sign up. Add the
+key to your environment and WebRouter uses that vendor first, with the free
+calls still behind it. [Configuration](/configuration) names each variable.
+
+<Note>
+  As of November 2026, from each vendor's own pricing page. Free plans change
+  often: check the vendor's page before you rely on a number.
+</Note>
+
+<AccordionGroup>
+  <Accordion title="Search and answers">
+    | Vendor | Free with no key | Free plan with a key | Card needed |
+    | --- | --- | --- | --- |
+    | Nimble | Search and extract | 5,000 requests a month | No |
+    | Tavily | Search and extract | 1,000 credits a month | No |
+    | Keenable | Search and extract | 100,000 requests a month | No |
+    | You.com | Search, through its MCP server | A one-time signup credit | No |
+    | Exa | Search, through its MCP server | $10 a month | No |
+    | Parallel | Search, through its MCP server | $5 a month | Yes |
+    | Brave | — | $5 a month for search, plus $5 a month for answers | Yes |
+    | Valyu | — | 2,000 credits a month | No |
+    | Seltz | — | $20 signup credit | No |
+    | Octen | — | $5 signup credit | Not stated |
+    | Linkup | — | Monthly credit (work email) | Not stated |
+    | Perplexity, DeepSeek | — | None, pay as you go | — |
+    | Microsoft WebIQ, AWS AgentCore | — | None: needs a paid cloud account | Yes |
+  </Accordion>
+  <Accordion title="Reading pages and scraping">
+    | Vendor | Free with no key | Free plan with a key | Card needed |
+    | --- | --- | --- | --- |
+    | Jina Reader | Extract | 10M tokens, one-time | No |
+    | Firecrawl | Extract | 1,000 credits a month | No |
+    | Bright Data | — | 5,000 credits a month | No |
+    | Oxylabs | — | $5 signup credit | Not stated |
+    | Apify | — | $5 a month | No |
+  </Accordion>
+  <Accordion title="Browsers and browser agents">
+    | Vendor | Free with no key | Free plan with a key | Card needed |
+    | --- | --- | --- | --- |
+    | `local` (built in) | Yes, on your machine | — | No |
+    | Browserbase | — | 1 browser hour a month | No |
+    | Kernel | — | $5 in credits | No |
+    | Anchor | — | Monthly free credit | Not stated |
+    | Steel | — | $30 signup credit | No |
+    | Hyperbrowser | — | 5,000 credits | Not stated |
+    | Browser Use | — | $1 signup credit | No |
+    | Skyvern | — | 14-day trial | Not stated |
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<Columns cols={3}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Your first search and extract, step by step.
+  </Card>
+  <Card title="Compare on WebBench" icon="chart-line" href="https://webench.net">
+    How the vendors rank on accuracy, speed and cost.
+  </Card>
+  <Card title="Cost and budgets" icon="wallet" href="/budgets">
+    Free first, then cap what paid calls may spend.
+  </Card>
+</Columns>

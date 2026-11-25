@@ -82,8 +82,11 @@ Beside the ladder:
 
 - **`web_run`**, where offered, takes the request in words and lets the
   server's router pick the method and backends. The built-in router picks
-  `search` or `extract`; an operator's router may pick a billed method. Call
-  a tool yourself when you know which you want.
+  `search`, `extract` or `research` from the request's wording. `research` is
+  billed per run and takes minutes, and a simple how, why, compare or list
+  question can be planned as one: call `search` yourself when a search is what
+  you want, or pass `dry_run=true` first. An operator's router may pick other
+  billed methods. Call a tool yourself when you know which you want.
 - **`data_apis`**, **`data_api_endpoint`**, **`call_data_api`** reach one vendor's
   own API (Google Ads, Datadog, ...) with the user's credentials. The data
   is the vendor's own, shaped to fit like every result: `fetch_raw` holds the

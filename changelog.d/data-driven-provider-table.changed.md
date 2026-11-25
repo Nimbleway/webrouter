@@ -1,0 +1,1 @@
+The default `data-driven` router now orders measured search candidates from its provider table in `plan()`, `run()` and MCP `web_run`. `prefer` selects the cost or speed line; `route_modes=False` leaves the default order when fewer than two measured rows remain. Use `route_tools=("search",)` to order plain `search()` calls too.

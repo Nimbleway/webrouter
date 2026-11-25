@@ -1,0 +1,1 @@
+Vendor catalog: VPNDetection, with 2 read-only endpoints (single and batch IP lookups) for VPN, Tor and relay detection, written from its own API documentation and called live; its free plan answers single lookups without a key.

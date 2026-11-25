@@ -110,6 +110,22 @@ def test_both_domain_lists_are_refused_unsent(
     assert not sent
 
 
+@pytest.mark.parametrize("field", ["include_domains", "exclude_domains"])
+def test_a_domain_with_a_path_is_refused_unsent(
+    provider: YouProvider, transport: httpx.MockTransport, sent: list[httpx.Request], field: str
+) -> None:
+    """You.com matches either list on the host alone (checked live), so the path would be dropped.
+
+    An include with a path served the whole host; an exclude with a path dropped it.
+    """
+    provider = YouProvider(transport=transport)
+    with pytest.raises(UnsupportedParameterError, match="no path") as caught:
+        provider.search(SearchRequest(query="hi", **{field: ["github.com/python"]}))
+    assert caught.value.values == {field: ["github.com/python"]}
+    assert YouProvider.refused_values(SearchRequest(query="hi", **{field: ["https://github.com/"]})) == {}
+    assert not sent
+
+
 needs_key = pytest.mark.skipif(not os.getenv("YOU_API_KEY"), reason="YOU_API_KEY not set")
 
 

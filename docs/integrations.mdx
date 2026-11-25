@@ -222,8 +222,9 @@ a loopback, private, link-local or cloud metadata host (`169.254.169.254`), or
 any URL that is not `http` or `https`, is never sent to a backend and comes
 back in `failures` with `kind="refused"` and why. The other URLs in the call
 are still read. Pass `url_policy=None` to send any `http` or `https` URL, for a
-backend you run on your own network. The check reads the host as written: it
-does not resolve DNS, and it does not follow or re-check redirects, since the
+backend you run on your own network. The check resolves the host and refuses a
+name that points at a private, loopback or metadata address; a literal address
+is judged as written. It does not follow or re-check redirects, since the
 backend fetches the page.
 
 ## Wrapping `search` for your own agent
