@@ -287,6 +287,19 @@ block of 10 more results adds $6 per 1k, so 100 results are $59 per 1k. With `sp
 | `specstream` | default | Titles, URLs, a snippet and a date per result; an answer and rows in `raw` | $5 per 1k; searches of up to 10 results; each started block of 10 more adds $6 per 1k; $1 per 1k with `speed=fast` through provider_options | [specstream.ai](https://specstream.ai/agents.md) | 2026-11-19 |
 <!-- /prices -->
 
+### Firecrawl
+
+Per search, in credits ([pricing](https://www.firecrawl.dev/pricing.md)): 2 credits per 10 results, and with
+`scrapeOptions` each result's scrape at the Scrape price, 1 credit a page. Credits are $5 per 1k on Hobby
+top-ups and down to $1 per 1k on Scale. The keyless tier bills nothing.
+
+<!-- prices: method=search provider=firecrawl -->
+| Mode | Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|---|
+| `lite` (default) | `firecrawl`, `firecrawl:lite` | No `scrapeOptions` (the default) | Titles, URLs and Firecrawl's description, often the page's opening markdown | $10 per 1k; 2 credits per 10 results; credits at $5 per 1k on Hobby top-ups (1,000–5,000 credits per $5 by plan); the estimate takes the top | [www.firecrawl.dev](https://www.firecrawl.dev/pricing.md) | 2026-11-24 |
+| `deep` | `firecrawl:deep` | `scrapeOptions.formats=["markdown"]` | The whole page | $60 per 1k; estimate is derived: 2 credits per 10 results plus each result's scrape at 1 credit a page, 10 results assumed, so 12 credits at $5 per 1k credits = $60 per 1k (derived, not stated by Firecrawl; seen live, 2 results cost 4 credits) | [www.firecrawl.dev](https://www.firecrawl.dev/pricing.md) | 2026-11-24 |
+<!-- /prices -->
+
 ### AWS AgentCore Web Search
 
 Billed by AWS to the account that owns the gateway: per query, plus the

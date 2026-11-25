@@ -203,6 +203,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_DEEPSEEK: ENV_DEEPSEEK_API_KEY,
     PROVIDER_VALYU: ENV_VALYU_API_KEY,
     PROVIDER_SPECSTREAM: ENV_SPECSTREAM_API_KEY,
+    PROVIDER_FIRECRAWL: ENV_FIRECRAWL_API_KEY,
     # Not a credential: the AWS one comes from botocore's chain. The gateway is
     # what has to exist before a call can be worth trying.
     PROVIDER_AGENTCORE: ENV_AGENTCORE_GATEWAY_URL,
@@ -570,7 +571,7 @@ AUTO_APPENDED: tuple[str, ...] = _chain("search", "appended")
 """Keyed members the frozen results do not rank, tried after the keyless tier, with a credential, in joining order.
 
 From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz``, ``octen``,
-``keirolabs`` and ``specstream`` joined after the scan that set the order, and the ranking set has no rows for them. A
+``keirolabs``, ``specstream`` and ``firecrawl`` joined after the scan that set the order, unranked by it. A
 backend that joins later goes at the end of the file's ``appended``, so joining changes no environment's routing;
 ``make chains`` moves it ahead of the keyless tier only once frozen results rank it.
 """
@@ -3105,24 +3106,7 @@ BRIGHTDATA_ERROR_CODE_HEADER = "x-brd-error-code"
 Read on its own too, so a failure that names only a code is still a failure.
 """
 
-# --- Firecrawl --------------------------------------------------------------
-# Extract only. Verified live keyless on 2026-10-01: the request body and the
-# `success` / `data.<format>` response for markdown and html. The keyed path
-# differs only by its Bearer header.
-
-FIRECRAWL_BASE_URL = "https://api.firecrawl.dev"
-FIRECRAWL_EXTRACT_PATH = "/v2/scrape"
-FIRECRAWL_API_KEY_PREFIX = "Bearer "
-
-FIRECRAWL_EXTRACT_FORMATS: dict[ExtractFormat, str] = {
-    # Normalized format -> the `formats` entry to ask for, which is also the key
-    # under `data` the body lands in.
-    "markdown": "markdown",
-    "html": "html",
-}
-
-FIRECRAWL_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "markdown"
-
+# Firecrawl's endpoints, extract formats and search options are in constants_firecrawl.py.
 
 # --- Jina Reader, the keyless route -----------------------------------------
 # A key only raises the rate limit: 20 requests a minute without one, 500 with.

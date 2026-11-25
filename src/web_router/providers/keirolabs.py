@@ -25,7 +25,7 @@ from web_router.constants_keirolabs import (
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpSearchProvider
-from web_router.providers._utils import build_payload
+from web_router.providers._utils import build_payload, field_names
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "snippet", "score"})
@@ -60,7 +60,7 @@ class KeirolabsProvider(HttpSearchProvider):
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         hits = payload.get("results")
         if not isinstance(hits, list):
-            raise ProviderError(self.name, MSG_KEIROLABS_NO_RESULTS.format(fields=", ".join(sorted(payload)) or "none"))
+            raise ProviderError(self.name, MSG_KEIROLABS_NO_RESULTS.format(fields=field_names(payload)))
         return SearchResponse(
             provider=self.name,
             query=request.query,

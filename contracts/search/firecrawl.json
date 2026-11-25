@@ -1,0 +1,119 @@
+{
+  "provider": "firecrawl",
+  "method": "search",
+  "class": "web_router.providers.firecrawl.FirecrawlProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.firecrawl.dev",
+    "paths": {
+      "search_path": "/v2/search"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "FIRECRAWL_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.query": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.limit": 3
+      }
+    },
+    "search_depth": {
+      "lite": {
+        "unchanged": "no wire change"
+      },
+      "fast": {
+        "refused": "UnsupportedParameterError"
+      },
+      "deep": {
+        "body.scrapeOptions.formats": [
+          "markdown"
+        ]
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "effort",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "recency"
+  ],
+  "source": [
+    "https://docs.firecrawl.dev/api-reference/endpoint/search",
+    "https://www.firecrawl.dev/pricing.md"
+  ],
+  "verified": {
+    "max_results": "live: tests/providers/test_firecrawl_search.py::test_live_search_returns_results",
+    "search_depth": "live: tests/providers/test_firecrawl_search.py::test_live_deep_search_returns_each_page"
+  },
+  "vendor_options": {
+    "sources": {
+      "status": "passthrough",
+      "note": "web (the default), images, news or alexandria; only data.web is mapped, the others stay in raw."
+    },
+    "categories": {
+      "status": "passthrough",
+      "note": "developer, gov, research or pdf."
+    },
+    "includeDomains": {
+      "status": "passthrough",
+      "note": "Hostnames to keep; not yet mapped from include_domains."
+    },
+    "excludeDomains": {
+      "status": "passthrough",
+      "note": "Hostnames to drop; not yet mapped from exclude_domains."
+    },
+    "tbs": {
+      "status": "passthrough",
+      "note": "qdr:h/d/w/m/y, a cdr: date range or sbd:1; not yet mapped from recency."
+    },
+    "location": {
+      "status": "passthrough",
+      "note": "A place name such as 'San Francisco,California,United States'."
+    },
+    "country": {
+      "status": "passthrough",
+      "note": "ISO country code, US by default; not yet mapped from country."
+    },
+    "safe": {
+      "status": "passthrough",
+      "note": "true filters unsafe results."
+    },
+    "timeout": {
+      "status": "passthrough",
+      "note": "Milliseconds, 60000 by default."
+    },
+    "ignoreInvalidURLs": {
+      "status": "passthrough",
+      "note": "true drops URLs the other Firecrawl endpoints cannot take."
+    },
+    "highlights": {
+      "status": "passthrough",
+      "note": "true by default."
+    },
+    "domainTools": {
+      "status": "passthrough",
+      "note": "On by default with the alexandria source."
+    },
+    "toolDetail": {
+      "status": "passthrough",
+      "note": "compact (the default), summary or full."
+    },
+    "enterprise": {
+      "status": "passthrough",
+      "note": "anon or zdr."
+    },
+    "threatProtection": {
+      "status": "passthrough",
+      "note": "A per-request Threat Protection override."
+    }
+  }
+}
