@@ -135,9 +135,9 @@ On Claude:
   archived when it ends.
 - **web-router's tools run here**, on this machine's keys, as custom tools: the
   session pauses on each call, the script runs it and sends the result back.
-  Claude's built-in tools run on Anthropic's side, and so does an `mcp:` arm's
-  server: the environment allows MCP servers (`allow_mcp_servers`), which
-  opens only the ones an agent names.
+  Claude's built-in tools and an `mcp:` arm's server run on Anthropic's side.
+  `web_search` and `web_fetch` reach only the hosts the environment allows, so
+  the environment's networking is unrestricted; the agents have no shell or file tools.
 
 On OpenAI:
 

@@ -207,11 +207,10 @@ MSG_INCOMPLETE = "response {status}: {details}"
 
 AGENT_NAME = "web-router-bench/{arm}"
 ENVIRONMENT_NAME = "web-router-agent-bench"
-# web_search and web_fetch run on Anthropic's servers whatever the networking,
-# and web-router's tools run here, so the container needs no other egress. An
-# mcp: arm's server is reached through it, and the flag opens only the servers
-# an agent names -- the other arms' agents name none.
-ENVIRONMENT_CONFIG: dict[str, Any] = {"type": "cloud", "networking": {"type": "limited", "allow_mcp_servers": True}}
+# web_search and web_fetch reach only the hosts the environment allows, so a
+# limited environment with no hosts fails every native call (url_not_allowed).
+# The agents get no shell or file tools, so open egress gives no arm a tool it lacks.
+ENVIRONMENT_CONFIG: dict[str, Any] = {"type": "cloud", "networking": {"type": "unrestricted"}}
 CLAUDE_NATIVE_TOOLS: list[dict[str, Any]] = [
     {
         "type": "agent_toolset_20260401",
