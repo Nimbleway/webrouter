@@ -41,31 +41,23 @@ def lite_body(text: str, depth: SearchDepth | None) -> str:
     return as_snippet(text) if depth == "lite" else text
 
 
-def named_result(
-    hit: dict[str, Any],
-    depth: SearchDepth | None = None,
-    *,
-    link: str = "url",
-    snippet: str = "description",
-    body: str | None = None,
-    date: str | None = None,
-) -> SearchResult:
-    """One result from a hit whose fields are named here; every field not named stays in ``extra``.
+def named_result(hit: dict[str, Any], depth: SearchDepth | None = None, *, body: str | None = None) -> SearchResult:
+    """One result from a hit carrying ``url``, ``title`` and ``description``; every other field stays in ``extra``.
 
-    ``description`` is the snippet cut to a snippet's size. ``content`` is the
-    page body when ``body`` names one that came back, else the snippet, cut when
-    ``lite`` was asked for. A date comes only from ``date``, and there is never a
-    score: nothing the backend did not return is invented.
+    ``description`` is cut to a snippet's size. ``content`` is the page body
+    under ``body`` when one came back, else the description, cut when ``lite``
+    was asked for. There is never a score or a date: nothing the backend did
+    not return is invented.
     """
-    text = str(hit.get(snippet) or "")
-    named = {link, "title", snippet, body, date}
+    snippet = str(hit.get("description") or "")
+    text = (hit.get(body) if body else None) or snippet
     return SearchResult(
-        url=hit[link],
+        url=hit["url"],
         title=hit.get("title") or "",
-        description=as_snippet(text),
-        content=lite_body(hit.get(body) or text if body else text, depth),
-        published_date=hit.get(date) or None if date else None,
-        extra={key: value for key, value in hit.items() if key not in named},
+        description=as_snippet(snippet),
+        content=lite_body(text, depth),
+        published_date=None,
+        extra={key: value for key, value in hit.items() if key not in {"url", "title", "description", body}},
     )
 
 
