@@ -37,12 +37,17 @@ from web_router.vendors.schema import Vendor, VendorEndpoint
 _WORD = re.compile(r"[a-z0-9]+")
 
 
-def words(text: str) -> set[str]:
-    """Lowercase words, plurals folded: "monitors" and "monitor" are one word to a search."""
-    return {
+@functools.lru_cache(maxsize=16384)
+def words(text: str) -> frozenset[str]:
+    """Lowercase words, plurals folded: "monitors" and "monitor" are one word to a search.
+
+    Cached: a find tokenizes the same endpoint texts again for every query, and the
+    set is frozen so a caller cannot mutate what the next caller reads.
+    """
+    return frozenset(
         word[:-1] if len(word) > 3 and word.endswith("s") and not word.endswith("ss") else word
         for word in _WORD.findall(text.lower())
-    }
+    )
 
 
 class VendorCatalog:
@@ -125,7 +130,7 @@ class VendorCatalog:
         return found if limit is None else found[:limit]
 
 
-def _score(query_words: set[str], endpoint: VendorEndpoint, vendor: Vendor) -> int:
+def _score(query_words: frozenset[str], endpoint: VendorEndpoint, vendor: Vendor) -> int:
     if not query_words:
         return 0
     strong = words(f"{endpoint.id} {endpoint.job or ''} {vendor.name} {vendor.vendor}")

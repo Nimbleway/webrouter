@@ -31,7 +31,7 @@ _ID_MAX_TOKENS = 3
 """The most query tokens an id is matched across: ``data.gov.au`` names ``data-gov-au``."""
 
 
-def _name_words(vendor: Vendor) -> set[str]:
+def _name_words(vendor: Vendor) -> frozenset[str]:
     return words(vendor.name) | words(vendor.vendor.replace("-", " "))
 
 
