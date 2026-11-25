@@ -74,7 +74,6 @@ from web_router.constants import (
     MCP_TOOL_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS,
     MCP_TOOL_SEARCH,
-    MCP_TOOL_WAITS,
 )
 from web_router.constants_live_data import MCP_TOOL_LIVE_DATA, MCP_TOOL_LIVE_DATA_SOURCE, MCP_TOOL_LIVE_DATA_SOURCES
 from web_router.constants_mcp import (
@@ -90,6 +89,7 @@ from web_router.mcp.browsers import BrowserSessions, check_target, playwright_in
 from web_router.mcp.budget import ConnectionBudget, browser_charged, wait_left
 from web_router.mcp.env import EnvSources, user_config_dir
 from web_router.mcp.env_tool import load_env_entry
+from web_router.mcp.jobs import settle, tool_waits
 from web_router.mcp.key_text import env_hint, no_backend_hint, nothing_configured, server_instructions
 from web_router.mcp.live_data_tools import live_data_source_tool, live_data_sources_tool, live_data_tool
 from web_router.mcp.methods import METHODS
@@ -166,7 +166,7 @@ class WebRouterTools:
         self.browse_wait = browse_wait
         self.browsers = browsers if browsers is not None else BrowserSessions()
         self.env = env if env is not None else EnvSources()
-        self._waits = {**MCP_TOOL_WAITS, MCP_TOOL_RESEARCH: research_wait, MCP_TOOL_BROWSE: browse_wait}
+        self._waits = tool_waits(research_wait, browse_wait)
         every: dict[str, _Handler] = {
             MCP_TOOL_SEARCH: self._search,
             MCP_TOOL_EXTRACT: self._extract,
@@ -309,9 +309,9 @@ class WebRouterTools:
         record = self.record(MCP_TOOL_RESEARCH_STATUS, arguments)
         if not isinstance(record.job, ResearchJob):
             raise self._not_a_job(record, MCP_TOOL_RESEARCH_STATUS, MCP_TOOL_RESEARCH)
-        progress = await record.job.astatus()
+        progress = await settle(record.job, waited := wait_left(self.research_wait))
         if progress.response is None:
-            return shape_progress(progress, record.handle)
+            return shape_progress(progress, record.handle, wait=waited)
         record.raw = progress.response.raw
         return shape_research(progress.response, record.handle, budget=result_budget(MCP_TOOL_RESEARCH))
 
@@ -332,10 +332,10 @@ class WebRouterTools:
         record = self.record(MCP_TOOL_BROWSE_STATUS, arguments)
         if not isinstance(record.job, BrowseJob):
             raise self._not_a_job(record, MCP_TOOL_BROWSE_STATUS, MCP_TOOL_BROWSE)
-        progress = await record.job.astatus()
+        progress = await settle(record.job, waited := wait_left(self.browse_wait))
         if progress.response is None:
             # A failed task's detail is the backend's own message, which can quote a session URL.
-            shaped, count = redact(shape_progress(progress, record.handle))
+            shaped, count = redact(shape_progress(progress, record.handle, wait=waited))
             if count:
                 shaped["note"] = redaction_note(count).strip()
             return dict(shaped)

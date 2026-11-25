@@ -87,6 +87,17 @@ MCP_MSG_PLAN_NOT_SERVED = (
 )
 """``web_run`` refusing to run a method the allowlist excludes: the allowlist is not bypassed by routing."""
 
+MCP_STATUS_STILL_RUNNING = (
+    "Still going after this call waited {wait:g}s. Call {tool} with handle {handle!r} again; it waits on its own, "
+    "so there is no need to pause first."
+)
+"""A status tool's note on a job its wait did not see finish.
+
+The status tools wait as long as the tool that started the job, rather than answering at once. Answering at once
+left the pacing to the model, and models do not pace: against Nimble research runs of a few minutes, a fast model
+polled every 1.5 seconds, 130 to 150 times a run, and a careful one spent 6 to 14 turns of its turn limit on polls.
+"""
+
 MCP_JSON_SEPARATORS = (",", ":")
 """How a result is serialized: compact, since every space is a token the model pays for and never reads."""
 

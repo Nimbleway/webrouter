@@ -3867,7 +3867,7 @@ MCP_DESC_RESEARCH = (
 )
 
 MCP_DESC_RESEARCH_STATUS = (
-    "Poll a run `research` started: its state, or the answer once it has one. Free, about a second."
+    "Waits up to {wait:g}s on a run `research` started: its state, or the answer once it has one. Free."
 )
 
 MCP_DESC_BROWSE = (
@@ -3878,8 +3878,8 @@ MCP_DESC_BROWSE = (
 )
 
 MCP_DESC_BROWSE_STATUS = (
-    "Poll a task `browse` started: its state, or the answer and the agent's steps once it has one. Free, "
-    "about a second."
+    "Waits up to {wait:g}s on a task `browse` started: its state, or the answer and the agent's steps once it "
+    "has one. Free."
 )
 
 MCP_DESC_FETCH_RAW = (
