@@ -895,7 +895,8 @@ Some clients cut a long tool result before the model sees it: Codex keeps about
 `max_chars` and it returns one page of the payload's JSON instead, with
 `total_chars` and the `next_offset` to ask for next (a page is the server's
 result size when only `offset` is set), so such a client reads the whole
-payload a page per call.
+payload a page per call. `max_chars` counts the page as it is sent, its JSON
+escapes included, so a page of quotes or line breaks stays under the cut too.
 
 Everything else — parameter names, provider selection, error messages — is a
 thin projection of the library. A failure comes back as a tool error carrying

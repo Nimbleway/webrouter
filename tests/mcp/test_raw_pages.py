@@ -12,6 +12,7 @@ from web_router.client import AsyncWebRouter
 from web_router.constants import ENV_BRAVE_API_KEY, ENV_MCP_MAX_CHARS, MCP_TOOL_FETCH_RAW, MCP_TOOL_RESEARCH
 from web_router.constants_mcp_instructions import MCP_UNTRUSTED_MARK
 from web_router.constants_vendors import VENDOR_MASK
+from web_router.mcp import raw_tool
 from web_router.mcp.shaping import render
 from web_router.mcp.tools import WebRouterTools
 
@@ -21,6 +22,11 @@ REPORT = {"answer": " ".join(f"finding {i} with its source" for i in range(400))
 @pytest.fixture
 def tools(no_keys: None) -> WebRouterTools:
     return WebRouterTools(AsyncWebRouter("auto"))
+
+
+def _sent(page: dict[str, Any]) -> int:
+    """How many characters the page takes in the result the client receives, its escapes included."""
+    return len(render(page["page"])) - 2
 
 
 async def _read_all(tools: WebRouterTools, handle: str, max_chars: int) -> list[dict[str, Any]]:
@@ -39,7 +45,7 @@ async def test_pages_join_into_the_whole_payload_and_say_where_the_next_one_star
 
     whole = render(REPORT)
     assert "".join(page["page"] for page in pages) == whole
-    assert all(len(page["page"]) <= 1000 for page in pages) and len(pages) == -(-len(whole) // 1000)
+    assert all(_sent(page) <= 1000 for page in pages) and len(pages) >= -(-len(whole) // 1000)
     assert {page["total_chars"] for page in pages} == {len(whole)}
     assert f"offset {pages[0]['next_offset']}" in pages[0]["note"], "the note says how to ask for the next page"
     assert "next_offset" not in pages[-1] and "next page" not in pages[-1]["note"]
@@ -65,7 +71,7 @@ async def test_an_offset_alone_reads_a_page_of_the_servers_result_size(
 
     page = await ok_on(tools, MCP_TOOL_FETCH_RAW, handle=record.handle, offset=100)
 
-    assert page["page"] == render(REPORT)[100:2600] and page["next_offset"] == 2600
+    assert page["page"] == render(REPORT)[100 : page["next_offset"]] and 2400 < _sent(page) <= 2500
 
 
 async def test_a_key_is_masked_before_the_payload_is_cut_into_pages(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -93,3 +99,33 @@ async def test_a_page_argument_it_cannot_serve_is_refused_with_a_reason(
     failed, text = await outcome(tools, MCP_TOOL_FETCH_RAW, handle=record.handle, **arguments)
 
     assert failed and next(iter(arguments)) in text
+
+
+async def test_a_page_counts_the_escapes_it_is_sent_with(tools: WebRouterTools) -> None:
+    raw = {"content": "line\n" * 3000 + 'a "quoted" \\ path\t' * 300}
+    record = tools.store.add(MCP_TOOL_RESEARCH, raw=raw)
+
+    pages = await _read_all(tools, record.handle, max_chars=1000)
+
+    assert "".join(page["page"] for page in pages) == render(raw)
+    assert all(_sent(page) <= 1000 for page in pages), "a page of line breaks would otherwise arrive twice its size"
+
+
+async def test_reading_pages_masks_the_payload_once_and_again_when_it_changes(
+    tools: WebRouterTools, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    masked: list[Any] = []
+    real = raw_tool.mask_configured
+    monkeypatch.setattr(raw_tool, "mask_configured", lambda value: masked.append(value) or real(value))
+    record = tools.store.add(MCP_TOOL_RESEARCH, raw=REPORT)
+
+    pages = await _read_all(tools, record.handle, max_chars=1000)
+    assert len(pages) > 5 and len(masked) == 1
+
+    record.raw = {"answer": f"the finished report, which quotes {KEY}"}  # a research run that finished since
+    page = await ok_on(tools, MCP_TOOL_FETCH_RAW, handle=record.handle, offset=0)
+    assert page["page"] == render(record.raw) and len(masked) == 2
+
+    monkeypatch.setenv(ENV_BRAVE_API_KEY, KEY)  # a key added since (load_env) is masked in every page after
+    page = await ok_on(tools, MCP_TOOL_FETCH_RAW, handle=record.handle, offset=0)
+    assert KEY not in page["page"] and VENDOR_MASK in page["page"] and len(masked) == 3

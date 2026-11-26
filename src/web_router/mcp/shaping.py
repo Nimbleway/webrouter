@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import os
 from collections import OrderedDict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from web_router.constants import (
@@ -100,6 +100,8 @@ class Record:
     tool: str
     raw: Any = None
     job: ResearchJob | BrowseJob | None = None
+    pages: Any = field(default=None, repr=False, compare=False)
+    """``fetch_raw``'s masked JSON of ``raw``, kept while it is read in pages (:mod:`web_router.mcp.raw_tool`)."""
 
 
 class HandleStore:
