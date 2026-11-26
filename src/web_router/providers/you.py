@@ -33,6 +33,7 @@ from web_router.constants_you import (
     MSG_YOU_SEARCH_DOMAINS,
     MSG_YOU_SEARCH_VALUES,
     YOU_COUNTRIES,
+    YOU_DOMAIN_LIMITS,
     YOU_FRESHNESS_FIELD,
     YOU_RECENCY,
     YOU_SEARCH_PARAM_NAMES,
@@ -81,10 +82,14 @@ class YouProvider(HttpSearchProvider):
 
     @classmethod
     def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
-        """Both domain lists, a path in one, or a ``country`` or ``locale`` off its lists; MCP is held to them too."""
+        """Both domain lists, a path or too many entries in one, or a ``country`` or ``locale`` off its lists.
+
+        The MCP tool is held to them too.
+        """
         lists = {name: getattr(request, name) or [] for name in DOMAIN_LISTS}
         with_path = {name: domains for name, domains in lists.items() if any(map(_has_path, domains))}
-        return {**refused_domains(request), **with_path, **off_the_lists(request, YOU_COUNTRIES)}
+        too_long = {name: domains for name, domains in lists.items() if len(domains) > YOU_DOMAIN_LIMITS[name]}
+        return {**refused_domains(request), **with_path, **too_long, **off_the_lists(request, YOU_COUNTRIES)}
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         # A depth of None, or "lite" which needs no extraction, both map to None

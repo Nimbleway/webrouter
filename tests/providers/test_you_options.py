@@ -126,6 +126,19 @@ def test_a_domain_with_a_path_is_refused_unsent(
     assert not sent
 
 
+@pytest.mark.parametrize(("field", "limit"), [("include_domains", 500), ("exclude_domains", 5000)])
+def test_a_domain_list_past_its_limit_is_refused_unsent(
+    provider: YouProvider, transport: httpx.MockTransport, sent: list[httpx.Request], field: str, limit: int
+) -> None:
+    """Checked live: You.com answers one entry past the limit with an unexplained 422."""
+    provider = YouProvider(transport=transport)
+    domains = [f"site-{i}.com" for i in range(limit + 1)]
+    with pytest.raises(UnsupportedParameterError, match="at most 500 include_domains or 5,000 exclude_domains"):
+        provider.search(SearchRequest(query="hi", **{field: domains}))
+    assert YouProvider.refused_values(SearchRequest(query="hi", **{field: domains[:limit]})) == {}
+    assert not sent
+
+
 needs_key = pytest.mark.skipif(not os.getenv("YOU_API_KEY"), reason="YOU_API_KEY not set")
 
 

@@ -156,7 +156,7 @@ on to the next eligible backend.
 | Backend | Refused |
 | --- | --- |
 | Nimble | `recency` at `search_depth="lite"`, which does not filter by it |
-| You.com, You.com MCP | A `country` off its 36 codes; a `locale` off its 51-language list (`pt` or `zh` alone; give `pt-BR`, `zh-TW`); both domain lists at once; a path in either list (`github.com/python`, not `github.com`), since You.com matches both on the host alone |
+| You.com, You.com MCP | A `country` off its 36 codes; a `locale` off its 51-language list (`pt` or `zh` alone; give `pt-BR`, `zh-TW`); both domain lists at once; a path in either list (`github.com/python`, not `github.com`), since You.com matches both on the host alone; more than 500 `include_domains` or 5,000 `exclude_domains` |
 | Brave | A `country` off its 37 codes; a `locale` off the same language list; a query past 600 characters or 75 words with its `site:` operators |
 | Tavily | A `country` off the 166 it names, or with a `topic` other than general (`country` is a ranking boost there; `locale` is a filter) |
 | Parallel | A `country` off its 37 codes; both domain lists at once; more than 200 domains |

@@ -129,11 +129,17 @@ MSG_YOU_SEARCH_VALUES = (
 # Checked live on 2026-11-24 against the REST API: include_domains=["github.com/python"] returned the same 10
 # results as github.com, 2 of them under /python, and exclude_domains=["github.com/python"] dropped every
 # github.com result.
+YOU_DOMAIN_LIMITS: dict[str, int] = {"include_domains": 500, "exclude_domains": 5000}
+"""The most entries each domain list takes. Checked live on 2026-11-24: 500 and 5,000 were served with the last entry
+honored, and one more in either list answered 422 "invalid request parameter(s)"."""
+
 MSG_YOU_SEARCH_DOMAINS = (
     "You.com matches a domain filter on the host alone and ignores a path, so each entry must be a host name with no"
-    " path (github.com, not github.com/python); it also searches with one domain list, not both."
+    " path (github.com, not github.com/python); it also searches with one domain list, not both, of at most"
+    f" {YOU_DOMAIN_LIMITS['include_domains']:,} include_domains or {YOU_DOMAIN_LIMITS['exclude_domains']:,}"
+    " exclude_domains."
 )
-"""Why ``you`` refuses a domain with a path, or both domain lists at once; ``you-mcp`` refuses them too."""
+"""Why ``you`` refuses a domain with a path, both domain lists at once, or a list past its limit; ``you-mcp`` too."""
 
 # The MCP tool `you-search` (tools/list on api.you.com/mcp?profile=free, and
 # keyless calls on 2026-11-09): it has no country, language or include_domains
