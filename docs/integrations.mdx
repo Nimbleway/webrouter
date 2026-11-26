@@ -39,16 +39,30 @@ is [Adding a provider](https://github.com/Nimbleway/webrouter/blob/main/CONTRIBU
 ## LangChain
 
 `web_router.integrations.langchain` puts search and extract in front of a
-LangChain agent as two tools, `web_search` and `web_extract`:
+LangChain agent as two tools, `web_search` and `web_extract`. The `langchain`
+extra adds `langchain-core`, all the tools need; the agent loop and the model
+are your own install, here `langchain` and `langchain-openai`:
+
+```bash
+pip install "webrouter[langchain]" langchain langchain-openai
+```
 
 ```python
 from langchain.agents import create_agent
 from web_router import WebRouter
 from web_router.integrations.langchain import web_router_tools
 
-tools = web_router_tools(WebRouter(), provider="nimble", max_results=5)
+tools = web_router_tools(WebRouter(), max_results=5)
 agent = create_agent("openai:gpt-4.1", tools=tools)
 ```
+
+The tools need no API key; the model needs its own (`OPENAI_API_KEY` here).
+Each provider key you set adds that backend to the default routing, which tries
+it before the keyless ones.
+
+`provider="tavily"` sends every call to one backend, which then needs its key.
+A name that only searches leaves extract on the default routing;
+`extract_provider=` picks that one.
 
 Or build them one at a time — `WebRouterSearch(router=..., provider=...,
 max_results=..., search_depth=...)` and `WebRouterExtract(...)` — and pass
