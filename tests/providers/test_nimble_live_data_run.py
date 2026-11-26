@@ -153,3 +153,12 @@ def test_a_data_field_named_warnings_does_not_replace_nimbles_own(provider: Nimb
     response = to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
 
     assert response.extra["warnings"] == ["render is ignored because driver is configured"]
+
+
+def test_a_data_field_named_warnings_is_kept_when_nimble_sends_none(provider: NimbleLiveDataProvider) -> None:
+    payload = _run_payload(RECORD, warnings=None)
+    payload["data"]["warnings"] = ["x"]
+
+    response = to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
+
+    assert response.extra["warnings"] == ["x"]

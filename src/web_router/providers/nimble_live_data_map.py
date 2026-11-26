@@ -81,7 +81,7 @@ def to_response(provider: str, request: LiveDataRequest, payload: dict[str, Any]
                 "metadata": payload.get("metadata"),
                 "pagination": payload.get("pagination"),
                 **{k: v for k, v in data.items() if k not in ("parsing", *NIMBLE_EXTRACT_FORMATS.values())},
-                "warnings": warnings or None,
+                **({"warnings": warnings} if warnings else {}),
             }
         ),
         raw=payload,
