@@ -10,7 +10,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from web_router.constants import MCP_MIN_FIELD_CHARS, MCP_MSG_OVERSIZED, MCP_MSG_SAMPLES_OMITTED
+from web_router.constants import (
+    MCP_MIN_FIELD_CHARS,
+    MCP_MSG_DROPPED,
+    MCP_MSG_OVERSIZED,
+    MCP_MSG_SAMPLES_OMITTED,
+    MCP_MSG_TRUNCATED,
+)
 from web_router.mcp.shaping import _fit, redact, render
 from web_router.types_live_data import LiveDataResponse, LiveDataSource, LiveDataSourcePage
 
@@ -85,9 +91,9 @@ def shape_live_data(response: LiveDataResponse, handle: str, *, budget: int) -> 
 
     The records are what the caller asked for, shaped by the source's own
     schema; the page beside them, when one was asked for, is the one thing
-    long enough to cut. Records that do not fit are left out whole, with a
-    note naming the handle that holds them, and ``record_count`` still says
-    how many the run returned.
+    long enough to cut. Records that do not fit are left out whole, from the
+    end, with a note naming the handle that holds them, and ``record_count``
+    still says how many the run returned.
     """
     page = (
         {
@@ -112,7 +118,35 @@ def shape_live_data(response: LiveDataResponse, handle: str, *, budget: int) -> 
         "document": page,
     }
     fitted = _fit(payload, [page] if page is not None else [], ("content",), handle=handle, budget=budget)
+    _leading_records(fitted, handle=handle, budget=budget)
     return _bounded(fitted, ((payload, "records"),), handle=handle, budget=budget)
+
+
+def _leading_records(payload: dict[str, Any], *, handle: str, budget: int) -> None:
+    """Keep the most leading records that fit, at least one, saying how many were left out.
+
+    A listing's records are each whole, so the ones that fit are worth more
+    than none; a first record too large on its own is left to ``_bounded``,
+    which leaves it out with a pointer to the handle.
+    """
+    records, earlier = payload["records"], payload.get("note")
+    if len(records) < 2 or len(render(payload)) <= budget:
+        return
+
+    def keep(count: int) -> bool:
+        dropped = MCP_MSG_DROPPED.format(dropped=len(records) - count, total=len(records))
+        note = MCP_MSG_TRUNCATED.format(dropped=dropped, handle=handle)
+        payload["records"] = records[:count]
+        payload["note"] = f"{earlier} {note}" if earlier else note
+        return len(render(payload)) <= budget
+
+    payload["truncated"] = True
+    # The most that fit, found by halving: rendering once per record dropped is quadratic on a long listing.
+    low, high = 1, len(records) - 1
+    while low < high:
+        middle = (low + high + 1) // 2
+        low, high = (middle, high) if keep(middle) else (low, middle - 1)
+    keep(low)
 
 
 def _bounded(

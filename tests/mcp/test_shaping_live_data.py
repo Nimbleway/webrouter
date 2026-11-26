@@ -65,6 +65,36 @@ def test_a_record_that_fits_once_the_page_is_cut_is_kept() -> None:
     assert len(render(shaped)) <= 1_500
 
 
+def test_a_listing_over_budget_keeps_the_leading_records_that_fit_and_counts_the_rest() -> None:
+    """A category page's books: each is small, all of them are not, so the first ones stay rather than none."""
+    books = [
+        {"title": f"Book {index}", "price": 45.17, "rating": 2, "product_url": f"https://books.example/b/{index}"}
+        for index in range(200)
+    ]
+    response = LiveDataResponse(provider="fake", source="t", records=books)
+
+    shaped = shape_live_data(response, "live_data-0001", budget=3_000)
+
+    kept = shaped["records"]
+    assert 1 < len(kept) < len(books)
+    assert kept == books[: len(kept)], "the leading records, whole and in order"
+    assert shaped["record_count"] == 200
+    assert shaped["truncated"] is True
+    assert f"{200 - len(kept)} of 200" in shaped["note"] and "fetch_raw" in shaped["note"]
+    assert shaped["handle"] == "live_data-0001"
+    assert len(render(shaped)) <= 3_000
+    assert response.records == books, "the response itself is left whole"
+
+
+def test_a_listing_that_fits_is_returned_whole() -> None:
+    books = [{"title": f"Book {index}", "price": 45.17} for index in range(20)]
+
+    shaped = shape_live_data(LiveDataResponse(provider="fake", source="t", records=books), "h", budget=20_000)
+
+    assert shaped["records"] == books
+    assert shaped["truncated"] is False
+
+
 def test_a_described_template_carries_its_samples_whole() -> None:
     sample = LiveDataSample(input={"url": "https://example.com/p/1"}, output={"title": "Widget"})
     template = LiveDataSource(provider="fake", name="t", input_schema={"type": "object"}, samples=[sample])
