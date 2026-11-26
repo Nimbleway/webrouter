@@ -128,9 +128,10 @@ def test_a_domain_with_a_path_is_refused_unsent(
 
 @pytest.mark.parametrize(("field", "limit"), [("include_domains", 500), ("exclude_domains", 5000)])
 def test_a_domain_list_past_its_limit_is_refused_unsent(
-    provider: YouProvider, transport: httpx.MockTransport, sent: list[httpx.Request], field: str, limit: int
+    monkeypatch: pytest.MonkeyPatch, transport: httpx.MockTransport, sent: list[httpx.Request], field: str, limit: int
 ) -> None:
     """Checked live: You.com answers one entry past the limit with an unexplained 422."""
+    monkeypatch.setenv("YOU_API_KEY", "test-key")
     provider = YouProvider(transport=transport)
     domains = [f"site-{i}.com" for i in range(limit + 1)]
     with pytest.raises(UnsupportedParameterError, match="at most 500 include_domains or 5,000 exclude_domains"):
