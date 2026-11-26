@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ import pytest
 
 from web_router.exceptions import UnsupportedParameterError
 from web_router.exceptions_typed import ExtractFailedError
+from web_router.providers._clock import pinned_today
 from web_router.providers.apify import ApifyExtractProvider, ApifySearchProvider
 from web_router.types import ExtractRequest, SearchRequest
 
@@ -52,6 +54,12 @@ def test_search_maps_the_shared_options() -> None:
         "countryCode": "DE",
         "languageCode": "de",
     }
+
+
+def test_search_sends_recency_as_its_start_date() -> None:
+    with pinned_today(date(2026, 11, 9)):
+        payload = ApifySearchProvider()._build_payload(SearchRequest(query="q", recency="week"))
+    assert payload["dateFrom"] == "2026-11-02"
 
 
 def test_search_sends_a_bearer_token_to_the_server_interface() -> None:
