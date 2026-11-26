@@ -61,14 +61,14 @@ def to_response(provider: str, request: LiveDataRequest, payload: dict[str, Any]
         detail = MSG_LIVE_DATA_PAGE_FAILED.format(source=request.source, status=status_code)
         raise ProviderError(provider, "; ".join([detail, *(payload.get("warnings") or [])]))
 
-    record = _record(provider, request, data.get("parsing"))
+    records = _records(provider, request, data.get("parsing"))
     document = _document(request, payload, data)
 
     return LiveDataResponse(
         provider=provider,
         source=request.source,
         inputs=dict(request.inputs),
-        data=record,
+        records=records,
         url=payload.get("url"),
         document=document,
         status_code=_as_int(payload.get("status_code")),
@@ -84,6 +84,16 @@ def to_response(provider: str, request: LiveDataRequest, payload: dict[str, Any]
         ),
         raw=payload,
     )
+
+
+def _records(provider: str, request: LiveDataRequest, parsing: Any) -> list[dict[str, Any]]:
+    """Every record under ``data.parsing``: one for a single page, a list of them for a search or a listing.
+
+    Each item of a list is read as :func:`_record` reads a single one.
+    """
+    if isinstance(parsing, list) and parsing:
+        return [_record(provider, request, item) for item in parsing]
+    return [_record(provider, request, parsing)]
 
 
 def _record(provider: str, request: LiveDataRequest, parsing: Any) -> dict[str, Any]:
