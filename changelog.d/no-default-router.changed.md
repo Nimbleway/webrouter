@@ -1,0 +1,1 @@
+No router is attached by default any more (it was `rules`): `plan()`, `run()` and the MCP server's `web_run` search every prompt unless you attach one, so a URL in the prompt is no longer extracted. Pass `router="data-driven"`, or set `WEB_ROUTER_MCP_ROUTER=data-driven`, to pick the method from the trained table; it can plan billed research.

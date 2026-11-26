@@ -8,6 +8,7 @@ mapping here is shared with Parallel's answer provider.
 from __future__ import annotations
 
 from typing import Any, ClassVar
+from urllib.parse import quote
 
 import httpx
 
@@ -113,10 +114,15 @@ class ParallelResearchProvider(HttpResearchProvider):
         return await aread_or_running(lambda: self._aread(request, run), _run_id(run), _UNREAD)
 
     def _fetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
-        return self._read(request, self._get(self.status_path.format(run_id=job_id)))
+        return self._read(request, self._get(self._path(self.status_path, job_id)))
 
     async def _afetch(self, request: ResearchRequest, job_id: str) -> ResearchProgress:
-        return await self._aread(request, await self._aget(self.status_path.format(run_id=job_id)))
+        return await self._aread(request, await self._aget(self._path(self.status_path, job_id)))
+
+    @staticmethod
+    def _path(template: str, run_id: str) -> str:
+        """``template`` with the run id in it, quoted so an id cannot point the request elsewhere."""
+        return template.format(run_id=quote(run_id, safe=""))
 
     def _read(self, request: ResearchRequest, run: dict[str, Any]) -> ResearchProgress:
         """Fetch the answer of a run that has one, from whichever call reported it.
@@ -127,13 +133,13 @@ class ParallelResearchProvider(HttpResearchProvider):
         """
         if self._state(run) != "completed":
             return self._progress(run)
-        result = self._get(self.result_path.format(run_id=_run_id(run)))
+        result = self._get(self._path(self.result_path, _run_id(run)))
         return self._progress(run, self._to_response(request, run, result))
 
     async def _aread(self, request: ResearchRequest, run: dict[str, Any]) -> ResearchProgress:
         if self._state(run) != "completed":
             return self._progress(run)
-        result = await self._aget(self.result_path.format(run_id=_run_id(run)))
+        result = await self._aget(self._path(self.result_path, _run_id(run)))
         return self._progress(run, self._to_response(request, run, result))
 
     def _build_payload(self, request: ResearchRequest) -> dict[str, Any]:

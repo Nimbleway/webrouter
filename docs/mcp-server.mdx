@@ -8,8 +8,8 @@ A self-hosted stdio MCP server that gives an agent — Claude Code, Claude
 Desktop, Cursor, anything that speaks MCP — the methods this package
 routes: `search`, `extract`, `answer`, `research` and a vendor's live data (`live_data_sources`,
 `live_data_source`, `live_data`) — plus `browse` for a hosted browser agent, the
-`browser_*` tools for driving a browser yourself, and `web_run`, which picks the
-method for a request in words.
+`browser_*` tools for driving a browser yourself, and `web_run`, which runs a
+request in words.
 
 It runs as a subprocess of your own client, on your own machine, and reads your
 own credentials out of your own environment. There is no hosted service in the
@@ -357,7 +357,7 @@ in `WEB_ROUTER_MCP_TOOLS` to keep those tools visible in that setup.
 | `browse_status` | Poll a handle from `browse`: its state, or the answer and the agent's steps once it has one. | about a second, and free |
 | `fetch_raw` | The backend's full, unshaped payload for a handle from any of the above. | instant — nothing is called again |
 | `load_env` | Load provider keys from a `.env` file the user names, by path; see [above](#loading-keys-mid-conversation-load_env). | instant |
-| `web_run` | Hand a request in words to web-router's router, which picks the method and backends and runs it; `dry_run` returns the plan only. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). | as the method it picks |
+| `web_run` | Hand a request in words to web-router, which runs it: a search, or the method the operator's router picks; `dry_run` returns the plan only. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). | as the method it picks |
 | `budget_start` | Open a task budget, in dollars and seconds, that every billed tool then spends from. | instant |
 | `budget_status` | What the budget has spent, reserved and left. | instant, and free |
 | `data_apis` | Find a data API to call with the user's own account: with `query` ("google ads spend by campaign"), matching endpoints best first; without, the vendors in the catalog. Each row says whether its credentials are set here, and which variables to set when not. | instant, and free |
@@ -432,14 +432,13 @@ unchanged: `search`, `extract` and the rest never ask the router.
 The router is set by the operator -- whoever starts the server and sets its
 environment -- once, when the server starts:
 
-- unset, the built-in [data-driven router](https://docs.webrouter.net/smart-routing#the-data-driven-router)
-  (`data-driven`, also the library's default): it ranks web methods and search providers from bundled
+- `WEB_ROUTER_MCP_ROUTER=data-driven`, the built-in
+  [data-driven router](https://docs.webrouter.net/smart-routing#the-data-driven-router): it ranks web methods and search providers from bundled
   data without a routing model call, picking `search`, `extract` or `research`
   from the prompt's wording. `research` is billed per run and is picked for many how, why,
   compare, list and summarize requests; with no research backend configured,
   the next method runs, `extract` for a prompt with a URL, else `search`. It
-  needs no key and sends the prompt nowhere. `WEB_ROUTER_MCP_ROUTER=data-driven`
-  names it. Search backend ordering follows its measured provider table;
+  needs no key and sends the prompt nowhere. Search backend ordering follows its measured provider table;
   `WEB_ROUTER_MCP_ROUTER_CONFIG='{"prefer": "cheap"}'` selects its cost line, cheapest by the benchmark's prices.
   To let it pick `browse` too, set that together with
   `WEB_ROUTER_MCP_ROUTER_CONFIG='{"browse": true}'`: a config with no router
@@ -511,7 +510,7 @@ environment -- once, when the server starts:
   preset's host too, as the record does: `llm(api.openai.com)`,
   `systemone(api.typesafe.ai)`, `gemini(generativelanguage.googleapis.com)`. A value that is not
   a JSON object, or one set beside no built-in router, stops the server;
-- `WEB_ROUTER_MCP_ROUTER=off` attaches none: `web_run` then plans the static
+- unset, or `WEB_ROUTER_MCP_ROUTER=off`, no router, the default: `web_run` plans the static
   order, which is `search`.
 
 `WEB_ROUTER_MCP_ROUTER` imports and runs your code when the server starts, so
@@ -863,7 +862,9 @@ So a shaped result:
 - keeps the fields a reader acts on, and drops `description` where `content`
   already holds the same text;
 - caps the whole response at **8000 characters** (`WEB_ROUTER_MCP_MAX_CHARS`
-  overrides it);
+  overrides it). A finished research run gets five times that, 40,000 by
+  default, three quarters of it for the report: the report is what the run
+  was paid for, and a typical one is 10,000 to 40,000 characters;
 - cuts long text at a word boundary and marks the cut ` ... [truncated]`;
 - drops whole results from the end of a list only when trimming text is not
   enough, and never drops the last one;
@@ -1002,9 +1003,9 @@ the cloud browsers are.
 | `WEB_ROUTER_MCP_LOAD_ENV`, `WEB_ROUTER_MCP_REMEMBERED_ENV`, `WEB_ROUTER_MCP_CWD_ENV` | `off`, `anywhere`, `on` | Where keys may come from: what `load_env` may do, where a remembered `.env` is read, and whether the working directory's is. See [Using this safely with untrusted pages](#using-this-safely-with-untrusted-pages). |
 | `WEB_ROUTER_MCP_PRIVATE_URLS` | `off` | `on` lets the browser tools open loopback and private-network addresses. See [Where the browser may go](#where-the-browser-may-go). Read from the real environment only. |
 | `WEB_ROUTER_MCP_TOKEN` | unset | Under `--transport http`, the bearer token every request must carry; required on any host but `127.0.0.1`, `localhost` and `::1`. See [Serve over HTTP for a team](#serve-over-http-for-a-team). Read from the real environment only. |
-| `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be. An unreadable value, or one of zero or less, falls back to the default rather than stopping the server. |
+| `WEB_ROUTER_MCP_MAX_CHARS` | `8000` | How large one shaped tool result may be; a finished research run's may be five times as large. An unreadable value, or one of zero or less, falls back to the default rather than stopping the server. |
 | `WEB_ROUTER_MCP_ALLOW_FILE_URLS` | unset | `1` lets the browser tools open `file:` URLs. Off by default; see [Where the browser may go](#where-the-browser-may-go). |
-| `WEB_ROUTER_MCP_ROUTER` | the data-driven router | The router `web_run` plans with: `<module>:<attribute>`, `remote`, another built-in router such as `fallback`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
+| `WEB_ROUTER_MCP_ROUTER` | none: `web_run` searches | The router `web_run` plans with: `<module>:<attribute>`, `remote`, another built-in router such as `fallback`, or `off`. An empty value stops the server from starting. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). |
 | `WEB_ROUTER_MCP_ROUTER_CONFIG` | unset | With `WEB_ROUTER_MCP_ROUTER` naming a built-in router (or any name registered with `register_router` in the server's process, an override of a built-in name included), its `router_config` as a JSON object; each `api_key_env` in it is read once at startup and handed to the router as `api_key`, so a router's factory gets `api_key`, never `api_key_env`. Anything but a JSON object, or a value set beside no built-in router, stops the server from starting. Read from the real environment only. |
 | `WEB_ROUTER_REMOTE_ROUTER_URL` | unset | With `WEB_ROUTER_MCP_ROUTER=remote`, your router service's URL: `https`, or `http` to a loopback host. Missing, or any other URL, stops the server from starting. Read from the real environment only. |
 | `WEB_ROUTER_REMOTE_ROUTER_API_KEY` | unset | The bearer key sent to that service, never logged or shown. Read from the real environment only -- no `.env` file and no `load_env` call sets it. |

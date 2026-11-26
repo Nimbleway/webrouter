@@ -108,6 +108,6 @@ def shipped_table() -> ToolTable:
         table = manifest["tool_table"]
         return checked_table(manifest["version"], read_release(table["file"], sha256=table["sha256"]))
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
-        # The default router reads these on every construction: a stripped or damaged install says so plainly.
+        # The data-driven router reads these each time it is built: a stripped or damaged install says so plainly.
         why = MSG_DATA_DRIVEN_UNREADABLE.format(error=type(exc).__name__)
         raise ConfigurationError(MSG_DATA_DRIVEN_TABLE.format(why=why)) from exc

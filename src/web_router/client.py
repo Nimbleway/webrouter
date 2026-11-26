@@ -56,7 +56,6 @@ from web_router.client_vendors import AsyncVendors, DataApiCredentials, SyncVend
 from web_router.client_vendors_compat import renamed_credentials
 from web_router.client_warmup import AsyncWarmup, SyncWarmup
 from web_router.constants import BROWSE_TIMEOUT, DEFAULT_PROVIDER, MSG_SYNC_ROUTER_ASYNC_CLIENT, RESEARCH_TIMEOUT
-from web_router.constants_data_driven import DATA_DRIVEN_ROUTER_NAME
 from web_router.exceptions import ConfigurationError
 from web_router.provider_ids import check_provider_id
 from web_router.providers._pinning import backend_of
@@ -108,7 +107,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
-        router: RouterLike | str | None = DATA_DRIVEN_ROUTER_NAME,
+        router: RouterLike | str | None = None,
         router_config: Mapping[str, Any] | None = None,
         route_tools: Collection[ToolName] | None = None,
         route_modes: bool | None = None,
@@ -127,8 +126,9 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
                 This is the only place credentials are passed explicitly; everything else comes from the environment.
             router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
                 ask it (the router's own ``route_tools``, else all five) and if its failure raises (experimental):
-                ``"data-driven"`` unless set (:mod:`web_router.routing.data_driven`), ``None`` for none. A name builds a
-                registered router from ``router_config``, closed with this one (:mod:`web_router.routing.registry`).
+                none unless set, so ``plan()`` and ``run()`` search; ``"data-driven"`` names the built-in table router
+                (:mod:`web_router.routing.data_driven`). A name builds a registered router from ``router_config``,
+                closed with this one (:mod:`web_router.routing.registry`).
                 ``route_modes=True`` shows it a candidate per vendor mode too (the router's own, else no).
                 ``url_policy="public_only"`` refuses private hosts in a plan's or a router's URLs (experimental).
             data_api_credentials: for :meth:`call_data_api`, read before the environment; once ``vendor_credentials``.
@@ -286,7 +286,7 @@ class WebRouter(
         provider: str | Provider = DEFAULT_PROVIDER,
         *,
         provider_config: dict[str, dict[str, Any]] | None = None,
-        router: RouterLike | str | None = DATA_DRIVEN_ROUTER_NAME,
+        router: RouterLike | str | None = None,
         router_config: Mapping[str, Any] | None = None,
         route_tools: Collection[ToolName] | None = None,
         route_modes: bool | None = None,

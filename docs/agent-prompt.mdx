@@ -61,8 +61,9 @@ Choosing a tool:
   second run while the first is going — poll research_status or browse_status
   with the handle you were given; polling is free.
 - web_run, where it is offered, takes the request in words and lets the
-  server's router pick the method and the backends. The built-in router
-  picks search, extract or research from the request's wording. Research is
+  server's router pick the method and the backends. With no router set it
+  searches; the data-driven router, when the operator sets it, picks search,
+  extract or research from the request's wording. Research is
   billed per run and takes minutes, and a simple how, why, compare or list
   question can be planned as one: call search yourself when a search is what
   you want, or pass dry_run=true first. An operator's router may pick answer

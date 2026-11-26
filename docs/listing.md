@@ -28,8 +28,8 @@ submitting or updating one, so all of them say the same thing.
 WebRouter puts one typed interface in front of many web APIs and serves it as
 an MCP server. An agent gets `search`, `extract`, `answer`, `research`, a
 vendor's ready-made scrapers (`live_data`), a hosted browser agent (`browse`),
-browser sessions it drives itself (`browser_*`), and `web_run`, which picks the
-method for a request in words. Each tool behaves the same whichever backend
+browser sessions it drives itself (`browser_*`), and `web_run`, which runs a
+request in words. Each tool behaves the same whichever backend
 serves it, and `auto` falls back to the next backend when one fails; a research or
 browse job, once a backend accepts it, stays with that backend until it ends.
 

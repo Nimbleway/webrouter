@@ -23,6 +23,8 @@ from web_router.constants import (
     ENV_MCP_ENV_FILE,
     ENV_XDG_CONFIG_HOME,
 )
+from web_router.constants_data_driven import DATA_DRIVEN_ROUTER_NAME
+from web_router.constants_mcp import ENV_MCP_ROUTER
 from web_router.constants_mcp_env import MCP_ENV_SWITCHES
 from web_router.mcp.env_credentials import credential_variables
 from web_router.mcp.http_transport import HTTP_OFF_SWITCHES, http_env_defaults
@@ -158,6 +160,11 @@ def routed(ceiling: Budget | None = None, **environ: str) -> WebRouterTools:
     if ceiling is not None:
         routing = McpRouting(router=routing.router, router_name=routing.router_name, ceiling=ceiling)
     return WebRouterTools(routing.build(provider_config=CONFIG), routing=routing, research_wait=0.0)
+
+
+def data_driven() -> WebRouterTools:
+    """A session over the fake members with the operator's router set to ``data-driven``: none is the default."""
+    return routed(**{ENV_MCP_ROUTER: DATA_DRIVEN_ROUTER_NAME})
 
 
 async def outcome(tools: WebRouterTools, name: str, **arguments: Any) -> tuple[bool, Any]:

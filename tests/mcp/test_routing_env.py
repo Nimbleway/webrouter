@@ -75,6 +75,7 @@ async def test_load_env_never_sets_or_changes_the_ceiling_or_router(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, isolated_home: Path
 ) -> None:
     monkeypatch.setenv(ENV_MCP_MAX_COST_USD, "1.5")
+    monkeypatch.setenv(ENV_MCP_ROUTER, DATA_DRIVEN_ROUTER_NAME)
     tools = WebRouterTools()
     env_file = tmp_path / "keys.env"
     env_file.write_text(f"{ENV_MCP_MAX_COST_USD}=999\n{ENV_MCP_ROUTER}={MCP_ROUTER_OFF}\nTAVILY_API_KEY=k\n")
@@ -90,7 +91,7 @@ async def test_load_env_never_sets_or_changes_the_ceiling_or_router(
 def test_the_capabilities_routing_section() -> None:
     routing = routed(Budget(max_cost_usd=2.0, time_limit_s=600)).capabilities()["routing"]
     assert {key: routing[key] for key in ("router", "router_runs", "url_policy")} == {
-        "router": DATA_DRIVEN_ROUTER_NAME,
+        "router": MCP_ROUTER_OFF,
         "router_runs": "in_process",
         "url_policy": "public_only",
     }

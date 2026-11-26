@@ -10,7 +10,7 @@ set or change them, since :mod:`web_router.mcp.env` loads credentials only:
   with the bearer key ``WEB_ROUTER_REMOTE_ROUTER_API_KEY``, both read from the
   same environment; any other built-in router by name, such as ``fallback``,
   configured by ``WEB_ROUTER_MCP_ROUTER_CONFIG`` (:mod:`.routing_named`);
-  ``off`` for none. Unset, the built-in ``data-driven`` router (:mod:`web_router.routing.data_driven`).
+  ``off`` for none, as when unset: ``web_run`` then searches.
 - ``WEB_ROUTER_MCP_MAX_COST_USD`` and ``WEB_ROUTER_MCP_TIME_LIMIT_S``: the
   ceiling on one connection, held by :mod:`web_router.mcp.budget`.
 
@@ -77,10 +77,10 @@ from web_router.routing.registry import available_routers, is_builtin
 class McpRouting:
     """The server's routing as the operator set it: the router ``web_run`` plans with, and the ceiling.
 
-    The default is the built-in ``data-driven`` router, by name, as the clients' ``router="data-driven"`` builds it."""
+    The default is no router, as with the clients' ``router=None``: ``web_run`` searches every prompt."""
 
-    router: RouterLike | str | None = DATA_DRIVEN_ROUTER_NAME
-    router_name: str = DATA_DRIVEN_ROUTER_NAME
+    router: RouterLike | str | None = None
+    router_name: str = MCP_ROUTER_OFF
     """What the capabilities resource names it: ``data-driven``, ``off``, ``operator`` -- never the import path -- or
     ``remote(<scheme>://<host>)``, and a built-in router by its name and its services' hosts."""
     ceiling: Budget = field(default_factory=Budget)
