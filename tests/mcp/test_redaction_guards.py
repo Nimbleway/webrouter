@@ -7,6 +7,7 @@ the sweep must not run without the marker, and must still run with it.
 
 from __future__ import annotations
 
+import re
 import types
 
 import pytest
@@ -23,27 +24,14 @@ def test_a_page_without_the_marker_skips_the_devtools_sweep(monkeypatch: pytest.
     assert redaction.redact(text) == (text, 0)
 
 
-def test_a_marker_still_takes_the_sweep(monkeypatch: pytest.MonkeyPatch) -> None:
-    # No scheme on purpose: a :// URL carrying the marker is redacted by the URL
-    # rule first, so the marker is gone by the time the guard looks and the sweep
-    # never runs. A bare path is the case the guard must let through.
-    swept: list[str] = []
-    real = redaction._DEVTOOLS
-
-    class Recorder:
-        sub = staticmethod(real.sub)
-
-        @staticmethod
-        def subn(repl: str, string: str) -> tuple[str, int]:
-            swept.append(string)
-            return real.subn(repl, string)
-
-    monkeypatch.setattr(redaction, "_DEVTOOLS", Recorder)
-    text = "the /devtools/json endpoint was probed"
-    redacted, count = redaction.redact(text)
-    assert swept == [text], "the sweep did not run on a value that has the marker"
-    assert count == 1
-    assert "/devtools/" not in redacted
+def test_the_marker_is_the_literal_every_devtools_match_carries() -> None:
+    assert redaction._DEVTOOLS_MARKER in redaction._DEVTOOLS.pattern
+    assert not redaction._DEVTOOLS.flags & re.IGNORECASE
+    assert "(?i" not in redaction._DEVTOOLS.pattern
+    for text in ("127.0.0.1:9222/devtools/page/AB", "/devtools/browser/x", "host/DevTools/x"):
+        guarded = redaction.redact(text)
+        swept = redaction._DEVTOOLS.subn(redaction.MCP_REDACTED, text)
+        assert guarded == swept, text
 
 
 def test_classify_answers_a_repeated_field_name_from_cache() -> None:
