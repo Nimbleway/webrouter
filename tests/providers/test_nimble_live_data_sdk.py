@@ -101,6 +101,26 @@ def test_run_list_and_describe_through_the_sdk_client(monkeypatch: pytest.Monkey
     assert caught.value.template == "gone" and isinstance(caught.value, ProviderError)
 
 
+def test_a_listing_comes_back_as_its_records_and_nothing_the_api_did_not_send(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A search or listing template answers with a list; each item is read as a single record is, as sent."""
+    second = {**RECORD, "title": "Tipping the Velvet"}
+
+    class _ListingApi(_Api):
+        def handle(self, request: httpx.Request) -> httpx.Response:
+            self.requests.append(request)
+            return httpx.Response(200, json=_run_payload([RECORD, {"status": "success", "entities": second}]))
+
+    provider = _ListingApi().sync_provider(monkeypatch)
+    try:
+        response = provider.run(LiveDataRequest(source=TEMPLATE))
+    finally:
+        provider.close()
+
+    assert response.records == [RECORD, second]
+
+
 def test_a_run_on_an_unknown_template_is_the_same_not_found_error(monkeypatch: pytest.MonkeyPatch) -> None:
     class _NoSuchTemplateApi(_Api):
         def handle(self, request: httpx.Request) -> httpx.Response:

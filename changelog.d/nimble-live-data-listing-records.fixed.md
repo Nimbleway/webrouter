@@ -1,0 +1,1 @@
+A Nimble `live_data()` run of a search or listing Extract Template now returns every record the template parsed in `records`, in order. It used to raise "answered without a record" whenever Nimble sent a list of records.
