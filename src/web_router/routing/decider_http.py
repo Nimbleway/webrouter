@@ -16,10 +16,10 @@ code, and with ``fail_on_router_error=True`` this error is the ``RouterError``'s
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass, field
 from typing import Any
 
+from web_router._environment import env_value
 from web_router._urls import host_of
 from web_router.constants_decider import (
     DECIDER_MAX_RESPONSE_BYTES,
@@ -84,7 +84,7 @@ def _key(name: str, host: str, api_key: object, api_key_env: object) -> str | No
         home = KEY_HOMES.get(api_key_env)
         if home is not None and home != host:
             raise ConfigurationError(MSG_DECIDER_KEY_HOME.format(name=name, env=api_key_env, home=home))
-        api_key = os.environ.get(api_key_env)
+        api_key = env_value(api_key_env)
         if not api_key:
             raise ConfigurationError(MSG_DECIDER_KEY_UNSET.format(name=name, env=api_key_env))
     if not visible_ascii(api_key) or not api_key:

@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import contextlib
 import json
-import os
 from collections.abc import Generator
 from typing import Any, ClassVar
 from urllib.parse import urlsplit
@@ -33,6 +32,7 @@ from urllib.parse import urlsplit
 import httpx
 from botocore.session import get_session
 
+from web_router._environment import env_value
 from web_router.constants import (
     ENV_AGENTCORE_GATEWAY_URL,
     MCP_JSONRPC_VERSION,
@@ -105,7 +105,7 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
         """
         # Checked when called, not here: a provider is built by auto, or by a
         # test, on machines with no gateway at all.
-        self._gateway_url = (gateway_url or os.environ.get(ENV_AGENTCORE_GATEWAY_URL) or "").strip()
+        self._gateway_url = (gateway_url or "").strip() or env_value(ENV_AGENTCORE_GATEWAY_URL)
         try:
             parts = urlsplit(self._gateway_url)
             self._host = parts.hostname or ""

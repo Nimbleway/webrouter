@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable, Mapping
 from typing import Any, Protocol, TypeVar, cast, runtime_checkable
 
 from pydantic import BaseModel
 
+from web_router._environment import env_value
 from web_router.constants import (
     BROWSER_FIELD_CASES,
     BROWSER_SECONDS_PARAMETERS,
@@ -34,8 +34,8 @@ _V = TypeVar("_V")
 
 
 def _explicit_or_env(value: str | None, env_var: str) -> str:
-    """The explicit value, else the one in ``env_var``, stripped; empty when neither has more than whitespace."""
-    return (value or "").strip() or (os.environ.get(env_var) or "").strip()
+    """The explicit value, else the one in ``env_var`` where the environment is read, stripped; else empty."""
+    return (value or "").strip() or env_value(env_var)
 
 
 def credential_given(value: str | None, env_var: str) -> bool:

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import Mapping
 
+from web_router._environment import env_value
 from web_router.constants import (
     BROWSE_ENV_BY_PROVIDER,
     BROWSER_ENV_BY_PROVIDER,
@@ -19,8 +19,11 @@ from web_router.constants_live_data import LIVE_DATA_CREDENTIAL_SETS
 
 
 def is_set(env_var: str) -> bool:
-    """Whether ``env_var`` holds a value, counting whitespace-only as unset, as the providers do."""
-    return bool((os.environ.get(env_var) or "").strip())
+    """Whether ``env_var`` holds a value, counting whitespace-only as unset, as the providers do.
+
+    Never, inside a router built with ``use_environment=False``: see :mod:`web_router._environment`.
+    """
+    return bool(env_value(env_var))
 
 
 def configured_providers() -> list[str]:

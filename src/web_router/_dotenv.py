@@ -13,8 +13,14 @@ import re
 import shlex
 from pathlib import Path
 
+from web_router._environment import reads_environment
 from web_router.constants import MCP_ENV_FILE_MAX_BYTES
-from web_router.constants_dotenv import DOTENV_FILENAME, MSG_DOTENV_NOT_READ, MSG_DOTENV_PREFIX
+from web_router.constants_dotenv import (
+    DOTENV_FILENAME,
+    MSG_DOTENV_NOT_READ,
+    MSG_DOTENV_PREFIX,
+    MSG_ENVIRONMENT_UNREAD,
+)
 
 _ASSIGNMENT = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$")
 _VARIABLE = re.compile(r"\b[A-Z][A-Z0-9]*_[A-Z0-9_]+\b")  # an underscore, so "API" in "No API key" is not one
@@ -68,7 +74,16 @@ def dotenv_hint(message: str, start: Path | None = None) -> str:
 
 
 def with_dotenv_hint(args: tuple[object, ...]) -> tuple[object, ...]:
-    """``args`` with the hint appended when they are a single message string."""
+    """``args`` with the hint appended when they are a single message string.
+
+    Raised where no environment is read -- a router built with ``use_environment=False`` -- an error naming a
+    variable says that instead: setting it, or loading a ``.env``, would change nothing.
+    """
     if len(args) == 1 and isinstance(args[0], str):
-        return (args[0] + dotenv_hint(args[0]),)
+        return (args[0] + (dotenv_hint(args[0]) if reads_environment() else _unread_hint(args[0])),)
     return args
+
+
+def _unread_hint(message: str) -> str:
+    """:data:`MSG_ENVIRONMENT_UNREAD` for a message naming a variable and not saying so already, or ""."""
+    return MSG_ENVIRONMENT_UNREAD if _VARIABLE.search(message) and MSG_ENVIRONMENT_UNREAD not in message else ""

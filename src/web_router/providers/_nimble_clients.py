@@ -167,7 +167,8 @@ class _NimbleKeyless(_NimbleClients):
         # A spent daily cap answers 429; retrying it only delays the fallback to the next keyless backend.
         if self._keyless:
             self.options = {"max_retries": 0, **self.options}
-        super()._connect(api_key, async_client)
+        # The SDK reads NIMBLE_API_KEY for a None: an empty key keeps it out of a client that reads no environment.
+        super()._connect("" if self._keyless and not self.reads_environment else api_key, async_client)
 
     def _authed(self, payload: dict[str, Any]) -> dict[str, Any]:
         """``payload``, keyless, with the key's header omitted beside any ``extra_headers`` the caller set."""

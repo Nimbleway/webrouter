@@ -6,9 +6,9 @@ The URL has a module of its own, :mod:`.remote_url`.
 from __future__ import annotations
 
 import math
-import os
 from typing import Any, TypeGuard
 
+from web_router._environment import env_value
 from web_router.constants_remote import (
     ENV_REMOTE_ROUTER_API_KEY,
     EXTRA_REMOTE,
@@ -49,7 +49,7 @@ def bearer_key(api_key: object) -> str | None:
     A key that is not visible ASCII is refused now, never echoed: as a header it would fail every call, and a
     non-ASCII one would carry the whole ``Authorization`` value in its ``UnicodeEncodeError``.
     """
-    key = os.environ.get(ENV_REMOTE_ROUTER_API_KEY) if api_key is None else api_key
+    key = (env_value(ENV_REMOTE_ROUTER_API_KEY) or None) if api_key is None else api_key
     if key is not None and not visible_ascii(key):
         raise ConfigurationError(MSG_REMOTE_KEY)
     return key or None

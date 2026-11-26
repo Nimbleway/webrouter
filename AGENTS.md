@@ -1658,7 +1658,9 @@ from the environment (`NIMBLE_API_KEY`, `TAVILY_API_KEY`, `YOU_API_KEY`,
 `OXYLABS_PASSWORD`, `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE`,
 `STEEL_API_KEY`, `BROWSERBASE_API_KEY`, `HYPERBROWSER_API_KEY`,
 `ANCHOR_API_KEY`, `KERNEL_API_KEY`, `BROWSER_USE_API_KEY`, `SKYVERN_API_KEY`, and the optional
-`JINA_API_KEY`) or from `provider_config` at construction. `agentcore` reads
+`JINA_API_KEY`) or from `provider_config` at construction; a router built with `use_environment=False`
+takes them from `provider_config` only, through the context switch in `_environment.py` that every
+key and setting read consults (`env_value`). `agentcore` reads
 `AGENTCORE_GATEWAY_URL`, which is not a secret; its credential is the AWS one
 botocore resolves, never a key of ours. `.env.example` lists
 every one, beside `CHROME_PATH` and `OBSCURA_PATH`, paths for `local` and `obscura` rather than
