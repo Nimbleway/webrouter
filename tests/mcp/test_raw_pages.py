@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import pytest
@@ -95,8 +96,30 @@ async def test_a_key_is_masked_before_the_payload_is_cut_into_pages(monkeypatch:
 
 @pytest.mark.parametrize(
     "arguments",
-    [{"offset": -1}, {"max_chars": 0}, {"max_chars": 5}, {"offset": "10"}, {"offset": True}, {"offset": 10**9}],
-    ids=["negative-offset", "zero-size", "smaller-than-one-escaped-character", "string", "bool", "past-the-end"],
+    [
+        {"offset": -1},
+        {"max_chars": 0},
+        {"max_chars": 5},
+        {"offset": "10"},
+        {"offset": True},
+        {"offset": 10**9},
+        {"offset": math.nan},
+        {"offset": math.inf},
+        {"max_chars": math.nan},
+        {"max_chars": math.inf},
+    ],
+    ids=[
+        "negative-offset",
+        "zero-size",
+        "smaller-than-one-escaped-character",
+        "string",
+        "bool",
+        "past-the-end",
+        "nan-offset",
+        "infinite-offset",
+        "nan-size",
+        "infinite-size",
+    ],
 )
 async def test_a_page_argument_it_cannot_serve_is_refused_with_a_reason(
     tools: WebRouterTools, arguments: dict[str, Any]
