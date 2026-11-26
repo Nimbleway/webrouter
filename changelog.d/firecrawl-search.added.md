@@ -1,1 +1,0 @@
-Firecrawl now searches as well as extracts: `search(provider="firecrawl")` calls its `/v2/search`, maps `max_results` and `search_depth` (`lite`, or `deep` for each result's page as markdown), and runs keyless with `allow_keyless`. `auto` appends it after the keyless tier when `FIRECRAWL_API_KEY` is set.

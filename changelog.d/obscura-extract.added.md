@@ -1,1 +1,0 @@
-New opt-in `obscura` extract backend: runs the open-source Obscura headless browser on your machine, so pages that only render in JavaScript can be read with no key, no Chromium and no vendor call. Name it with `provider="obscura"` once the binary is on `PATH` or in `OBSCURA_PATH`; it is in no `auto` chain.
