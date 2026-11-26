@@ -1,0 +1,771 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "WebRouter",
+  "description": "An open source standard that connects your agent to the internet.",
+  "colors": {
+    "primary": "#202c26",
+    "light": "#d1ddbf",
+    "dark": "#202c26"
+  },
+  "background": {
+    "color": {
+      "light": "#eeeadd",
+      "dark": "#14251e"
+    }
+  },
+  "fonts": {
+    "heading": {
+      "family": "Courier Prime",
+      "weight": 700
+    },
+    "body": {
+      "family": "Inter"
+    }
+  },
+  "appearance": {
+    "default": "system"
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "favicon": "/logo/favicon.png",
+  "banner": {
+    "content": "**Developer preview:** the API may change before 1.0. Share feedback on [Discord](https://discord.gg/MGztFWSjZh).",
+    "dismissible": true
+  },
+  "navbar": {
+    "links": [
+      {
+        "type": "discord",
+        "href": "https://discord.gg/MGztFWSjZh"
+      }
+    ],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/Nimbleway/webrouter"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "index",
+              "quickstart",
+              "how-it-works",
+              "providers",
+              "free-web-access"
+            ]
+          },
+          {
+            "group": "Methods",
+            "pages": [
+              "search",
+              "extract",
+              "answer",
+              "research",
+              "live-data",
+              "vendors",
+              "browser"
+            ]
+          },
+          {
+            "group": "Agents and routing",
+            "pages": [
+              "mcp-server",
+              "cli",
+              "integrations",
+              "agent-prompt",
+              "budgets",
+              "smart-routing",
+              "vendor-modes"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "production",
+              "benchmarks",
+              "custom-providers"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "configuration",
+              "errors"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Web Catalog",
+        "groups": [
+          {
+            "group": "Web Catalog",
+            "pages": [
+              "data-apis",
+              {
+                "group": "Advertising",
+                "expanded": false,
+                "pages": [
+                  "data-apis/adyntel",
+                  "data-apis/foreplay",
+                  "data-apis/google-ads",
+                  "data-apis/meta-ad-library",
+                  "data-apis/meta-ads",
+                  "data-apis/pinterest-ads",
+                  "data-apis/snapchat-ads",
+                  "data-apis/tiktok-ads",
+                  "data-apis/upspring"
+                ]
+              },
+              {
+                "group": "Analytics",
+                "expanded": false,
+                "pages": [
+                  "data-apis/affinity",
+                  "data-apis/amplitude",
+                  "data-apis/attio",
+                  "data-apis/close-crm",
+                  "data-apis/cloudflare",
+                  "data-apis/google-analytics",
+                  "data-apis/google-tag-manager",
+                  "data-apis/hubspot",
+                  "data-apis/klaviyo",
+                  "data-apis/mixpanel",
+                  "data-apis/pipedrive",
+                  "data-apis/posthog",
+                  "data-apis/similarweb",
+                  "data-apis/snitcher"
+                ]
+              },
+              {
+                "group": "SEO",
+                "expanded": false,
+                "pages": [
+                  "data-apis/advanced-web-ranking",
+                  "data-apis/ahrefs",
+                  "data-apis/bing-webmaster",
+                  "data-apis/chrome-ux-report",
+                  "data-apis/cloro",
+                  "data-apis/dataforseo",
+                  "data-apis/google-pagespeed-insights",
+                  "data-apis/google-search-console",
+                  "data-apis/keywordseverywhere",
+                  "data-apis/majestic",
+                  "data-apis/mangools",
+                  "data-apis/moz",
+                  "data-apis/seranking",
+                  "data-apis/semrush",
+                  "data-apis/serpstat",
+                  "data-apis/spyfu"
+                ]
+              },
+              {
+                "group": "Social",
+                "expanded": false,
+                "pages": [
+                  "data-apis/anyapi",
+                  "data-apis/dev-to",
+                  "data-apis/edges",
+                  "data-apis/facebook",
+                  "data-apis/fastmoss",
+                  "data-apis/fetchinio",
+                  "data-apis/harvestapi",
+                  "data-apis/influencersclub",
+                  "data-apis/instagram",
+                  "data-apis/justoneapi",
+                  "data-apis/linkedin",
+                  "data-apis/mention",
+                  "data-apis/moltbook",
+                  "data-apis/postiz",
+                  "data-apis/scrapecreators",
+                  "data-apis/soundcloud",
+                  "data-apis/sprout-social",
+                  "data-apis/stackexchange",
+                  "data-apis/tikhub",
+                  "data-apis/tiktok",
+                  "data-apis/twitterscore",
+                  "data-apis/x",
+                  "data-apis/youtube"
+                ]
+              },
+              {
+                "group": "Enrichment",
+                "expanded": false,
+                "pages": [
+                  "data-apis/aiark",
+                  "data-apis/airscale",
+                  "data-apis/anymailfinder",
+                  "data-apis/apollo",
+                  "data-apis/bettercontact",
+                  "data-apis/blitzapi",
+                  "data-apis/captaindata",
+                  "data-apis/clado",
+                  "data-apis/clay",
+                  "data-apis/contactout",
+                  "data-apis/datalegion",
+                  "data-apis/datagma",
+                  "data-apis/dropcontact",
+                  "data-apis/dropleads",
+                  "data-apis/enrichlayer",
+                  "data-apis/enrow",
+                  "data-apis/findymail",
+                  "data-apis/forager",
+                  "data-apis/fullenrich",
+                  "data-apis/getleadsio",
+                  "data-apis/getprospect",
+                  "data-apis/happenstance",
+                  "data-apis/hunter",
+                  "data-apis/icypeas",
+                  "data-apis/leadmagic",
+                  "data-apis/leadocean",
+                  "data-apis/leadsforge",
+                  "data-apis/lusha",
+                  "data-apis/moltsets",
+                  "data-apis/nyne",
+                  "data-apis/pdl",
+                  "data-apis/prospeo",
+                  "data-apis/quickenrich",
+                  "data-apis/reverse-contact",
+                  "data-apis/rocketreach",
+                  "data-apis/salesintel",
+                  "data-apis/salesql",
+                  "data-apis/seamless-ai",
+                  "data-apis/signalhire",
+                  "data-apis/sixtyfour",
+                  "data-apis/skrapp",
+                  "data-apis/tomba",
+                  "data-apis/uplead",
+                  "data-apis/village",
+                  "data-apis/whitepages",
+                  "data-apis/wiza",
+                  "data-apis/zoominfo"
+                ]
+              },
+              {
+                "group": "Verification",
+                "expanded": false,
+                "pages": [
+                  "data-apis/bounceban",
+                  "data-apis/bouncer",
+                  "data-apis/debounce",
+                  "data-apis/didit",
+                  "data-apis/emaillistverify",
+                  "data-apis/filtrat",
+                  "data-apis/hlrlookup",
+                  "data-apis/ipqualityscore",
+                  "data-apis/kickbox",
+                  "data-apis/trykitt",
+                  "data-apis/mailgun",
+                  "data-apis/millionverifier",
+                  "data-apis/neutrino-api",
+                  "data-apis/orbisearch",
+                  "data-apis/reoon",
+                  "data-apis/scrubby",
+                  "data-apis/trestleiq",
+                  "data-apis/zerobounce"
+                ]
+              },
+              {
+                "group": "Company data",
+                "expanded": false,
+                "pages": [
+                  "data-apis/adzuna",
+                  "data-apis/akta",
+                  "data-apis/albacross",
+                  "data-apis/recherche-entreprises",
+                  "data-apis/ashby",
+                  "data-apis/aviato",
+                  "data-apis/brandfetch",
+                  "data-apis/brreg",
+                  "data-apis/builtwith",
+                  "data-apis/cnpja",
+                  "data-apis/companies-house",
+                  "data-apis/companyenrich",
+                  "data-apis/trade-gov",
+                  "data-apis/branddev",
+                  "data-apis/coresignal",
+                  "data-apis/corpoapi",
+                  "data-apis/crunchbase",
+                  "data-apis/crustdata",
+                  "data-apis/diffbot",
+                  "data-apis/engagemii",
+                  "data-apis/explorium",
+                  "data-apis/extruct",
+                  "data-apis/fantasticjobs",
+                  "data-apis/fiber-ai",
+                  "data-apis/prh",
+                  "data-apis/fmcsa",
+                  "data-apis/fundable",
+                  "data-apis/gleif",
+                  "data-apis/greenhouse",
+                  "data-apis/handelsregister-ai",
+                  "data-apis/harmonic",
+                  "data-apis/hg-insights",
+                  "data-apis/lever",
+                  "data-apis/limadata",
+                  "data-apis/oceanio",
+                  "data-apis/opencorporates",
+                  "data-apis/openfunnel",
+                  "data-apis/openmart",
+                  "data-apis/openregister",
+                  "data-apis/origami",
+                  "data-apis/pappers",
+                  "data-apis/predictleads",
+                  "data-apis/recentfunding",
+                  "data-apis/rpvs",
+                  "data-apis/signalbase",
+                  "data-apis/smartrecruiters",
+                  "data-apis/societe-com",
+                  "data-apis/sumble",
+                  "data-apis/thecompaniesapi",
+                  "data-apis/theirstack",
+                  "data-apis/voygr",
+                  "data-apis/wappalyzer",
+                  "data-apis/workable"
+                ]
+              },
+              {
+                "group": "Finance",
+                "expanded": false,
+                "pages": [
+                  "data-apis/alchemy",
+                  "data-apis/alphavantage",
+                  "data-apis/bcb",
+                  "data-apis/bankofcanada",
+                  "data-apis/bankofengland",
+                  "data-apis/benzinga",
+                  "data-apis/binance",
+                  "data-apis/coinbase-exchange",
+                  "data-apis/coingecko",
+                  "data-apis/coinmarketcap",
+                  "data-apis/commoditypriceapi",
+                  "data-apis/cryptocompare",
+                  "data-apis/currencylayer",
+                  "data-apis/defillama",
+                  "data-apis/dune",
+                  "data-apis/edinet",
+                  "data-apis/eodhd",
+                  "data-apis/etherscan",
+                  "data-apis/ethplorer",
+                  "data-apis/ecb",
+                  "data-apis/eurostat",
+                  "data-apis/exchangerate-host",
+                  "data-apis/fdic",
+                  "data-apis/newyorkfed",
+                  "data-apis/financialdatasets",
+                  "data-apis/fmp",
+                  "data-apis/finnhub",
+                  "data-apis/finra",
+                  "data-apis/fiscal-ai",
+                  "data-apis/fixer",
+                  "data-apis/fred",
+                  "data-apis/glassnode",
+                  "data-apis/goldrush",
+                  "data-apis/hyperliquid",
+                  "data-apis/ibge",
+                  "data-apis/intrinio",
+                  "data-apis/kalshi",
+                  "data-apis/marketstack",
+                  "data-apis/mempool-space",
+                  "data-apis/moralis",
+                  "data-apis/nasdaq-data-link",
+                  "data-apis/oanda",
+                  "data-apis/open-exchange-rates",
+                  "data-apis/polygon",
+                  "data-apis/polymarket",
+                  "data-apis/sec-api",
+                  "data-apis/sec-edgar",
+                  "data-apis/statcan",
+                  "data-apis/stripe",
+                  "data-apis/tiingo",
+                  "data-apis/twelvedata",
+                  "data-apis/un-comtrade",
+                  "data-apis/bea",
+                  "data-apis/bls",
+                  "data-apis/cftc",
+                  "data-apis/eia",
+                  "data-apis/treasury-fiscal-data",
+                  "data-apis/wise",
+                  "data-apis/worldbank"
+                ]
+              },
+              {
+                "group": "Search",
+                "expanded": false,
+                "pages": [
+                  "data-apis/andi",
+                  "data-apis/itunes-search",
+                  "data-apis/atly",
+                  "data-apis/bravesearch",
+                  "data-apis/byteplus-search",
+                  "data-apis/dappier",
+                  "data-apis/event-registry",
+                  "data-apis/exa",
+                  "data-apis/gdelt",
+                  "data-apis/hn-algolia",
+                  "data-apis/internet-archive",
+                  "data-apis/loc-gov",
+                  "data-apis/linkup",
+                  "data-apis/litescrape",
+                  "data-apis/newsapi",
+                  "data-apis/newsdata",
+                  "data-apis/octen",
+                  "data-apis/opoint",
+                  "data-apis/parallel",
+                  "data-apis/querit",
+                  "data-apis/search1api",
+                  "data-apis/searchapi",
+                  "data-apis/seltz",
+                  "data-apis/serpapi",
+                  "data-apis/tako",
+                  "data-apis/tavily",
+                  "data-apis/valyu",
+                  "data-apis/wikipedia",
+                  "data-apis/you"
+                ]
+              },
+              {
+                "group": "Scraping",
+                "expanded": false,
+                "pages": [
+                  "data-apis/apify",
+                  "data-apis/brightdata",
+                  "data-apis/browseruse",
+                  "data-apis/crawl4ai",
+                  "data-apis/decodo",
+                  "data-apis/firecrawl",
+                  "data-apis/joinmassive",
+                  "data-apis/notte",
+                  "data-apis/olostep",
+                  "data-apis/outscraper",
+                  "data-apis/riveter",
+                  "data-apis/scrapegraphai",
+                  "data-apis/screenshotone",
+                  "data-apis/spidercloud",
+                  "data-apis/supadata",
+                  "data-apis/tinyfish"
+                ]
+              },
+              {
+                "group": "AI",
+                "expanded": false,
+                "pages": [
+                  "data-apis/artificial-analysis",
+                  "data-apis/huggingface",
+                  "data-apis/wolframalpha"
+                ]
+              },
+              {
+                "group": "Media",
+                "expanded": false,
+                "pages": [
+                  "data-apis/ambientcg",
+                  "data-apis/bible-api",
+                  "data-apis/ccmixter",
+                  "data-apis/discogs",
+                  "data-apis/helloao-bible",
+                  "data-apis/listennotes",
+                  "data-apis/mux",
+                  "data-apis/nasa-images",
+                  "data-apis/openverse",
+                  "data-apis/pexels",
+                  "data-apis/polyhaven",
+                  "data-apis/sefaria",
+                  "data-apis/sketchfab",
+                  "data-apis/tmdb",
+                  "data-apis/unsplash"
+                ]
+              },
+              {
+                "group": "Messaging",
+                "expanded": false,
+                "pages": [
+                  "data-apis/agentmail",
+                  "data-apis/agentphone",
+                  "data-apis/resend",
+                  "data-apis/saperly",
+                  "data-apis/sendgrid",
+                  "data-apis/slack",
+                  "data-apis/telnyx",
+                  "data-apis/twilio",
+                  "data-apis/vapi"
+                ]
+              },
+              {
+                "group": "Productivity",
+                "expanded": false,
+                "pages": [
+                  "data-apis/google-calendar",
+                  "data-apis/google-drive",
+                  "data-apis/microsoft-graph"
+                ]
+              },
+              {
+                "group": "Commerce",
+                "expanded": false,
+                "pages": [
+                  "data-apis/attom",
+                  "data-apis/bestbuy",
+                  "data-apis/carsxe",
+                  "data-apis/duffel",
+                  "data-apis/etsy",
+                  "data-apis/flightaware",
+                  "data-apis/keepa",
+                  "data-apis/rainforest",
+                  "data-apis/ridb",
+                  "data-apis/rentcast",
+                  "data-apis/servosaver",
+                  "data-apis/shippo",
+                  "data-apis/steam",
+                  "data-apis/ticketmaster",
+                  "data-apis/wafuelwatch"
+                ]
+              },
+              {
+                "group": "Maps",
+                "expanded": false,
+                "pages": [
+                  "data-apis/abstract-api",
+                  "data-apis/amap",
+                  "data-apis/apininjas",
+                  "data-apis/arcgis",
+                  "data-apis/foursquare",
+                  "data-apis/geoapify",
+                  "data-apis/google-business-profile",
+                  "data-apis/google-maps",
+                  "data-apis/graphhopper",
+                  "data-apis/here-maps",
+                  "data-apis/internetdata",
+                  "data-apis/ip2location-io",
+                  "data-apis/ipapiis",
+                  "data-apis/ipdata",
+                  "data-apis/ipinfo",
+                  "data-apis/ipregistry",
+                  "data-apis/mapbox",
+                  "data-apis/mapillary",
+                  "data-apis/maxmind",
+                  "data-apis/opencage",
+                  "data-apis/tomtom",
+                  "data-apis/yelp"
+                ]
+              },
+              {
+                "group": "Environment",
+                "expanded": false,
+                "pages": [
+                  "data-apis/rcc-acis",
+                  "data-apis/environmentagency",
+                  "data-apis/eccc-geomet",
+                  "data-apis/gdacs",
+                  "data-apis/nasapower",
+                  "data-apis/nhc",
+                  "data-apis/openmeteo",
+                  "data-apis/openweather",
+                  "data-apis/precip",
+                  "data-apis/tomorrow-io",
+                  "data-apis/usdroughtmonitor",
+                  "data-apis/nws",
+                  "data-apis/usgs-earthquake",
+                  "data-apis/usgswater",
+                  "data-apis/weatherapi"
+                ]
+              },
+              {
+                "group": "Science",
+                "expanded": false,
+                "pages": [
+                  "data-apis/alphafold",
+                  "data-apis/arxiv",
+                  "data-apis/chembl",
+                  "data-apis/crossref",
+                  "data-apis/doi",
+                  "data-apis/europepmc",
+                  "data-apis/gnomad",
+                  "data-apis/gtex",
+                  "data-apis/harvard-dataverse",
+                  "data-apis/hgnc",
+                  "data-apis/proteinatlas",
+                  "data-apis/morphosource",
+                  "data-apis/nih-reporter",
+                  "data-apis/opentargets",
+                  "data-apis/openalex",
+                  "data-apis/pubmed",
+                  "data-apis/rcsb-pdb",
+                  "data-apis/reactome",
+                  "data-apis/semanticscholar",
+                  "data-apis/springer-nature",
+                  "data-apis/string-db",
+                  "data-apis/uniprot",
+                  "data-apis/wikidata"
+                ]
+              },
+              {
+                "group": "Health",
+                "expanded": false,
+                "pages": [
+                  "data-apis/bcpmdata",
+                  "data-apis/health-canada-cnf",
+                  "data-apis/clinicaltrials-gov",
+                  "data-apis/data-cms",
+                  "data-apis/cms-open-payments",
+                  "data-apis/health-canada-dpd",
+                  "data-apis/isrctn",
+                  "data-apis/medicaid",
+                  "data-apis/nhsbsa",
+                  "data-apis/dsld",
+                  "data-apis/npi-registry",
+                  "data-apis/openfoodfacts",
+                  "data-apis/openfda",
+                  "data-apis/orphadata",
+                  "data-apis/usda-fdc",
+                  "data-apis/who-gho"
+                ]
+              },
+              {
+                "group": "Government",
+                "expanded": false,
+                "pages": [
+                  "data-apis/austender",
+                  "data-apis/civicapi",
+                  "data-apis/courtlistener",
+                  "data-apis/cpsc-recalls",
+                  "data-apis/data-gov-au",
+                  "data-apis/data-gov-ua",
+                  "data-apis/fec",
+                  "data-apis/gov-uk",
+                  "data-apis/govinfo",
+                  "data-apis/grants-gov",
+                  "data-apis/data-gov-lv",
+                  "data-apis/legislation-gov-uk",
+                  "data-apis/legistar",
+                  "data-apis/nhtsa",
+                  "data-apis/ofac-sls",
+                  "data-apis/ofacapi",
+                  "data-apis/fema",
+                  "data-apis/opensanctions",
+                  "data-apis/pncp",
+                  "data-apis/sam-gov",
+                  "data-apis/socrata",
+                  "data-apis/ted",
+                  "data-apis/unesco-uis",
+                  "data-apis/uscensus",
+                  "data-apis/usaspending",
+                  "data-apis/uspto",
+                  "data-apis/vaquill",
+                  "data-apis/votehub"
+                ]
+              },
+              {
+                "group": "Sports",
+                "expanded": false,
+                "pages": [
+                  "data-apis/fantasyfootballcalculator",
+                  "data-apis/sleeper",
+                  "data-apis/sportsdataio"
+                ]
+              },
+              {
+                "group": "Security",
+                "expanded": false,
+                "pages": [
+                  "data-apis/alienvault-otx",
+                  "data-apis/circl-hashlookup",
+                  "data-apis/cisa-kev",
+                  "data-apis/cve-services",
+                  "data-apis/enisa-euvd",
+                  "data-apis/first-epss",
+                  "data-apis/haveibeenpwned",
+                  "data-apis/hybrid-analysis",
+                  "data-apis/nvd",
+                  "data-apis/osv",
+                  "data-apis/pir-rdap",
+                  "data-apis/redhat-security",
+                  "data-apis/securitytrails",
+                  "data-apis/shodan",
+                  "data-apis/urlscan",
+                  "data-apis/verisign-rdap",
+                  "data-apis/virustotal",
+                  "data-apis/vpndetection",
+                  "data-apis/whoisxml-api"
+                ]
+              },
+              {
+                "group": "Developer",
+                "expanded": false,
+                "pages": [
+                  "data-apis/apis-guru",
+                  "data-apis/azure-retail-prices",
+                  "data-apis/context7",
+                  "data-apis/crates-io",
+                  "data-apis/docker-hub",
+                  "data-apis/github",
+                  "data-apis/google-cloud-billing",
+                  "data-apis/ibm-global-catalog",
+                  "data-apis/libraries-io",
+                  "data-apis/npm",
+                  "data-apis/oci-price-list",
+                  "data-apis/pypi",
+                  "data-apis/readthedocs",
+                  "data-apis/rubygems",
+                  "data-apis/supabase",
+                  "data-apis/vercel"
+                ]
+              },
+              {
+                "group": "Observability",
+                "expanded": false,
+                "pages": [
+                  "data-apis/datadog",
+                  "data-apis/ohdear",
+                  "data-apis/sentry"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "claude",
+      "chatgpt"
+    ]
+  },
+  "thumbnails": {
+    "preset": "classic",
+    "surface": "brand",
+    "fonts": {
+      "family": "Courier Prime"
+    }
+  },
+  "seo": {
+    "metatags": {
+      "og:site_name": "WebRouter",
+      "og:image": "/assets/og.png",
+      "twitter:card": "summary_large_image"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/Nimbleway/webrouter",
+      "discord": "https://discord.gg/MGztFWSjZh"
+    }
+  },
+  "redirects": [
+    {
+      "source": "/install",
+      "destination": "/quickstart"
+    }
+  ]
+}

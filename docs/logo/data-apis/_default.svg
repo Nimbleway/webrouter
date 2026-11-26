@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Data API">
+  <rect width="64" height="64" rx="14" fill="#d1ddbf"/>
+  <g fill="none" stroke="#202c26" stroke-width="3.2" stroke-linecap="round">
+    <ellipse cx="32" cy="20" rx="13" ry="5"/>
+    <path d="M19 20v12c0 2.8 5.8 5 13 5s13-2.2 13-5V20"/>
+    <path d="M19 32v12c0 2.8 5.8 5 13 5s13-2.2 13-5V32"/>
+  </g>
+</svg>

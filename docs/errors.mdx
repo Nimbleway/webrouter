@@ -1,0 +1,111 @@
+---
+title: "Errors"
+description: "Every WebRouter exception derives from WebRouterError: catch them all with one except, or handle each kind a call can raise."
+icon: "triangle-exclamation"
+---
+
+Every exception the router raises derives from `WebRouterError` and imports
+from `web_router`, so one `except` covers the lot:
+
+```python
+from web_router import Provider, WebRouter, WebRouterError
+
+try:
+    WebRouter(Provider.TAVILY).search("...")
+except WebRouterError as exc:
+    print(exc)
+```
+
+| Exception | Raised when | Typical fix |
+| --- | --- | --- |
+| `ConfigurationError` | No API key for a provider you named | Set the variable it names, or pass `provider_config` |
+| `ProviderNotInstalledError` | The extra carrying the provider's SDK is not installed | `make setup` in the clone installs every extra; the message names the one missing |
+| `ProviderNotFoundError` | Unknown provider name, or one that does not serve the method you called | The message lists every name that method does serve |
+| `UnsupportedParameterError` | The provider does not map an option you set | Use `provider_options`, or add the mapping |
+| `UnsupportedFormatError` | The extract or live data backend cannot return the `format` you asked for | Ask for one it can (the message lists them) or name another backend |
+| `LiveDataSourceNotFoundError` | A live data run or description named a source the provider does not have | List the provider's sources with `live_data_sources()` and use the provider's own source name |
+| `MissingParameterError` | The browse backend cannot start without an option you left unset: `start_url`, today | Set it, or name a backend that finds its own first page; nothing was billed |
+| `ResearchTimeoutError` / `BrowseTimeoutError` | A research run or browse task outlasted the timeout you allowed it | Nothing is lost: the run is still going and the exception carries its `job_id`. Poll it, or allow longer |
+| `BenchmarkTimeoutError` | Never raised: it is the `error` of a `benchmark()` or `benchmark_extract()` row whose provider had not answered within the comparison's `timeout` | Allow longer, or leave that provider out of `providers`; the other rows are unaffected |
+| `ProviderError` | The backend itself failed: HTTP error, SDK exception, bad credentials | Branch on `kind` (see below); the original error is on `original`, wrapped, not swallowed |
+| `AllProvidersFailedError` | A `ProviderError`: every backend `auto` tried failed | `failures` maps each backend to its own error; `kind` is theirs when they agree. When none was reachable from this machine, `blocked_hosts` lists the hosts to allow (see below) |
+| `ExtractFailedError` | A `ProviderError`: an extract read no page, and its URLs failed separately | `url_failures` holds each URL's `ExtractFailure`, with its own `kind` and `retryable`, as a partly successful extract's `failures` does |
+| `InvalidParameterError` | An option is not a value the method takes: an empty or whitespace-only query, `max_results=0`, an unknown `search_depth`, a negative `Budget` cap; a router built with a mode its backend does not declare (`"exa:exa-instnat"`). Raised before any backend is called | Fix the value: `field` names the option and `allowed` its values. Also a `ValueError` |
+| `LiveDataJobError` | A `ProviderError`: a live data run the vendor runs as a job failed or was still running after it was submitted, up to five minutes or the call's deadline (Oxylabs' job-only scrapers; a Bright Data scrape past its synchronous window) | The run may still have billed: `job_id` names the Oxylabs job or the Bright Data snapshot to read later |
+| `NoAnswerProviderError` | A `ProviderNotFoundError`: `answer()` was called with no provider and none could be chosen, or `auto` had no backend to try | Set an answer backend's key, or name one; `configured` lists the ones with a key and `env_vars` the variables that would add one |
+| `LiveDataBackendChoiceError` | A `ConfigurationError`: a live data run or description named a bare source that several configured backends could serve | Name one with `provider=`; `providers` lists them |
+| `VendorNotFoundError` | A vendor call or lookup named a vendor or endpoint the catalog does not hold | Use `data_apis()` or `find_data_api_endpoints()` to inspect the catalog |
+| `VendorWriteRefusedError` | A vendor call would change data and `allow_writes=True` was not passed | Review the operation, then opt in explicitly when you intend the write |
+| `BrowserActionError` | A page action on a browser handle failed; subclasses say how (see [Driving the page](/browser#driving-the-page)) | A `StaleElementError` wants a fresh `snapshot()`; the rest carry Playwright's error on `__cause__` |
+| `BudgetExceededError` | Nothing the call could run fits its `Budget` (see [Cost and budgets](/budgets)); raised before anything starts | Raise the cap, or drop `strict`; `skipped` names each backend left out and why |
+| `DeadlineExceededError` | A search, extract or answer had not answered by its `time_limit_s` (experimental) | Allow more time; an extract keeps the pages that came back in time |
+| `RouterError` | With `fail_on_router_error=True`, the attached router raised, ran out of time or answered something other than a `RouteDecision` (experimental) | Fix the router, or raise its `timeout_s`; `code` says which, and what it raised is on `__cause__` |
+
+These are **siblings, not a hierarchy**: `ProviderNotInstalledError` is not a
+subclass of `ConfigurationError`, so `except ConfigurationError` will not catch
+a missing extra. Catch `WebRouterError` unless you mean one specific case.
+
+## What kind of failure it was
+
+Every `ProviderError` says what kind of failure it was, so code can decide what
+to do without reading the message. A failed URL in an extract (`ExtractFailure`)
+carries the same `kind` and `status_code`. Over MCP, a failed tool call's text
+ends in the same facts, as ` (kind=target, retryable=false)`.
+
+| Field | Meaning |
+| --- | --- |
+| `kind` | `auth` (the key was refused: 401, 403, or Brave's 422 `SUBSCRIPTION_TOKEN_INVALID`), `rate_limit` (429, 402, or an MCP backend's 200 that says it throttled the call or its quota ran out), `bad_request` (400, 422), `not_found` (the backend's endpoint or resource is not there: 404), `timeout`, `target` (the page is the problem: its host does not resolve, its URL is not one, or the page itself came back 404 or 410), `local` (a failure on this side: an async router reused on a second event loop, or a provider's own bug), `network_blocked` (this machine's proxy refused the backend's host: a refused `CONNECT`, or a 407), `unreachable` (the backend's host did not resolve from here, or refused the connection), or `upstream` (anything else the backend did) |
+| `status_code` | The backend's HTTP status, when it answered with one |
+| `retryable` | Whether trying again, on the same backend or another, may work: `rate_limit`, `timeout` and `upstream` |
+| `retry_after` | Seconds the backend asked you to wait (`Retry-After`), when it said |
+
+```python
+from web_router import AllProvidersFailedError, ProviderError, WebRouter
+
+try:
+    WebRouter().search("...")
+except AllProvidersFailedError as exc:
+    for backend, error in exc.failures.items():
+        if isinstance(error, ProviderError):
+            print(backend, error.kind, error.status_code)
+        else:  # a backend that could not be tried at all, such as a ConfigurationError
+            print(backend, error)
+except ProviderError as exc:
+    if exc.retryable:
+        ...  # back off for exc.retry_after seconds, then try again
+```
+
+`auto` moves on to its next backend after most failures, but not after a
+`local` or a `target` one: the next backend would fail the same way, and
+trying it would only bill another call. It raises that error instead. A key
+that is refused (`auth`) moves on, and is logged at `WARNING` on the
+`web_router` logger, so a broken key is not hidden by the backend that
+answered after it. A keyless backend's 401 or 403 refused no key of yours, so
+only its `INFO` hop record shows it.
+
+## When no backend is reachable
+
+`network_blocked` and `unreachable` say the call never got past this
+machine's network: the backend did not fail. Neither is `retryable`, since the
+same network refuses the same host again, and `auto` moves on after either,
+since the next backend's host may be allowed. A failed call of either kind is
+logged in the spend log as `failed`, with no cost.
+
+A refused connection to `localhost`, a loopback, link-local or private address
+is the local backend's own failure: it stays `upstream` and retryable.
+A refusal with no request host stays `upstream` too; DNS failures remain
+`unreachable`.
+
+When every backend `auto` tried failed one of these two ways, the
+`AllProvidersFailedError` is one line naming the hosts, its `kind` is
+`network_blocked` (or `unreachable`, when every hop was), and `blocked_hosts`
+lists them:
+
+```text
+[auto] no backend host is reachable from this machine: sdk.nimbleway.com, api.tavily.com, api.you.com, ...
+```
+
+Allow those hosts in your proxy or firewall, or set a key for a backend whose
+host is allowed. [Network access](/production#network-access) lists the host
+each backend needs. The CLI prints the same line, and its error JSON adds
+`kind`, `hops` (each backend's own kind) and `blocked_hosts`.
