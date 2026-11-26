@@ -9,7 +9,7 @@ so both read the URL through the same functions here.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from urllib.parse import quote, urldefrag, urlsplit, urlunsplit
 
 _ASCII_SAFE = "".join(chr(code) for code in range(0x21, 0x7F))
@@ -66,13 +66,35 @@ def _encoded(text: str) -> str:
     return re.sub(r"%[0-9a-fA-F]{2}", lambda escape: escape.group(0).upper(), quote(text, safe=_ASCII_SAFE))
 
 
+def _by_bare(urls: Iterable[str]) -> dict[str, set[str]]:
+    """``urls`` grouped by the form :func:`bare_url` gives them, read once instead of once per answer."""
+    index: dict[str, set[str]] = {}
+    for url in urls:
+        index.setdefault(bare_url(url), set()).add(url)
+    return index
+
+
+def _matcher(urls: Sequence[str]) -> Callable[[str], set[str]]:
+    """The rule :func:`asked_for` applies, with the groups built on the first answer that is not an exact hit."""
+    known = set(urls)
+    index: dict[str, set[str]] | None = None
+
+    def match(url: str) -> set[str]:
+        nonlocal index
+        if url in known:
+            return {url}
+        if index is None:
+            index = _by_bare(urls)
+        found = index.get(bare_url(url))
+        # A rewrite that could be either of two URLs asked for proves neither was read.
+        return found if found and len(found) == 1 else set()
+
+    return match
+
+
 def asked_for(url: str, urls: Sequence[str]) -> set[str]:
     """The requested URLs ``url`` stands for: itself when asked for exactly, else the one a backend rewrote into it."""
-    if url in urls:
-        return {url}
-    # A rewrite that could be either of two URLs asked for proves neither was read.
-    matches = {asked for asked in urls if bare_url(asked) == bare_url(url)}
-    return matches if len(matches) == 1 else set()
+    return _matcher(urls)(url)
 
 
 def owners(answered: Sequence[str], urls: Sequence[str], also_claimed: Iterable[str] = ()) -> list[str | None]:
@@ -84,8 +106,9 @@ def owners(answered: Sequence[str], urls: Sequence[str], also_claimed: Iterable[
     that redirect is the unclaimed URL's. So one requested URL owns its own
     page, or the one redirect it led to, never a second unrelated page.
     """
-    matched = [next(iter(found)) if (found := asked_for(url, urls)) else None for url in answered]
-    claimed = {owner for owner in matched if owner} | {o for url in also_claimed for o in asked_for(url, urls)}
+    match = _matcher(urls)
+    matched = [next(iter(match(url)), None) for url in answered]
+    claimed = {owner for url in [*answered, *also_claimed] if (owner := next(iter(match(url)), None))}
     unclaimed = [url for url in urls if url not in claimed]
     if matched.count(None) == 1 and len(unclaimed) == 1:
         matched[matched.index(None)] = unclaimed[0]
