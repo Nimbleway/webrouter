@@ -205,6 +205,21 @@ def test_nimble_extract_payload_is_normalized(extractor: NimbleExtractProvider) 
     assert response.raw == [payload]
 
 
+def test_nimble_s_warnings_on_a_fetched_page_stay_on_the_document(extractor: NimbleExtractProvider) -> None:
+    """Nimble can fetch a page and still say it ignored part of the request, as it does for render beside driver."""
+    payload = {
+        "url": URL,
+        "status": "success",
+        "status_code": 200.0,
+        "data": {"markdown": "# Example Domain\n\nThis domain is for use in documentation examples."},
+        "warnings": ["render is ignored because driver is configured"],
+    }
+
+    response = extractor._to_response(ExtractRequest(urls=[URL], format="markdown"), [URL], payload)
+
+    assert response.documents[0].warnings == ["render is ignored because driver is configured"]
+
+
 def test_a_status_other_than_success_is_a_failure_not_an_empty_document(
     extractor: NimbleExtractProvider,
 ) -> None:
