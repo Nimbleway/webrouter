@@ -1,1 +1,0 @@
-Parallel research now escapes the run id in its status and result paths, as every other job provider already did, so an id holding `/`, `?` or `#` can no longer send the poll to a different Parallel endpoint.
