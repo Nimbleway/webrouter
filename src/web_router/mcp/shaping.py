@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import os
 from collections import OrderedDict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from web_router.constants import (
@@ -30,7 +30,7 @@ from web_router.constants import (
     MCP_HANDLE_TEMPLATE,
     MCP_MAX_RESPONSE_CHARS,
 )
-from web_router.constants_mcp_context import MCP_EMPTY_VALUES
+from web_router.constants_mcp_context import MCP_BUDGET_FACTOR_BY_TOOL, MCP_EMPTY_VALUES, MCP_RESEARCH_ANSWER_SHARE
 from web_router.mcp.redaction import redact as redact  # re-exported: callers import it from here
 from web_router.mcp.redaction import redaction_note as redaction_note
 from web_router.mcp.shaping_cost import cost_fields
@@ -59,6 +59,11 @@ def max_response_chars() -> int:
     except (KeyError, ValueError):
         chars = 0
     return chars if chars > 0 else MCP_MAX_RESPONSE_CHARS
+
+
+def result_budget(tool: str) -> int:
+    """How large one shaped result of ``tool`` may be: :func:`max_response_chars`, times the tool's factor."""
+    return max_response_chars() * MCP_BUDGET_FACTOR_BY_TOOL.get(tool, 1)
 
 
 def compact(row: dict[str, Any], *, whole: tuple[str, ...] = ()) -> dict[str, Any]:
@@ -95,6 +100,8 @@ class Record:
     tool: str
     raw: Any = None
     job: ResearchJob | BrowseJob | None = None
+    pages: Any = field(default=None, repr=False, compare=False)
+    """``fetch_raw``'s masked JSON of ``raw``, kept while it is read in pages (:mod:`web_router.mcp.raw_tool`)."""
 
 
 class HandleStore:
@@ -193,9 +200,9 @@ def shape_extract(response: ExtractResponse, handle: str, *, budget: int) -> dic
     return _fit(payload, documents, ("content",), handle=handle, budget=budget)
 
 
-def _cut_answer(text: str | None, budget: int) -> str | None:
+def _cut_answer(text: str | None, budget: int, share: float = MCP_ANSWER_SHARE) -> str | None:
     """A written answer cut to its share of the budget; ``None`` or ``""`` as it came."""
-    return truncate(text, int(budget * MCP_ANSWER_SHARE)) if text else text
+    return truncate(text, int(budget * share)) if text else text
 
 
 def _citation_rows(citations: list[Citation]) -> list[dict[str, Any]]:
@@ -211,9 +218,11 @@ def shape_research(response: ResearchResponse, handle: str, *, budget: int) -> d
 
     ``structured`` is left alone: it is the object the caller's own schema
     asked for, and trimming it would hand back something that no longer
-    validates against the schema they supplied.
+    validates against the schema they supplied. The report takes most of
+    the budget: it is what the run was paid for, and its citations' snippets
+    are cut first.
     """
-    answer = _cut_answer(response.answer, budget)
+    answer = _cut_answer(response.answer, budget, MCP_RESEARCH_ANSWER_SHARE)
     citations = _citation_rows(response.citations)
     payload = compact(
         {

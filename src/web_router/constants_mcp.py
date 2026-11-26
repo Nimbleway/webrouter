@@ -17,7 +17,7 @@ ENV_MCP_TIME_LIMIT_S = "WEB_ROUTER_MCP_TIME_LIMIT_S"
 ENV_MCP_ROUTER = "WEB_ROUTER_MCP_ROUTER"
 """``<module>:<attribute>``, the router ``web_run`` plans with; ``remote`` for a router service at
 ``WEB_ROUTER_REMOTE_ROUTER_URL``; another built-in router by name, configured by
-``WEB_ROUTER_MCP_ROUTER_CONFIG``; ``off`` for none. The built-in ``data-driven`` router when unset.
+``WEB_ROUTER_MCP_ROUTER_CONFIG``; ``off`` for none, as when unset.
 
 The three are read once, when the server starts, from the process environment
 only: no ``.env`` file and no ``load_env`` call can set or change them.
@@ -113,9 +113,9 @@ MCP_BUDGET_START_PROPERTIES: dict[str, dict[str, Any]] = {
 }
 
 MCP_DESC_WEB_RUN = (
-    "Hand a request in plain words to web-router's router, which picks the method and backends and runs "
-    "it (by default: search, a read of its URL, or research by wording -- billed, minutes long and picked "
-    "for many how, why or list asks, so set `max_cost_usd`). "
+    "Hand a request in plain words to web-router, which plans and runs it: by default a search; a router "
+    "the operator set may read a URL or run research instead -- billed and minutes long, so set "
+    "`max_cost_usd`. "
     "Call a tool directly for its options. "
     "`dry_run=true` returns the plan and bills nothing."
 )

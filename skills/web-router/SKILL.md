@@ -81,8 +81,9 @@ Work up this ladder and stop at the first rung that serves the task:
 Beside the ladder:
 
 - **`web_run`**, where offered, takes the request in words and lets the
-  server's router pick the method and backends. The built-in router picks
-  `search`, `extract` or `research` from the request's wording. `research` is
+  server's router pick the method and backends. With no router set it
+  searches; the data-driven router, when the operator sets it, picks `search`,
+  `extract` or `research` from the request's wording. `research` is
   billed per run and takes minutes, and a simple how, why, compare or list
   question can be planned as one: call `search` yourself when a search is what
   you want, or pass `dry_run=true` first. An operator's router may pick other
@@ -112,14 +113,16 @@ Beside the ladder:
 
 - Never start a second `research` or `browse` run for a question whose first
   run is still going: `research`/`browse` return a handle after ~25 seconds —
-  poll `research_status`/`browse_status` (free) instead of calling the method
-  again, which starts and bills a second run.
+  poll `research_status`/`browse_status` (free; each poll waits up to ~25
+  seconds, so call it again right away) instead of calling the method again,
+  which starts and bills a second run.
 - With `budget_start` and `budget_status` offered, start a budget before a
   task that may bill, and check it before a billed run. A call refused with
   `BudgetExceededError` did not run; do not retry it unchanged.
 - `fetch_raw` is free and instant: every result carries a `handle`, and the
   backend's full payload is already held for it. Reach for `fetch_raw` before
-  re-calling a tool for more detail.
+  re-calling a tool for more detail. If your client cuts long tool results,
+  read it in pages: `max_chars`, then `offset` from each page's `next_offset`.
 - Close every browser session with `browser_close` the moment you are done.
   Prefer `provider="local"` unless the task needs stealth, a proxy country or
   CAPTCHA solving, which only billed cloud vendors serve.

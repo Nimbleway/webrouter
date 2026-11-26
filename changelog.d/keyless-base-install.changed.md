@@ -1,1 +1,0 @@
-Plain `pip install webrouter` now runs keyless search and extract: httpx and the Nimble and Tavily SDKs are in the base install, and the `search`, `extract`, `research`, `answer`, `remote` and `vendors` extras add nothing more.

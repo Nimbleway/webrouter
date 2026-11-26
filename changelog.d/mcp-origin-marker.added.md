@@ -1,1 +1,0 @@
-MCP results that carry web content, `fetch_raw`, `call_data_api` and the browser actions that show a page included, now start with `"origin": "web page"`, so a model reads the page text as the web's, not the tool's.

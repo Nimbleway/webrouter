@@ -1,1 +1,0 @@
-Breaking: `FIRECRAWL_BASE_URL`, `FIRECRAWL_EXTRACT_PATH`, `FIRECRAWL_API_KEY_PREFIX`, `FIRECRAWL_EXTRACT_FORMATS` and `FIRECRAWL_EXTRACT_DEFAULT_FORMAT` move from `web_router.constants` to `web_router.constants_firecrawl`.

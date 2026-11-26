@@ -5,7 +5,7 @@ Experimental. It needs no key and calls nothing: five regular expressions read t
 values were served by. It ranks the methods of that row, most common first. When the call then searches, it
 orders the search backends a benchmark measured (:mod:`.providers`) along a cost or a speed line
 (:mod:`.lines`), and names their modes in ``extra_modes`` so the call is shown them; every other backend runs
-after, in ``auto``'s order. It is the routers' default, attached unless ``router=`` says otherwise, and it
+after, in ``auto``'s order. It is attached only when named, ``router="data-driven"``, and it
 declares ``route_tools=()``, so only
 :meth:`~web_router.WebRouter.plan` and :meth:`~web_router.WebRouter.run` ask it.
 
@@ -62,7 +62,7 @@ class DataDrivenRouter:
 
     @property
     def version(self) -> str:
-        """The trained release this router decides with, such as ``0.1.2``."""
+        """The trained release this router decides with, such as ``0.1.3``."""
         return self.table.version
 
     def route(self, req: RouteRequest) -> RouteDecision:

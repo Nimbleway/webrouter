@@ -98,8 +98,7 @@ def test_the_data_driven_router_runs_in_process_and_carries_no_note_about_a_mode
 def test_a_router_registered_over_the_built_in_name_is_not_reported_as_in_process(name: str) -> None:
     register_router(name, lambda **config: lambda req: None)
     try:
-        env = {} if name == "data-driven" else {ENV_MCP_ROUTER: name}
-        section = McpRouting.from_environ(env).capabilities(None)
+        section = McpRouting.from_environ({ENV_MCP_ROUTER: name}).capabilities(None)
     finally:
         unregister_router(name)
     assert (section["router"], section["router_runs"]) == (name, "built_in") and "model" in section["router_note"]

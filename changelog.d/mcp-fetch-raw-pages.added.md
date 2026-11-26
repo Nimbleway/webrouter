@@ -1,0 +1,1 @@
+MCP: `fetch_raw` takes an optional `offset` and `max_chars` and then returns one page of the payload's JSON, with `total_chars` and the `next_offset` to ask for next. A client that cuts long tool results, as Codex CLI 0.167 does at about 10 KiB, can now read a whole payload, such as a finished research run's, a page per call. Without them it returns the whole payload, as before.

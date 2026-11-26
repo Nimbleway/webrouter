@@ -15,7 +15,7 @@ import jsonschema
 import pytest
 
 from mcp import Client
-from tests.mcp.conftest import URL, outcome, routed
+from tests.mcp.conftest import URL, data_driven, outcome
 from web_router.client import AsyncWebRouter
 from web_router.constants import MCP_TOOL_ANSWER, MCP_TOOL_EXTRACT, MCP_TOOL_FETCH_RAW, MCP_TOOL_SEARCH
 from web_router.constants_answer import MCP_DESC_ANSWER
@@ -28,14 +28,16 @@ from web_router.mcp.shaping import render, shape_research
 from web_router.mcp.tools import WebRouterTools
 from web_router.types import ResearchResponse
 
-TOOL_LIST_BUDGET = 26_740  # +20 for Apify's name in the search and extract provider lists; 26,735 with it
+TOOL_LIST_BUDGET = 26_820  # +100: `fetch_raw`'s offset and max_chars, so a client that cuts long results can page
 """Bytes of compact JSON the whole tool list may take with every backend configured -- about 6.6k tokens.
 
 It was 31,051 (about 7.8k tokens) before descriptions were cut down and the
 provider sentence said once, and 25,630 with the output schemas. ``search``'s
 three data API options (``data_apis``, ``data_apis_only``, ``configured_only``)
 bring it to 26,289; ``extract``'s two (``data_apis``, ``configured_only``), to 26,602.
-SpecStream's name in the ``search`` and ``extract`` provider lists brings it to 26,663.
+SpecStream's name in the ``search`` and ``extract`` provider lists brings it to 26,663. ``fetch_raw``'s page
+arguments take it from 26,666 to 26,767, and Apify's name in the ``search`` and ``extract`` provider lists to
+26,783.
 """
 
 TOOL_BUDGET = 2_680
@@ -179,7 +181,7 @@ async def test_web_run_will_not_run_a_method_the_allowlist_leaves_out(
 ) -> None:
     monkeypatch.setenv(ENV_MCP_TOOLS, f"{MCP_TOOL_WEB_RUN},{MCP_TOOL_SEARCH}")
 
-    failed, text = await outcome(routed(), MCP_TOOL_WEB_RUN, prompt=f"read {URL}")
+    failed, text = await outcome(data_driven(), MCP_TOOL_WEB_RUN, prompt=f"read {URL}")
 
     assert failed and f"web_run planned {MCP_TOOL_EXTRACT}" in text and ENV_MCP_TOOLS in text
     assert members == [] and "WEB_ROUTER_MCP_PROFILE" in text, "nothing was run"

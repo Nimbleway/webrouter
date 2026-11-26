@@ -1,4 +1,4 @@
-"""The routers' default router: ``data-driven``, attached for plan and run alone, and what it plans for a prompt."""
+"""The routers attach no router by default; ``data-driven`` is attached by name, for plan and run alone."""
 
 from __future__ import annotations
 
@@ -17,14 +17,14 @@ from web_router.routing.registry import available_routers
 
 
 @pytest.mark.parametrize("cls", [WebRouter, AsyncWebRouter])
-def test_the_routers_attach_data_driven_by_default_and_none_attaches_nothing(cls: type) -> None:
-    default, bare = cls(), cls(router=None)
+def test_the_routers_attach_no_router_by_default_and_data_driven_by_name(cls: type) -> None:
+    default, named = cls(), cls(router="data-driven")
     try:
-        assert default._router is not None and default._router.name == "data-driven"
-        assert default._route_tools == frozenset(), "search(), extract() and the rest never ask it"
-        assert bare._router is None
+        assert default._router is None, "no router is the default until one is shown to improve results"
+        assert named._router is not None and named._router.name == "data-driven"
+        assert named._route_tools == frozenset(), "search(), extract() and the rest never ask it"
     finally:
-        for router in (default, bare):
+        for router in (default, named):
             router.close() if cls is WebRouter else asyncio.run(router.aclose())
 
 
@@ -65,9 +65,9 @@ def test_the_rules_warning_is_visible_with_default_python_filters(tmp_path: Path
     assert result.stderr.count(f"FutureWarning: {MSG_RULES_DEPRECATED}") == 1
 
 
-def _default(cls: type = WebRouter) -> WebRouter:
-    """A router built with no ``router=``, so the default is what plans."""
-    return cls(provider_config={"auto": {"chain": list(MEMBERS)}})
+def _data_driven(cls: type = WebRouter) -> WebRouter:
+    """A router with ``data-driven`` attached by name."""
+    return cls(router="data-driven", provider_config={"auto": {"chain": list(MEMBERS)}})
 
 
 @pytest.mark.usefixtures("called")
@@ -82,16 +82,17 @@ def _default(cls: type = WebRouter) -> WebRouter:
         ("summarize https://example.com/a", "research"),  # a URL does not always mean extract
     ],
 )
-def test_what_the_default_plans_for_a_prompt(prompt: str, tool: str) -> None:
-    with _default() as router:
+def test_what_data_driven_plans_for_a_prompt(prompt: str, tool: str) -> None:
+    with _data_driven() as router:
         plan = router.plan(prompt)
     assert (plan.tool, plan.decision.router) == (tool, "data-driven")
 
 
 @pytest.mark.usefixtures("called")
-def test_a_pinned_method_and_no_router_keep_a_plan_off_research() -> None:
-    assert _default().plan("why is the sky blue", tool="search").tool == "search"
-    assert wr().plan("why is the sky blue").tool == "search"
+def test_a_pinned_method_and_the_default_no_router_keep_a_plan_off_research() -> None:
+    assert _data_driven().plan("why is the sky blue", tool="search").tool == "search"
+    with WebRouter(provider_config={"auto": {"chain": list(MEMBERS)}}) as default:
+        assert default.plan("why is the sky blue").tool == "search", "no router is attached unless named"
     assert wr().plan("read https://example.com/a").tool == "search", "with no router a URL is not read"
 
 
@@ -99,7 +100,7 @@ def test_a_pinned_method_and_no_router_keep_a_plan_off_research() -> None:
 @pytest.mark.parametrize("scheme", ["HTTP", "HTTPS", "hTtPs"])
 def test_plan_extracts_a_url_with_a_mixed_case_scheme(scheme: str) -> None:
     url = f"{scheme}://example.com/Report?Token=AbC"
-    with _default() as router:
+    with _data_driven() as router:
         plan = router.plan(f"read {url}")
         assert plan.tool == "extract"
         assert plan.params["urls"] == [url]

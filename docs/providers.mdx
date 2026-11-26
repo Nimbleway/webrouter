@@ -115,7 +115,7 @@ which ones this environment can use.
 | Pass | Name | Provider | Credentials | Formats |
 | --- | --- | --- | --- | --- |
 | `Provider.NIMBLE` | `nimble` | [Nimble Extract](https://docs.nimbleway.com/api-reference/extract/extract) | `NIMBLE_API_KEY`, or keyless with `allow_keyless=True` (capped per caller per day) | `markdown`, `html` |
-| `Provider.TAVILY` | `tavily` | [Tavily Extract](https://tavily.com) | `TAVILY_API_KEY` *(keyless only through `auto`)* | `markdown`, `text` |
+| `Provider.TAVILY` | `tavily` | [Tavily Extract](https://tavily.com) | `TAVILY_API_KEY`, or keyless with `allow_keyless=True` (rate-limited) | `markdown`, `text` |
 | `Provider.EXA` | `exa` | [Exa Contents](https://exa.ai) | `EXA_API_KEY` | `text` |
 | `Provider.LINKUP` | `linkup` | [Linkup Fetch](https://docs.linkup.so) | `LINKUP_API_KEY` | `markdown`, `html` |
 | `Provider.FIRECRAWL` | `firecrawl` | [Firecrawl Scrape](https://firecrawl.dev) | `FIRECRAWL_API_KEY`, or keyless with `allow_keyless=True` (capped per IP per day) | `markdown`, `html` |
@@ -317,9 +317,9 @@ That switch is the library's only; the MCP server always falls through.
 
 For `extract` the same goes for the format, which every backend, `auto`
 included, **pins** to `markdown` when you name none, rather than each applying
-its vendor's own default. `html` passes over Tavily and Exa, and `text` goes to
-Tavily, Exa or Jina Reader. A format is never relabelled: a member that cannot return it is
-not asked.
+its vendor's own default. `html` passes over Tavily, Exa, Keenable, WebIQ, DeepSeek and
+SpecStream, and `text` goes to Tavily, Exa, Jina Reader, WebIQ or SpecStream. A format is
+never relabelled: a member that cannot return it is not asked.
 
 ### Choosing the order yourself
 

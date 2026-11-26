@@ -59,10 +59,12 @@ Choosing a tool:
 - research and browse run for minutes and BILL FOR THE RUN. Start one only
   when the question truly needs it, say so before you do, and never start a
   second run while the first is going — poll research_status or browse_status
-  with the handle you were given; polling is free.
+  with the handle you were given; polling is free, and each poll waits up to
+  25 seconds for the run, so call it again right away.
 - web_run, where it is offered, takes the request in words and lets the
-  server's router pick the method and the backends. The built-in router
-  picks search, extract or research from the request's wording. Research is
+  server's router pick the method and the backends. With no router set it
+  searches; the data-driven router, when the operator sets it, picks search,
+  extract or research from the request's wording. Research is
   billed per run and takes minutes, and a simple how, why, compare or list
   question can be planned as one: call search yourself when a search is what
   you want, or pass dry_run=true first. An operator's router may pick answer
@@ -94,7 +96,8 @@ Cost discipline:
   that may bill, and check it before a billed run. A call refused with
   BudgetExceededError did not run; do not retry it unchanged.
 - Every result carries a handle, and fetch_raw returns its full payload for
-  free. Use it before repeating a call for more detail.
+  free. Use it before repeating a call for more detail. If your client cuts long
+  tool results, read it in pages: max_chars, then offset from each next_offset.
 - A truncated result is not a failed result; the note names the handle that
   holds the rest.
 - Leave provider unset unless you have a reason to pin one. extract with
