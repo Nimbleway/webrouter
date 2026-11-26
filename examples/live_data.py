@@ -7,9 +7,9 @@ than page text to read through. `live_data_sources()` lists the catalogue,
 `live_data_source()` says what one takes and returns, and `live_data()` runs
 it; the records come back in `response.records`.
 
-Runs against Nimble's Extract Templates. Needs a key, and names the vendor on
-every call: a source's name belongs to one vendor, so there is no `auto` and
-no anonymous tier. With no credential at all this prints what to set and exits.
+Runs against Nimble's Extract Templates. Needs a Nimble key, and names the
+vendor on every call: a source's name belongs to one vendor, and there is no
+anonymous tier. Without NIMBLE_API_KEY this prints what to set and exits.
 
 Run it with::
 
@@ -23,10 +23,8 @@ import json
 
 from web_router import ProviderError, WebRouter, configured_live_data_providers
 
-USABLE = [name for name in configured_live_data_providers() if name != "auto"]
-
-if not USABLE:
-    raise SystemExit("No live data backend is configured. Set NIMBLE_API_KEY and run this again.")
+if "nimble" not in configured_live_data_providers():
+    raise SystemExit("This example runs on Nimble, which has no key here. Set NIMBLE_API_KEY and run this again.")
 
 
 def catalogue(router: WebRouter) -> str | None:
