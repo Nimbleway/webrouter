@@ -30,6 +30,8 @@ if TYPE_CHECKING:
 # (\n, \t, ... or \u00XX). Every other character, non-ASCII included, is sent as it is (`ensure_ascii=False`).
 _ESCAPED = {'"': 2, "\\": 2, "\b": 2, "\f": 2, "\n": 2, "\r": 2, "\t": 2}
 _CONTROL_ESCAPED = 6
+MIN_PAGE_CHARS = max(_CONTROL_ESCAPED, *_ESCAPED.values())
+"""The smallest ``max_chars``: what one character can cost, so a page's first character always fits the size asked."""
 
 
 @dataclass(frozen=True)
@@ -51,7 +53,7 @@ async def fetch_raw_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) ->
     if record.raw is None:
         raise ValueError(MCP_MSG_NO_RAW.format(handle=record.handle))
     offset = _page_argument(arguments, MCP_ARG_OFFSET, minimum=0)
-    max_chars = _page_argument(arguments, MCP_ARG_MAX_CHARS, minimum=1)
+    max_chars = _page_argument(arguments, MCP_ARG_MAX_CHARS, minimum=MIN_PAGE_CHARS)
     if offset is None and max_chars is None:
         # Deliberately unbounded unless a page is asked for: this tool exists to hand back exactly what
         # the shaped result could not carry.
@@ -102,7 +104,8 @@ def _page_end(text: str, offset: int, max_chars: int) -> int:
 
     The page is a slice of JSON sent inside JSON, so its quotes, backslashes and line breaks are escaped a second time
     on the way out: 8,000 characters of a page of line breaks would arrive as 16,000, past the cut the page exists to
-    get under. A page always holds at least one character, so reading the next one always moves forward.
+    get under. ``max_chars`` is at least :data:`MIN_PAGE_CHARS`, so a page always holds its first character within
+    the size asked, and reading the next page always moves forward.
     """
     end, size = offset, 0
     while end < len(text):

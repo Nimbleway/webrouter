@@ -3671,7 +3671,7 @@ MCP_ARG_MAX_CHARS = "max_chars"
 MCP_FETCH_RAW_PROPERTIES: dict[str, dict[str, Any]] = {
     MCP_ARG_HANDLE: {"type": "string", "description": "The handle an earlier result carried."},
     "offset": {"type": "integer", "minimum": 0},
-    MCP_ARG_MAX_CHARS: {"type": "integer", "minimum": 1},
+    MCP_ARG_MAX_CHARS: {"type": "integer", "minimum": 6},
 }
 MCP_ARG_STEALTH = "stealth"
 

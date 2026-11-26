@@ -9,10 +9,17 @@ import pytest
 from tests.mcp.conftest import ok_on, outcome
 from tests.mcp.env_helpers import KEY
 from web_router.client import AsyncWebRouter
-from web_router.constants import ENV_BRAVE_API_KEY, ENV_MCP_MAX_CHARS, MCP_TOOL_FETCH_RAW, MCP_TOOL_RESEARCH
+from web_router.constants import (
+    ENV_BRAVE_API_KEY,
+    ENV_MCP_MAX_CHARS,
+    MCP_FETCH_RAW_PROPERTIES,
+    MCP_TOOL_FETCH_RAW,
+    MCP_TOOL_RESEARCH,
+)
 from web_router.constants_mcp_instructions import MCP_UNTRUSTED_MARK
 from web_router.constants_vendors import VENDOR_MASK
 from web_router.mcp import raw_tool
+from web_router.mcp.raw_tool import MIN_PAGE_CHARS
 from web_router.mcp.shaping import render
 from web_router.mcp.tools import WebRouterTools
 
@@ -88,8 +95,8 @@ async def test_a_key_is_masked_before_the_payload_is_cut_into_pages(monkeypatch:
 
 @pytest.mark.parametrize(
     "arguments",
-    [{"offset": -1}, {"max_chars": 0}, {"offset": "10"}, {"max_chars": True}, {"offset": 10**9}],
-    ids=["negative-offset", "zero-size", "string", "bool", "past-the-end"],
+    [{"offset": -1}, {"max_chars": 0}, {"max_chars": 5}, {"offset": "10"}, {"max_chars": True}, {"offset": 10**9}],
+    ids=["negative-offset", "zero-size", "smaller-than-one-escaped-character", "string", "bool", "past-the-end"],
 )
 async def test_a_page_argument_it_cannot_serve_is_refused_with_a_reason(
     tools: WebRouterTools, arguments: dict[str, Any]
@@ -129,3 +136,19 @@ async def test_reading_pages_masks_the_payload_once_and_again_when_it_changes(
     monkeypatch.setenv(ENV_BRAVE_API_KEY, KEY)  # a key added since (load_env) is masked in every page after
     page = await ok_on(tools, MCP_TOOL_FETCH_RAW, handle=record.handle, offset=0)
     assert KEY not in page["page"] and VENDOR_MASK in page["page"] and len(masked) == 3
+
+
+async def test_the_smallest_page_still_fits_its_size_when_it_starts_on_an_escaped_character(
+    tools: WebRouterTools,
+) -> None:
+    raw = {"text": '"\\\n\u0001x'}
+    record = tools.store.add(MCP_TOOL_RESEARCH, raw=raw)
+
+    pages = await _read_all(tools, record.handle, max_chars=MIN_PAGE_CHARS)
+
+    assert "".join(page["page"] for page in pages) == render(raw)
+    assert all(0 < _sent(page) <= MIN_PAGE_CHARS for page in pages)
+
+
+def test_the_listed_schema_asks_for_no_page_smaller_than_the_tool_serves() -> None:
+    assert MCP_FETCH_RAW_PROPERTIES["max_chars"]["minimum"] == MIN_PAGE_CHARS
