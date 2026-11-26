@@ -36,4 +36,9 @@ def site_endpoints(catalog: VendorCatalog, url: str) -> list[tuple[Vendor, Vendo
         for endpoint in vendor.endpoints
         if endpoint.kind == "read"
     ]
-    return sorted(candidates, key=lambda pair: (-_score(path, pair[1], pair[0]), -_score(query, pair[1], pair[0])))
+
+    def rank(pair: tuple[Vendor, VendorEndpoint]) -> tuple[int, int]:
+        strong, weak = catalog._terms[pair[1].id]
+        return -_score(path, strong, weak), -_score(query, strong, weak)
+
+    return sorted(candidates, key=rank)

@@ -36,31 +36,17 @@ from web_router.vendors.schema import Vendor, VendorEndpoint
 
 _WORD = re.compile(r"[a-z0-9]+")
 
-_WORDS_CACHE_MAX_LEN = 512
-"""Longest text the cache keeps: the catalog's own endpoint texts run to 281 characters, a query has no bound."""
 
-
-def _words(text: str) -> frozenset[str]:
+def words(text: str) -> frozenset[str]:
     """Lowercase words, plurals folded: "monitors" and "monitor" are one word to a search.
 
-    The set is frozen so a caller cannot mutate what the next caller reads.
+    Not cached: a caller passes query and page text, which must not outlive the
+    request. The catalog's own endpoint text is tokenized once, in ``_terms``.
     """
     return frozenset(
         word[:-1] if len(word) > 3 and word.endswith("s") and not word.endswith("ss") else word
         for word in _WORD.findall(text.lower())
     )
-
-
-_words_cached = functools.lru_cache(maxsize=16384)(_words)
-
-
-def words(text: str) -> frozenset[str]:
-    """``_words``, cached for the short fixed texts a find tokenizes once per query.
-
-    Longer text is a query or a URL, not a catalog entry: caching it would keep
-    unbounded user input in a process-level cache after the request returned.
-    """
-    return _words_cached(text) if len(text) <= _WORDS_CACHE_MAX_LEN else _words(text)
 
 
 class VendorCatalog:
@@ -70,6 +56,22 @@ class VendorCatalog:
         self._vendors: dict[str, Vendor] = {vendor.vendor: vendor for vendor in vendors}
         self._endpoints: dict[str, VendorEndpoint] = {
             endpoint.id: endpoint for vendor in self._vendors.values() for endpoint in vendor.endpoints
+        }
+
+    @functools.cached_property
+    def _terms(self) -> dict[str, tuple[frozenset[str], frozenset[str]]]:
+        """Each endpoint's strong and weak words, tokenized once on the first find.
+
+        Strong is the id, job and vendor name/id; weak is the name, summary and
+        category. Built here, not in ``__init__``: loading a catalog is not a search.
+        """
+        return {
+            endpoint.id: (
+                words(f"{endpoint.id} {endpoint.job or ''} {owner.name} {owner.vendor}"),
+                words(f"{endpoint.name} {endpoint.summary} {owner.category}"),
+            )
+            for endpoint in self._endpoints.values()
+            for owner in (self._vendors[endpoint.vendor],)
         }
 
     def __len__(self) -> int:
@@ -122,9 +124,11 @@ class VendorCatalog:
         """
         if vendor is not None:
             self.vendor(vendor)
-        query_words = words(query) - VENDOR_FIND_STOP_WORDS
-        if not query_words and words(query):
+        asked = words(query)
+        query_words = asked - VENDOR_FIND_STOP_WORDS
+        if not query_words and asked:
             return []  # a query of filler words only asks for nothing, not for everything
+        terms = self._terms
         scored: list[tuple[int, str, VendorEndpoint]] = []
         for endpoint in self._endpoints.values():
             owner = self._vendors[endpoint.vendor]
@@ -134,7 +138,7 @@ class VendorCatalog:
                 continue
             if kind is not None and endpoint.kind != kind:
                 continue
-            score = _score(query_words, endpoint, owner)
+            score = _score(query_words, *terms[endpoint.id])
             if query_words and score == 0:
                 continue
             scored.append((-score, endpoint.id, endpoint))
@@ -143,11 +147,9 @@ class VendorCatalog:
         return found if limit is None else found[:limit]
 
 
-def _score(query_words: frozenset[str], endpoint: VendorEndpoint, vendor: Vendor) -> int:
+def _score(query_words: frozenset[str], strong: frozenset[str], weak: frozenset[str]) -> int:
     if not query_words:
         return 0
-    strong = words(f"{endpoint.id} {endpoint.job or ''} {vendor.name} {vendor.vendor}")
-    weak = words(f"{endpoint.name} {endpoint.summary} {vendor.category}")
     return 3 * len(query_words & strong) + len(query_words & weak)
 
 
