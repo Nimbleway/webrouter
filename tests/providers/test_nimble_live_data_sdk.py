@@ -101,6 +101,47 @@ def test_run_list_and_describe_through_the_sdk_client(monkeypatch: pytest.Monkey
     assert caught.value.template == "gone" and isinstance(caught.value, ProviderError)
 
 
+def test_a_listing_run_through_the_sdk_returns_each_record_as_the_api_sent_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The SDK reads each `parsing` item as its success wrapper; the fields it would add are not the record's."""
+    books = [
+        {"title": "It's Only the Himalayas", "price": 45.17, "rating": 2, "availability": "In stock"},
+        {"title": "See America", "price": 48.87, "rating": 3, "availability": "In stock"},
+    ]
+
+    class _ListingApi(_Api):
+        def handle(self, request: httpx.Request) -> httpx.Response:
+            self.requests.append(request)
+            return httpx.Response(200, json=_run_payload(books))
+
+    provider = _ListingApi().sync_provider(monkeypatch)
+    try:
+        response = provider.run(LiveDataRequest(source=TEMPLATE, inputs={"url": URL}))
+    finally:
+        provider.close()
+
+    assert response.records == books
+    assert response.data == books[0]
+
+
+async def test_an_async_listing_run_returns_each_record_as_the_api_sent_it() -> None:
+    """The async run dumps the SDK model as the sync one does: no wrapper fields added to a listing's records."""
+    books = [{"title": "It's Only the Himalayas", "price": 45.17}, {"title": "See America", "price": 48.87}]
+
+    class _ListingApi(_Api):
+        def handle(self, request: httpx.Request) -> httpx.Response:
+            self.requests.append(request)
+            return httpx.Response(200, json=_run_payload(books))
+
+    provider = _ListingApi().async_provider()
+    try:
+        response = await provider.arun(LiveDataRequest(source=TEMPLATE, inputs={"url": URL}))
+    finally:
+        await provider.aclose()
+
+    assert response.records == books
+    assert response.data == books[0]
+
+
 def test_a_run_on_an_unknown_template_is_the_same_not_found_error(monkeypatch: pytest.MonkeyPatch) -> None:
     class _NoSuchTemplateApi(_Api):
         def handle(self, request: httpx.Request) -> httpx.Response:

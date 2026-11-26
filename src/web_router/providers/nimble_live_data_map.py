@@ -61,14 +61,14 @@ def to_response(provider: str, request: LiveDataRequest, payload: dict[str, Any]
         detail = MSG_LIVE_DATA_PAGE_FAILED.format(source=request.source, status=status_code)
         raise ProviderError(provider, "; ".join([detail, *(payload.get("warnings") or [])]))
 
-    record = _record(provider, request, data.get("parsing"))
+    records = _records(provider, request, data.get("parsing"))
     document = _document(request, payload, data)
 
     return LiveDataResponse(
         provider=provider,
         source=request.source,
         inputs=dict(request.inputs),
-        data=record,
+        records=records,
         url=payload.get("url"),
         document=document,
         status_code=_as_int(payload.get("status_code")),
@@ -86,8 +86,22 @@ def to_response(provider: str, request: LiveDataRequest, payload: dict[str, Any]
     )
 
 
+def _records(provider: str, request: LiveDataRequest, parsing: Any) -> list[dict[str, Any]]:
+    """Every record under ``data.parsing``: a template that extracts a listing sends a list, one per item.
+
+    The SDK types ``parsing`` as one record, but the live API answers a
+    listing template with a list of them. Each item is read as ``_record``
+    reads one, so an item that is not a record raises rather than being dropped.
+    """
+    if isinstance(parsing, list) and parsing:
+        return [_record(provider, request, item) for item in parsing]
+    return [_record(provider, request, parsing)]
+
+
 def _record(provider: str, request: LiveDataRequest, parsing: Any) -> dict[str, Any]:
     """The record under ``data.parsing``, in whichever of its three shapes Nimble sent it.
+
+    A listing sends a list of them instead, read item by item by ``_records``.
 
     See ``NIMBLE_LIVE_DATA_PARSING_SUCCESS_STATUS``: the record may arrive
     bare, or wrapped beside a status that says it parsed, or replaced by

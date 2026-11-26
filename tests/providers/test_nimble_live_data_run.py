@@ -20,7 +20,7 @@ from tests.providers._nimble_live_data_payloads import (
     URL,
     _run_payload,
 )
-from web_router.exceptions import UnsupportedFormatError
+from web_router.exceptions import ProviderError, UnsupportedFormatError
 from web_router.types_live_data import LiveDataRequest
 
 pytest.importorskip("nimble_python", reason="nimble extra not installed")
@@ -94,6 +94,36 @@ def test_a_wrapped_record_is_unwrapped(provider: NimbleLiveDataProvider) -> None
     response = to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
 
     assert response.data == RECORD
+
+
+def test_a_listing_template_answers_with_a_list_and_every_item_is_a_record(provider: NimbleLiveDataProvider) -> None:
+    """A recorded listing-page run: `data.parsing` a list with one dict per book, which the SDK does not type."""
+    books = [
+        {"title": "It's Only the Himalayas", "price": "£45.17", "availability": "In stock", "rating": "Two"},
+        {"title": "Full Moon over Noah's Ark", "price": "£49.43", "availability": "In stock", "rating": "Four"},
+        {"title": "See America", "price": "£48.87", "availability": "In stock", "rating": "Three"},
+    ]
+    payload = _run_payload(books)
+
+    response = to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
+
+    assert response.records == books
+    assert response.data == books[0]
+    assert "parsing" not in response.extra
+    assert response.raw == payload
+
+
+def test_a_listed_item_in_the_success_wrapper_is_unwrapped(provider: NimbleLiveDataProvider) -> None:
+    payload = _run_payload([{"status": "success", "entities": RECORD}])
+
+    assert to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload).records == [RECORD]
+
+
+@pytest.mark.parametrize("parsing", [[], [{}], [RECORD, "not a record"]], ids=["empty", "empty-item", "non-dict-item"])
+def test_a_list_that_is_not_all_records_is_no_record(provider: NimbleLiveDataProvider, parsing: list[Any]) -> None:
+    """An empty list or item is no record, as an empty dict is; an item that is not one is never dropped silently."""
+    with pytest.raises(ProviderError, match="without a record"):
+        to_response(provider.name, LiveDataRequest(source=TEMPLATE), _run_payload(parsing))
 
 
 def test_a_format_asked_for_comes_back_as_the_page_beside_the_record(provider: NimbleLiveDataProvider) -> None:
