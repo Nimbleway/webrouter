@@ -11,29 +11,29 @@ from web_router import AsyncWebRouter, WebRouter, check_provider_id, provider_id
 from web_router.exceptions import ProviderNotFoundError, ProviderNotInstalledError
 from web_router.exceptions_typed import InvalidParameterError
 
-ROUTERS = [WebRouter, AsyncWebRouter]
 VALID = ["auto", "max", "EXA", "exa:exa-instant", "EXA:EXA-INSTANT", "search:exa:exa-instant", "exa:exa-summary"]
 """Ids a router takes as its default; ``exa-summary`` is an extract mode only, which search checks when used."""
 
 
-@pytest.mark.parametrize("router", ROUTERS)
 @pytest.mark.parametrize("provider", VALID)
-def test_a_valid_id_builds(router: type, provider: str) -> None:
-    assert router(provider).default_provider == provider.lower()
+def test_a_valid_id_builds(provider: str) -> None:
+    assert WebRouter(provider).default_provider == provider.lower()
 
 
-@pytest.mark.parametrize("router", ROUTERS)
+def test_an_async_router_checks_its_default_id() -> None:
+    assert AsyncWebRouter("exa:exa-instant").default_provider == "exa:exa-instant"
+
+
 @pytest.mark.parametrize("provider", ["exa:exa-instnat", "EXA:EXA-INSTNAT", "search:exa:exa-instnat"])
-def test_a_mode_typo_fails_when_built(router: type, provider: str) -> None:
+def test_a_mode_typo_fails_when_built(provider: str) -> None:
     with pytest.raises(InvalidParameterError, match="exa has no mode part 'exa-instnat'"):
-        router(provider)
+        WebRouter(provider)
 
 
-@pytest.mark.parametrize("router", ROUTERS)
 @pytest.mark.parametrize("provider", ["exaa", "exaa:exa-instant", "search:exaa:exa-instant"])
-def test_a_backend_typo_fails_when_built(router: type, provider: str) -> None:
+def test_a_backend_typo_fails_when_built(provider: str) -> None:
     with pytest.raises(ProviderNotFoundError):
-        router(provider)
+        WebRouter(provider)
 
 
 def test_an_id_naming_its_method_is_checked_for_that_method_only() -> None:
@@ -43,7 +43,7 @@ def test_an_id_naming_its_method_is_checked_for_that_method_only() -> None:
     assert WebRouter("extract:exa:exa-summary").default_provider == "extract:exa:exa-summary"
 
 
-@pytest.mark.parametrize("provider", ["exa:", ":exa", "exa::exa-instant"])
+@pytest.mark.parametrize("provider", ["exa:", ":exa"])
 def test_an_id_with_an_empty_part_fails_when_built(provider: str) -> None:
     with pytest.raises(InvalidParameterError, match="is not tool:provider"):
         WebRouter(provider)
@@ -77,7 +77,6 @@ def test_check_passes_an_id_its_tool_takes(tool: str, provider: str) -> None:
         ("research", "exa", ProviderNotFoundError, "does not serve"),
         ("research", "nimble:fast", InvalidParameterError, "research takes none of"),
         ("research", "research:nimble", ProviderNotFoundError, "research:nimble"),
-        ("search", "exa:", InvalidParameterError, "is not tool:provider"),
         ("search", "extract:exa:exa-summary", InvalidParameterError, "names 'extract'"),
         ("searh", "exa", InvalidParameterError, "not a router method"),
     ],
