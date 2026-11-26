@@ -1,0 +1,1 @@
+Nimble search refuses more than 400 `include_domains` or 1,000 `exclude_domains`, or more than 50 distinct entries in either at `search_depth="lite"`, before sending; `auto` passes Nimble over for such a call.
