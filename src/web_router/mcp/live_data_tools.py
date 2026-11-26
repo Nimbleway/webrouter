@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from web_router.constants_live_data import MCP_TOOL_LIVE_DATA, MCP_TOOL_LIVE_DATA_SOURCE, MCP_TOOL_LIVE_DATA_SOURCES
 from web_router.mcp.budget import live_data_charged
-from web_router.mcp.shaping import max_response_chars
+from web_router.mcp.shaping import result_budget
 from web_router.mcp.shaping_live_data import shape_live_data, shape_live_data_source, shape_live_data_sources
 from web_router.mcp.urls import ascreen, url_values
 
@@ -24,14 +24,14 @@ async def live_data_sources_tool(tools: WebRouterTools, arguments: Mapping[str, 
     """One page of a vendor's catalogue, cut to the words a model picks a source by."""
     page = await tools.router.live_data_sources(**tools.arguments(MCP_TOOL_LIVE_DATA_SOURCES, arguments))
     record = tools.store.add(MCP_TOOL_LIVE_DATA_SOURCES, raw=page.raw)
-    return shape_live_data_sources(page, record.handle, budget=max_response_chars())
+    return shape_live_data_sources(page, record.handle, budget=result_budget(MCP_TOOL_LIVE_DATA_SOURCES))
 
 
 async def live_data_source_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:
     """One source with its schemas and samples."""
     source = await tools.router.live_data_source(**tools.arguments(MCP_TOOL_LIVE_DATA_SOURCE, arguments))
     record = tools.store.add(MCP_TOOL_LIVE_DATA_SOURCE, raw=source.raw)
-    return shape_live_data_source(source, record.handle, budget=max_response_chars())
+    return shape_live_data_source(source, record.handle, budget=result_budget(MCP_TOOL_LIVE_DATA_SOURCE))
 
 
 async def live_data_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:
@@ -41,4 +41,4 @@ async def live_data_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) ->
     with live_data_charged(tools.router, kwargs):
         response = await tools.router.live_data(**kwargs)
     record = tools.store.add(MCP_TOOL_LIVE_DATA, raw=response.raw)
-    return shape_live_data(response, record.handle, budget=max_response_chars())
+    return shape_live_data(response, record.handle, budget=result_budget(MCP_TOOL_LIVE_DATA))

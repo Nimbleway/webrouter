@@ -195,7 +195,7 @@ for each format, and Bright Data's own reference shows a JSON envelope beside a
 `format="raw"` request that does not return one.
 
 Where no account is available, say so in the test module's docstring the way
-`tests/providers/test_oxylabs.py`, `test_brightdata.py` and `test_firecrawl.py`
+`tests/providers/test_seltz.py`, `test_valyu.py` and `test_octen.py`
 do, so the next person knows the mapping is documentation-derived rather than
 verified.
 
@@ -228,10 +228,11 @@ its API can do is reachable only through `provider_options`, untranslated and
 provider-specific. Mapping one properly makes it work the same way across every
 backend, for every user.
 
-The clearest gaps right now: `locale` on Exa and Parallel and `recency` on WebIQ
-on the search side (the `docs/providers.mdx` support table lists the rest), and on the extract
-side nobody maps JS rendering or geo-targeting even though most of those
-backends support both.
+The clearest gaps right now are on the extract side: nobody maps JS rendering or
+geo-targeting even though most of those backends support both. On the search side,
+the `docs/providers.mdx` support table lists what each backend leaves unmapped. Check
+the vendor's API before picking one: some options are unmapped because the API has
+no field for them, as with `locale` on Exa and Parallel and `recency` on WebIQ's web search.
 
 ### Mapping an existing option to a provider (the common case)
 

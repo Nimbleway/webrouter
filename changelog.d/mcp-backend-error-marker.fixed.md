@@ -1,1 +1,0 @@
-MCP backend-call errors, including a call's deadline, now start with `"origin": "web page"` before text that may quote a remote response. Error flags, kinds, retry advice and credential redaction are preserved; local argument errors keep their existing text.

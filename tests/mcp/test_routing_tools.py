@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from tests.mcp.conftest import URL, Table, ok_on, outcome, routed
+from tests.mcp.conftest import URL, Table, data_driven, ok_on, outcome, routed
 from tests.routing_helpers import MEMBERS
 from web_router import RouteDecision, RouteRequest
 from web_router.constants_budget import SKIP_NO_TIME, SKIP_PRICE_UNKNOWN
@@ -36,10 +36,10 @@ ANY = object()
 
 
 @pytest.mark.parametrize(("prompt", "tool"), [(f"what does {URL} say?", "extract"), ("latest on solar", "search")])
-async def test_a_dry_run_plans_with_the_default_router_and_runs_nothing(
+async def test_a_dry_run_plans_with_the_data_driven_router_and_runs_nothing(
     members: list[str], prompt: str, tool: str
 ) -> None:
-    plan = await ok_on(routed(), MCP_TOOL_WEB_RUN, prompt=prompt, dry_run=True)
+    plan = await ok_on(data_driven(), MCP_TOOL_WEB_RUN, prompt=prompt, dry_run=True)
     assert (plan["dry_run"], plan["tool"]) == (True, tool)
     assert plan["providers"][tool] == list(MEMBERS)
     assert plan["decision"]["router"] == DATA_DRIVEN_ROUTER_NAME
@@ -47,7 +47,7 @@ async def test_a_dry_run_plans_with_the_default_router_and_runs_nothing(
 
 
 async def test_web_run_runs_the_plan_shaped_like_the_method_with_a_handle_and_its_record(members: list[str]) -> None:
-    tools = routed()
+    tools = data_driven()
     shaped = await ok_on(tools, MCP_TOOL_WEB_RUN, prompt=f"read {URL}")
     assert shaped["tool"] == "extract" and members == ["first"]
     assert shaped["decision"]["router"] == DATA_DRIVEN_ROUTER_NAME and shaped["decision"]["ran"] == 0
@@ -55,8 +55,9 @@ async def test_web_run_runs_the_plan_shaped_like_the_method_with_a_handle_and_it
     assert raw["tool"] == MCP_TOOL_WEB_RUN
 
 
-async def test_web_run_with_routing_off_plans_the_static_order(members: list[str]) -> None:
-    plan = await ok_on(routed(**{ENV_MCP_ROUTER: MCP_ROUTER_OFF}), MCP_TOOL_WEB_RUN, prompt=f"read {URL}", dry_run=True)
+@pytest.mark.parametrize("environ", [{}, {ENV_MCP_ROUTER: MCP_ROUTER_OFF}])
+async def test_web_run_with_no_router_by_default_or_off_plans_the_static_order(members: Any, environ: Any) -> None:
+    plan = await ok_on(routed(**environ), MCP_TOOL_WEB_RUN, prompt=f"read {URL}", dry_run=True)
     assert plan["tool"] == "search" and "router" not in plan["decision"]
 
 

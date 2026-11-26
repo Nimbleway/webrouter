@@ -653,9 +653,9 @@ AUTO_EXTRACT_FORMATS: frozenset[ExtractFormat] = frozenset({"markdown", "html", 
 """What some member of the chain can return: the union, not the intersection.
 
 Each request goes only to the members that return the format it asks for, so a
-format here is never relabelled: ``html`` passes over Tavily and Exa, ``text``
-over Nimble, Firecrawl, Oxylabs, Bright Data and Linkup. Listed rather than
-computed so importing ``auto`` does not drag in each member's SDK.
+format here is never relabelled: a member that cannot return it, Tavily for
+``html`` or Nimble for ``text``, is passed over. Listed rather than computed so
+importing ``auto`` does not drag in each member's SDK.
 ``tests/test_auto.py`` asserts it really is the union.
 """
 
@@ -3849,7 +3849,7 @@ MCP_DESC_RESEARCH = (
 )
 
 MCP_DESC_RESEARCH_STATUS = (
-    "Poll a run `research` started: its state, or the answer once it has one. Free, about a second."
+    "Waits up to {wait:g}s on a run `research` started: its state, or the answer once it has one. Free."
 )
 
 MCP_DESC_BROWSE = (
@@ -3860,8 +3860,8 @@ MCP_DESC_BROWSE = (
 )
 
 MCP_DESC_BROWSE_STATUS = (
-    "Poll a task `browse` started: its state, or the answer and the agent's steps once it has one. Free, "
-    "about a second."
+    "Waits up to {wait:g}s on a task `browse` started: its state, or the answer and the agent's steps once it "
+    "has one. Free."
 )
 
 MCP_DESC_FETCH_RAW = (

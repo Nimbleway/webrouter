@@ -87,11 +87,39 @@ MCP_MSG_PLAN_NOT_SERVED = (
 )
 """``web_run`` refusing to run a method the allowlist excludes: the allowlist is not bypassed by routing."""
 
+MCP_STATUS_STILL_RUNNING = (
+    "Still going after this call waited {wait:g}s. Call {tool} with handle {handle!r} again; it waits on its own, "
+    "so there is no need to pause first."
+)
+"""A status tool's note on a job its wait did not see finish.
+
+The status tools wait as long as the tool that started the job, rather than answering at once. Answering at once
+left the pacing to the model, and models do not pace: against Nimble research runs of a few minutes, a fast model
+polled every 1.5 seconds, 130 to 150 times a run, and a careful one spent 6 to 14 turns of its turn limit on polls.
+"""
+
 MCP_JSON_SEPARATORS = (",", ":")
 """How a result is serialized: compact, since every space is a token the model pays for and never reads."""
 
 MCP_EMPTY_VALUES: tuple[Any, ...] = ("", [])
 """Values a shaped row leaves out with ``None``: a key that says nothing costs as much as one that does."""
+
+MCP_BUDGET_FACTOR_BY_TOOL: dict[str, int] = {MCP_TOOL_RESEARCH: 5}
+"""How many per-result budgets one result of a tool may take; a tool not named here takes one.
+
+A finished research run is a report the caller waited minutes and paid for, written from reading
+the model never has to repeat. Reports measured 7,000 to 74,000 characters, about 37,000 at the
+median, and at one budget the report got 4,000 of them: the rest only through ``fetch_raw``, whose
+untouched payload is two to three times the report's size. Five budgets is 40,000 characters,
+about 10,000 tokens, the same as a browser snapshot.
+"""
+
+MCP_RESEARCH_ANSWER_SHARE = 0.75
+"""Fraction of a research result's budget its report may take; the rest is its citations.
+
+The report is what the run was paid for. A run cites 20 to 80 sources, whose snippets are cut
+before any is dropped, so a quarter of the budget still lists most of them.
+"""
 
 _STRING = {"type": "string"}
 _HANDLE: dict[str, Any] = {"handle": _STRING, "truncated": {"type": "boolean"}, "note": _STRING}

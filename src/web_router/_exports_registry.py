@@ -1,5 +1,6 @@
 """The provider registry's public names, re-exported by ``web_router`` to keep its ``__init__`` short."""
 
+from web_router.provider_ids import check_provider_id
 from web_router.registry import (
     available_browse_providers,
     available_browser_providers,
@@ -41,6 +42,7 @@ __all__ = [
     "available_live_data_providers",
     "available_providers",
     "available_research_providers",
+    "check_provider_id",
     "configured_answer_providers",
     "configured_browse_providers",
     "configured_browser_providers",

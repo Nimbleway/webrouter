@@ -70,7 +70,11 @@ def test_plan_tries_the_measured_search_backends_in_the_preferences_order(
 def test_a_cost_cap_drops_what_the_price_list_says_does_not_fit_and_the_rest_keep_their_order(keyed: None) -> None:
     with WebRouter(router="data-driven", router_config={"prefer": "cheap"}) as router:
         merged = router.plan("who won the 2022 world cup", budget=Budget(max_cost_usd=0.006)).decision.merged
-    assert merged[:2] == ["search:parallel:parallel-turbo+fast", "search:parallel:parallel-advanced+fast"]
+    assert merged[:3] == [
+        "search:parallel:parallel-turbo+fast",
+        "search:keenable:keenable-pro+fast",
+        "search:parallel:parallel-advanced+fast",
+    ]
     assert not any(entry.startswith("search:exa:") for entry in merged)
 
 

@@ -797,7 +797,7 @@ number up. The latency belongs to the router, not the tool, so the result is a
 row per router: a router declares the tools it fits as its own `route_tools`
 (see https://docs.webrouter.net/smart-routing), and a caller's `route_tools` always wins.
 
-**How it times.** A router is one of `data-driven` (the built-in default router),
+**How it times.** A router is one of `data-driven` (the built-in data-driven router),
 `llm` (the built-in `router="llm"`, on the preset `LLM_ROUTER_PRESET` names,
 `openai` unless set), `sklearn` and `jev` (the examples in `examples/`), `remote:<url>` (a
 router service in the wire format, schema 1; `--remote-rtt-ms` adds the same

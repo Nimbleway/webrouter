@@ -1,1 +1,0 @@
-**Breaking (MCP):** the default is slim, `load_env` is off and private browser destinations are refused. Restore with `WEB_ROUTER_MCP_PROFILE=full`, `WEB_ROUTER_MCP_LOAD_ENV=remember` and `WEB_ROUTER_MCP_PRIVATE_URLS=on`. Tools with no configured backend stay hidden in every profile; name them in `WEB_ROUTER_MCP_TOOLS` to list them anyway.

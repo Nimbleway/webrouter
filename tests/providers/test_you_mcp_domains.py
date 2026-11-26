@@ -34,6 +34,20 @@ def test_a_domain_filter_with_a_path_is_refused_before_anything_is_sent(
     assert not sent
 
 
+def test_an_include_list_past_the_limit_is_refused_naming_it(
+    transport: httpx.MockTransport, sent: list[httpx.Request]
+) -> None:
+    """The refusal for include_domains is the site: one, so it has to name the limit as well."""
+    provider = YouMcpProvider(transport=transport)
+    domains = [f"site-{i}.com" for i in range(501)]
+
+    with pytest.raises(UnsupportedParameterError, match="at most 500") as caught:
+        provider.search(SearchRequest(query="hi", include_domains=domains))
+
+    assert caught.value.values == {"include_domains": domains}
+    assert not sent
+
+
 @pytest.mark.parametrize("field", ["include_domains", "exclude_domains"])
 def test_auto_passes_over_you_mcp_for_a_domain_with_a_path(field: str) -> None:
     assert YouMcpProvider.refused_values(SearchRequest(query="hi", **{field: ["github.com/python"]})) == {

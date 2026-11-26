@@ -74,7 +74,6 @@ from web_router.constants import (
     MCP_TOOL_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS,
     MCP_TOOL_SEARCH,
-    MCP_TOOL_WAITS,
 )
 from web_router.constants_live_data import MCP_TOOL_LIVE_DATA, MCP_TOOL_LIVE_DATA_SOURCE, MCP_TOOL_LIVE_DATA_SOURCES
 from web_router.constants_mcp import (
@@ -90,6 +89,7 @@ from web_router.mcp.browsers import BrowserSessions, check_target, playwright_in
 from web_router.mcp.budget import ConnectionBudget, browser_charged, wait_left
 from web_router.mcp.env import EnvSources, user_config_dir
 from web_router.mcp.env_tool import load_env_entry
+from web_router.mcp.jobs import settle, shape_waited, tool_waits
 from web_router.mcp.key_text import env_hint, no_backend_hint, nothing_configured, server_instructions
 from web_router.mcp.live_data_tools import live_data_source_tool, live_data_sources_tool, live_data_tool
 from web_router.mcp.methods import METHODS
@@ -100,13 +100,12 @@ from web_router.mcp.shaping import (
     HandleStore,
     Record,
     ToolOutput,
-    max_response_chars,
     redact,
     redaction_note,
+    result_budget,
     shape_browse,
     shape_extract,
     shape_pending,
-    shape_progress,
     shape_research,
     shape_search,
 )
@@ -166,7 +165,7 @@ class WebRouterTools:
         self.browse_wait = browse_wait
         self.browsers = browsers if browsers is not None else BrowserSessions()
         self.env = env if env is not None else EnvSources()
-        self._waits = {**MCP_TOOL_WAITS, MCP_TOOL_RESEARCH: research_wait, MCP_TOOL_BROWSE: browse_wait}
+        self._waits = tool_waits(research_wait, browse_wait)
         every: dict[str, _Handler] = {
             MCP_TOOL_SEARCH: self._search,
             MCP_TOOL_EXTRACT: self._extract,
@@ -284,14 +283,14 @@ class WebRouterTools:
     async def _search(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         response = await self.router.search(**self.arguments(MCP_TOOL_SEARCH, arguments))
         record = self.store.add(MCP_TOOL_SEARCH, raw=response.raw)
-        return shape_search(response, record.handle, budget=max_response_chars())
+        return shape_search(response, record.handle, budget=result_budget(MCP_TOOL_SEARCH))
 
     async def _extract(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         kwargs = self.arguments(MCP_TOOL_EXTRACT, arguments)
         kwargs["urls"] = await ascreen(MCP_TOOL_EXTRACT, kwargs["urls"])
         response = await self.router.extract(**kwargs)
         record = self.store.add(MCP_TOOL_EXTRACT, raw=response.raw)
-        return shape_extract(response, record.handle, budget=max_response_chars())
+        return shape_extract(response, record.handle, budget=result_budget(MCP_TOOL_EXTRACT))
 
     async def _research(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         job = await self.router.submit_research(**self.arguments(MCP_TOOL_RESEARCH, arguments))
@@ -303,17 +302,17 @@ class WebRouterTools:
             handle = self.store.add(MCP_TOOL_RESEARCH, job=job).handle
             return shape_pending(job, handle, wait=waited, note=MCP_MSG_RESEARCH_PENDING)
         record = self.store.add(MCP_TOOL_RESEARCH, raw=response.raw, job=job)
-        return shape_research(response, record.handle, budget=max_response_chars())
+        return shape_research(response, record.handle, budget=result_budget(MCP_TOOL_RESEARCH))
 
     async def _research_status(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         record = self.record(MCP_TOOL_RESEARCH_STATUS, arguments)
         if not isinstance(record.job, ResearchJob):
             raise self._not_a_job(record, MCP_TOOL_RESEARCH_STATUS, MCP_TOOL_RESEARCH)
-        progress = await record.job.astatus()
+        progress = await settle(record.job, waited := wait_left(self.research_wait))
         if progress.response is None:
-            return shape_progress(progress, record.handle)
+            return shape_waited(progress, record.handle, wait=waited, tool=MCP_TOOL_RESEARCH_STATUS)
         record.raw = progress.response.raw
-        return shape_research(progress.response, record.handle, budget=max_response_chars())
+        return shape_research(progress.response, record.handle, budget=result_budget(MCP_TOOL_RESEARCH))
 
     async def _browse(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         kwargs = self.arguments(MCP_TOOL_BROWSE, arguments)
@@ -326,21 +325,21 @@ class WebRouterTools:
             handle = self.store.add(MCP_TOOL_BROWSE, job=job).handle
             return shape_pending(job, handle, wait=waited, note=MCP_MSG_BROWSE_PENDING)
         record = self.store.add(MCP_TOOL_BROWSE, raw=response.raw, job=job)
-        return shape_browse(response, record.handle, budget=max_response_chars())
+        return shape_browse(response, record.handle, budget=result_budget(MCP_TOOL_BROWSE))
 
     async def _browse_status(self, arguments: Mapping[str, Any]) -> dict[str, Any]:
         record = self.record(MCP_TOOL_BROWSE_STATUS, arguments)
         if not isinstance(record.job, BrowseJob):
             raise self._not_a_job(record, MCP_TOOL_BROWSE_STATUS, MCP_TOOL_BROWSE)
-        progress = await record.job.astatus()
+        progress = await settle(record.job, waited := wait_left(self.browse_wait))
         if progress.response is None:
             # A failed task's detail is the backend's own message, which can quote a session URL.
-            shaped, count = redact(shape_progress(progress, record.handle))
+            shaped, count = redact(shape_waited(progress, record.handle, wait=waited, tool=MCP_TOOL_BROWSE_STATUS))
             if count:
-                shaped["note"] = redaction_note(count).strip()
+                shaped["note"] = _noted(shaped.get("note", ""), [redaction_note(count).strip()])
             return dict(shaped)
         record.raw = progress.response.raw
-        return shape_browse(progress.response, record.handle, budget=max_response_chars())
+        return shape_browse(progress.response, record.handle, budget=result_budget(MCP_TOOL_BROWSE))
 
     def rebuild(self) -> None:
         """Hand every later call to a router built from the environment as it is now.
@@ -436,7 +435,7 @@ class WebRouterTools:
             provider=self.browsers.provider_of(session_id), documents=[type(document).model_validate(raw)], raw=[raw]
         )
         record = self.store.add(MCP_TOOL_BROWSER_READ, raw=raw)
-        shaped = shape_extract(response, record.handle, budget=max_response_chars())
+        shaped = shape_extract(response, record.handle, budget=result_budget(MCP_TOOL_EXTRACT))
         return {MCP_ARG_SESSION_ID: session_id, **self._scrubbed(shaped, count, lowered)}
 
     async def _browser_close(self, arguments: Mapping[str, Any]) -> dict[str, Any]:

@@ -1,1 +1,0 @@
-Nimble search keeps each result's `entities`, the company or creator records `focus="company"` and `focus="creators"` return, and any other field it does not map in `SearchResult.extra`, instead of leaving them only in `raw`.
