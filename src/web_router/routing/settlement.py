@@ -6,8 +6,9 @@ charge, in the call's own cap and in every shared budget it reserves in:
 
 - :func:`refund_unstarted`: an attempt that failed before the backend did any
   work -- the failures :func:`~web_router.providers._chain.nothing_started`
-  names, a 4xx refusal or a connection never made, and a backend passed over
-  while it cools down after timeouts -- is charged nothing. A 404
+  names, a 4xx refusal or a connection never made, a backend passed over
+  while it cools down after timeouts, and a backend refusing an option it does
+  not map -- is charged nothing. A 404
   or 410 stays charged: a fetch backend may bill a page it found gone;
 - :func:`settle_reported`: the attempt whose answer the call returns, when
   the response states its cost -- reported, or a keyless call's $0 -- is
@@ -23,16 +24,37 @@ attempt's estimate there is ``0``, as nothing ran.
 from __future__ import annotations
 
 import math
+from contextvars import ContextVar, Token
 from typing import TypeGuard
+from weakref import WeakKeyDictionary
 
 from web_router.constants_cost import COST_STATED
-from web_router.exceptions import WebRouterError
+from web_router.exceptions import UnsupportedParameterError, WebRouterError
+from web_router.exceptions_typed import InvalidParameterError
 from web_router.providers._chain import nothing_started
 from web_router.providers._cooldown import CoolingDownError
 from web_router.routing.attempts import Attempt
 from web_router.routing.budget_hooks import LEDGERS, check_own
 from web_router.routing.ledger import Ledger
 from web_router.types_errors import TARGET_GONE_STATUSES
+
+_REFUSED_BEFORE_SENDING = (UnsupportedParameterError, InvalidParameterError)
+"""An option the backend does not map, and a value it cannot take (a mode clash on ``auto`` search)."""
+
+_Notes = WeakKeyDictionary[BaseException, tuple[Ledger, ...]]
+
+_LEFT: ContextVar[_Notes | None] = ContextVar("web_router_refusals_left", default=None)
+"""For the outermost budgeted call in flight here: the ledgers in force, outermost first, when each refusal last
+left a call that was not one of them. One map per outermost call, so calls running at once never share notes."""
+
+
+def open_notes() -> Token[_Notes | None]:
+    """Start the outermost call's own notes; :func:`close_notes` ends them with the call."""
+    return _LEFT.set(WeakKeyDictionary())
+
+
+def close_notes(token: Token[_Notes | None]) -> None:
+    _LEFT.reset(token)
 
 
 def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> None:
@@ -42,7 +64,7 @@ def refund_unstarted(ledger: Ledger, call_id: str, exc: BaseException | str) -> 
     the call it was made in: an enclosing call's ledger, told of a nested
     call's failure, leaves its own open attempt as it is.
     """
-    if not isinstance(exc, WebRouterError) or not _never_started(exc) or not check_own(ledger)():
+    if not isinstance(exc, WebRouterError) or not _never_started(exc, ledger) or not check_own(ledger)():
         return
     attempt = ledger.refund_open(call_id)
     if attempt is not None:
@@ -67,11 +89,51 @@ def _match_enclosing(ledger: Ledger, attempt: Attempt, cost: float, *, refunded:
             enclosing.settle_counted(attempt, cost, refunded=refunded)
 
 
-def _never_started(exc: WebRouterError) -> bool:
+def left_call(ledger: Ledger, exc: BaseException) -> None:
+    """Note that ``exc`` is leaving the call ``ledger`` holds, unless it already left a call nested in it.
+
+    A provider may keep one error and raise it again in a later call: there the old note names other calls, so it
+    is replaced rather than kept. Only a refusal is noted, and only one that can be a key: a provider's own error
+    class may define ``__eq__`` without ``__hash__``, and the note must never replace that error with a TypeError.
+    """
+    notes = _LEFT.get()
+    if notes is None or not isinstance(exc, _REFUSED_BEFORE_SENDING) or not _keyable(exc):
+        return
+    if not _among(ledger, notes.get(exc, ())):
+        notes[exc] = LEDGERS.get()
+
+
+def _from_nested(exc: BaseException, ledger: Ledger) -> bool:
+    """Whether ``exc`` already left a call nested in the one ``ledger`` holds; one that cannot be noted never did."""
+    notes = _LEFT.get()
+    chain = notes.get(exc, ()) if notes is not None and _keyable(exc) else ()
+    return _among(ledger, chain) and chain[-1] is not ledger
+
+
+def _keyable(exc: BaseException) -> bool:
+    try:
+        hash(exc)
+    except TypeError:
+        return False
+    return True
+
+
+def _among(ledger: Ledger, chain: tuple[Ledger, ...]) -> bool:
+    return any(held is ledger for held in chain)
+
+
+def _never_started(exc: WebRouterError, ledger: Ledger) -> bool:
     """Whether ``exc`` proves the attempt never started: a backend passed over while it cools down, whatever status
-    started the cooldown, or what :func:`nothing_started` names but a gone page, which a fetch backend may bill."""
+    started the cooldown, a backend refusing an option before sending, or what :func:`nothing_started` names but a
+    gone page, which a fetch backend may bill.
+
+    A refusal that already left a call nested in this one is that call's: a registered provider can make one, do
+    billable work of its own, and pass its refusal on -- even a refusal naming the provider itself.
+    """
     if isinstance(exc, CoolingDownError):
         return True
+    if isinstance(exc, _REFUSED_BEFORE_SENDING):
+        return not _from_nested(exc, ledger)
     return nothing_started(exc) and getattr(exc, "status_code", None) not in TARGET_GONE_STATUSES
 
 

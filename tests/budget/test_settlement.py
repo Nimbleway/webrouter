@@ -5,18 +5,24 @@ Through the public routers, on the fake chain of :mod:`tests.budget.conftest`, w
 
 from __future__ import annotations
 
+import asyncio
 import math
+from contextlib import suppress
+from typing import Any
 
 import httpx
 import pytest
 
 from tests.budget.conftest import Chain, Table, call, scoped
-from web_router import Budget, WebRouter
+from tests.conftest import FakeProvider
+from web_router import AsyncWebRouter, Budget, WebRouter
 from web_router.constants_cost import COST_REPORTED
-from web_router.exceptions import ConfigurationError, ProviderError
+from web_router.exceptions import ConfigurationError, ProviderError, UnsupportedParameterError, WebRouterError
+from web_router.exceptions_typed import InvalidParameterError
+from web_router.registry import register_provider, unregister_provider
 from web_router.routing.attempts import Attempt
 from web_router.routing.ledger import Ledger
-from web_router.types import SearchRequest
+from web_router.types import SearchRequest, SearchResponse
 
 SHARED = Budget(max_cost_usd=0.10)
 _REQUEST = httpx.Request("GET", "https://api.test")
@@ -70,6 +76,109 @@ def test_a_named_backend_that_never_started_is_charged_nothing(chain: Chain, pri
     with WebRouter().budget(SHARED) as shared, pytest.raises(ProviderError):
         shared.search("q", provider="first")
     assert (shared.status().spent_usd, shared.status().reserved_usd) == (0.0, 0.0)
+
+
+@pytest.mark.parametrize(
+    ("tool", "refusal"),
+    [
+        ("answer", UnsupportedParameterError("first", ["recency"])),
+        ("search", InvalidParameterError("effort", "the pinned mode sets it")),
+    ],
+    ids=["unmapped-option-on-answer", "mode-clash-on-search"],
+    indirect=["tool"],
+)  # the refusals auto passes a member over on, per method
+def test_a_member_refusing_an_option_is_charged_nothing_so_the_next_fits(
+    chain: Chain, priced: Table, refusal: WebRouterError
+) -> None:
+    chain.raises["first"] = refusal
+    priced.update(first=(0.04, None), second=(0.04, None))
+    response = call(chain, Budget(max_cost_usd=0.06))
+    assert chain.called == ["first", "second"], "first sent nothing, so its estimate does not crowd out second"
+    assert [attempt.est_cost_usd for attempt in response.decision.attempts] == [0.0, 0.04]
+
+
+@pytest.mark.parametrize("tool", ["answer"], indirect=True)
+def test_a_refusal_raised_again_in_a_later_call_is_charged_nothing_there(chain: Chain, priced: Table) -> None:
+    chain.raises["first"] = UnsupportedParameterError("first", ["recency"])  # one instance, kept and raised again
+    priced.update(first=(0.04, None), second=(0.04, None))
+    with pytest.raises(UnsupportedParameterError):
+        call(chain, Budget(max_cost_usd=0.06), provider="first")  # the refusal leaves this call
+    chain.called.clear()
+    call(chain, Budget(max_cost_usd=0.06))
+    assert chain.called == ["first", "second"], "an earlier call's note does not make it a nested refusal here"
+
+
+async def test_a_call_running_at_once_never_frees_a_charge_a_nested_refusal_kept(priced: Table) -> None:
+    router, refusal, depth = AsyncWebRouter(), UnsupportedParameterError("wrapper", ["recency"]), []
+    nested_refused, other_refused = asyncio.Event(), asyncio.Event()
+
+    async def wrapper(self: Any, search: SearchRequest) -> SearchResponse:
+        if depth:
+            raise refusal
+        depth.append(1)
+        try:
+            await router.search("inner", provider="wrapper")
+        except UnsupportedParameterError:
+            nested_refused.set()
+            await other_refused.wait()  # meanwhile another call raises the same kept refusal
+            raise
+        return FakeProvider._respond(self, search)
+
+    async def other(self: Any, search: SearchRequest) -> SearchResponse:
+        await nested_refused.wait()
+        raise refusal
+
+    async def run_other() -> None:
+        with suppress(UnsupportedParameterError):
+            await router.search("q", provider="other")
+        other_refused.set()
+
+    register_provider("wrapper", type("Wrapper", (FakeProvider,), {"name": "wrapper", "_asearch": wrapper}))
+    register_provider("other", type("Other", (FakeProvider,), {"name": "other", "_asearch": other}))
+    priced.update(wrapper=(0.02, None), other=(0.01, None))
+    try:
+        async with router.budget(SHARED) as shared:
+            outcomes = await asyncio.gather(router.search("q", provider="wrapper"), run_other(), return_exceptions=True)
+    finally:
+        unregister_provider("wrapper")
+        unregister_provider("other")
+    assert isinstance(outcomes[0], UnsupportedParameterError)
+    assert shared.status().spent_usd == pytest.approx(0.02), "only the two attempts that sent nothing refunded"
+
+
+class _Unhashable(ProviderError):
+    def __eq__(self, other: object) -> bool:  # defining __eq__ leaves the class without __hash__
+        return self is other
+
+    __hash__ = None  # type: ignore[assignment]
+
+
+@pytest.mark.parametrize("tool", ["search"], indirect=True)
+def test_a_provider_error_that_cannot_be_hashed_still_reaches_the_caller(chain: Chain, priced: Table) -> None:
+    chain.raises["first"] = _Unhashable("first", "the provider's own failure")
+    priced.update(first=(0.02, None))
+    with pytest.raises(_Unhashable):
+        call(chain, Budget(max_cost_usd=0.10), provider="first")
+
+
+def test_a_refusal_passed_on_from_a_nested_call_leaves_the_provider_charged(priced: Table) -> None:
+    router, depth = WebRouter(), []
+
+    def wrapper(self: Any, search: SearchRequest) -> SearchResponse:
+        if depth:
+            raise UnsupportedParameterError("wrapper", ["recency"])
+        depth.append(1)
+        router.search("inner", provider="wrapper")  # after work it bills, a nested call refuses; passed on
+        return FakeProvider._respond(self, search)
+
+    register_provider("wrapper", type("Wrapper", (FakeProvider,), {"name": "wrapper", "_search": wrapper}))
+    priced.update(wrapper=(0.02, None))
+    try:
+        with router.budget(SHARED) as shared, pytest.raises(UnsupportedParameterError):
+            router.search("q", provider="wrapper")
+    finally:
+        unregister_provider("wrapper")
+    assert shared.status().spent_usd == pytest.approx(0.02), "only the nested attempt, which sent nothing, refunded"
 
 
 @pytest.mark.parametrize("tool", ["search", "answer"], indirect=True)  # the fakes that can state a cost
