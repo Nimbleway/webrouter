@@ -59,6 +59,26 @@ WebRouter().extract("https://example.com")  # page contents, also keyless
   </Card>
 </Columns>
 
+## Which method to use
+
+Start with the cheapest method that can answer, and move down the table only
+when it cannot. An agent can follow the same order: the
+[agent system prompt](/agent-prompt) spells it out as rules.
+
+| You need | Use | Takes | Key needed |
+| --- | --- | --- | --- |
+| Pages about a topic, with links and snippets | [`search`](/search) | seconds | No |
+| The contents of a URL you already have | [`extract`](/extract) | seconds | No |
+| A short written answer to one closed question, with sources | [`answer`](/answer) | seconds | Yes, and it bills |
+| Structured records from one site (products, reviews, listings) | [`live_data`](/live-data) | varies by site | Yes, one billed run |
+| A report that needs many searches and reasoning | [`research`](/research) | minutes | Yes, billed per run |
+| Clicking, typing and logging in on a page | [`open_browser`](/browser) | per session | No for `local` |
+| A whole browser task done for you | [`browse`](/browser) | minutes | Yes, billed per run |
+
+Not sure which? `run()` (`web_run` in the [MCP server](/mcp-server)) takes the
+request in words and picks between `search` and `extract` for you; a
+[router](/smart-routing) can widen that choice.
+
 ## Get help
 
 - [Discord](https://discord.gg/MGztFWSjZh): questions in #help, chatting with other builders and the maintainers, and showing what you built in #showcase.
