@@ -36,14 +36,15 @@ provider sentence said once, and 25,630 with the output schemas. ``search``'s
 three data API options (``data_apis``, ``data_apis_only``, ``configured_only``)
 bring it to 26,289; ``extract``'s two (``data_apis``, ``configured_only``), to 26,602.
 SpecStream's name in the ``search`` and ``extract`` provider lists brings it to 26,663. ``fetch_raw``'s page
-arguments take it from 26,666 to 26,767.
+arguments take it from 26,666 to 26,767, and Apify's name in the ``search`` and ``extract`` provider lists to
+26,783.
 """
 
-TOOL_BUDGET = 2_670
+TOOL_BUDGET = 2_680
 """Bytes any one tool may take: ``search``, the largest, is 2,606 with its data API options.
 
 Each search backend adds its name to ``search``'s ``provider`` list; Valyu, Seltz and
-Octen together bring it to about 2,620, SpecStream to 2,647, and Firecrawl to 2,661.
+Octen together bring it to about 2,620, SpecStream to 2,647, Firecrawl to 2,661, and Apify to 2,669.
 """
 
 

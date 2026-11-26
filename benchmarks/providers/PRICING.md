@@ -300,6 +300,18 @@ top-ups and down to $1 per 1k on Scale. The keyless tier bills nothing.
 | `deep` | `firecrawl:deep` | `scrapeOptions.formats=["markdown"]` | The whole page | $60 per 1k; estimate is derived: 2 credits per 10 results plus each result's scrape at 1 credit a page, 10 results assumed, so 12 credits at $5 per 1k credits = $60 per 1k (derived, not stated by Firecrawl; seen live, 2 results cost 4 credits) | [www.firecrawl.dev](https://www.firecrawl.dev/pricing.md) | 2026-11-24 |
 <!-- /prices -->
 
+### Apify
+
+Per search ([Web Search](https://apify.com/apify/web-search)), one results page of about 10 organic results: $5 per
+1k on the Free plan, $1.50 on Starter (Bronze Store tier), $1.25 on Silver and $1 on Gold and above. A DuckDuckGo
+search through `provider_options` costs the same. Billed to the account that owns the `APIFY_TOKEN`.
+
+<!-- prices: method=search provider=apify -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `apify` | default (Google) | Titles, URLs, a snippet and a date per result; the engine's own search block in `raw` | $1.50 per 1k; per search of one results page, on the Starter plan's Bronze Store tier; $5 per 1k on the Free plan, $1.25 on Silver, $1 on Gold and above; DuckDuckGo through provider_options is charged the same | [apify.com](https://apify.com/apify/web-search) | 2026-11-25 |
+<!-- /prices -->
+
 ### AWS AgentCore Web Search
 
 Billed by AWS to the account that owns the gateway: per query, plus the
@@ -370,6 +382,7 @@ key at the proxy's own cost map. These are LiteLLM's published defaults; an oper
 | browserbase | default | — | markdown | — | $1 per 1k; Fetch API calls past the included 1,000 (Free and Developer $20/mo); $0.50 per 1k past 10,000 on Startup ($99/mo); $4 per 1k with proxies, which web-router never turns on itself | [www.browserbase.com](https://www.browserbase.com/pricing) | 2026-11-08 |
 | browserbase | `browserbase-proxies` | `browserbase:browserbase-proxies` (unverified) | `proxies=true` | Fetched through Browserbase's proxies | $4 per 1k; $4 per 1k with proxies against $1 without | [www.browserbase.com](https://www.browserbase.com/pricing) | 2026-11-17 |
 | specstream | default | — | markdown (default) or text | — | $0.80 per 1k; per page read; a page that gives no text is not charged | [specstream.ai](https://specstream.ai/agents.md) | 2026-11-19 |
+| apify | default | — | markdown (default), html or text | — | $1.50 per 1k; per successful fetch through Apify's unblocker, Free and Starter (Bronze) Store tiers; $1.25 on Silver, $1 on Gold and above | [apify.com](https://apify.com/apify/web-fetch) | 2026-11-25 |
 <!-- /prices -->
 
 ## Templates (Extract Templates)

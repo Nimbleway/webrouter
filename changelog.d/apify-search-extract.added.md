@@ -1,0 +1,1 @@
+Apify as a search and extract backend: `apify` search runs Apify Web Search (Google by default, DuckDuckGo through `provider_options`) and `apify` extract runs Apify Web Fetch, both Server Actors called over their server interface under the same `APIFY_TOKEN` as live data. Both join `auto` after its existing members.
