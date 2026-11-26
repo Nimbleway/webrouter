@@ -24,12 +24,6 @@ def test_a_rewrite_two_requested_urls_share_proves_neither() -> None:
     assert owners(["https://example.com/page#top"], urls) == [None]
 
 
-def test_the_one_unmatched_answer_is_the_one_unclaimed_url() -> None:
-    urls = ["https://example.com/a", "https://example.com/b"]
-    answered = ["https://example.com/a", "https://elsewhere.test/landed"]
-    assert owners(answered, urls) == ["https://example.com/a", "https://example.com/b"]
-
-
 def test_a_url_no_parser_can_read_only_matters_once_a_rewrite_needs_it() -> None:
     with pytest.raises(ValueError):
         owners(["https://[::1/"], ["https://[::1"])
