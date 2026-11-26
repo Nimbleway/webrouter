@@ -229,9 +229,7 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
 
     def _check_gateway(self) -> None:
         if not self._gateway_url:
-            raise ConfigurationError.missing_setting(
-                self.name, env_var=ENV_AGENTCORE_GATEWAY_URL, setting="gateway_url"
-            )
+            raise self._missing_setting(ENV_AGENTCORE_GATEWAY_URL, "gateway_url")
         if not (self._is_https and self._host):
             raise ConfigurationError(MSG_AGENTCORE_BAD_URL.format(url=self._gateway_url, doc=AGENTCORE_SETUP_DOC))
 

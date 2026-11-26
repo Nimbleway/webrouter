@@ -47,6 +47,7 @@ from web_router.constants_litellm import (
 from web_router.constants_tavily import TAVILY_SEARCH_PARAMETERS
 from web_router.exceptions import ConfigurationError
 from web_router.modes import ModeDeclarations
+from web_router.providers._credential import _CredentialMixin
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._search_text import lite_body
 from web_router.providers._utils import best_text
@@ -58,7 +59,7 @@ from web_router.snippet import as_snippet
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 
-class LiteLLMSearchMixin:
+class LiteLLMSearchMixin(_CredentialMixin):
     """Mixed in ahead of a vendor's :class:`HttpSearchProvider` to send its search through a LiteLLM proxy."""
 
     name: ClassVar[str]
@@ -103,7 +104,7 @@ class LiteLLMSearchMixin:
         if self._url_error is not None:
             raise self._url_error
         if not self._proxy_url:
-            raise ConfigurationError.missing_setting(self.name, env_var=ENV_LITELLM_PROXY_API_BASE, setting="base_url")
+            raise self._missing_setting(ENV_LITELLM_PROXY_API_BASE, "base_url")
 
     def _search(self, request: SearchRequest) -> SearchResponse:
         self._require_proxy()

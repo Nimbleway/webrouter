@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Any, Self
+from typing import Any, ClassVar, Self
 
 from web_router._environment import env_value, environment, reads_environment
+from web_router.exceptions import ConfigurationError
 
 
 class _CredentialMixin:
     """:attr:`holds_credential` for every provider: a key, else its ``env_api_key`` variable set."""
 
+    name: ClassVar[str]
     api_key: str | None
     reads_environment: bool = True
     """Whether this provider was built reading the environment: a router with ``use_environment=False`` builds
@@ -33,3 +35,8 @@ class _CredentialMixin:
         env_var = getattr(self, "env_api_key", None)
         with environment(self.reads_environment):
             return isinstance(env_var, str) and bool(env_value(env_var))
+
+    def _missing_setting(self, env_var: str, setting: str) -> ConfigurationError:
+        """The error for a setting found missing when called, its hint the one for the switch this was built under."""
+        with environment(self.reads_environment):
+            return ConfigurationError.missing_setting(self.name, env_var=env_var, setting=setting)

@@ -94,3 +94,13 @@ def test_an_error_off_says_the_environment_was_not_read(monkeypatch: pytest.Monk
     assert "A .env exists" not in str(raised.value)
     with environment(False):
         assert "use_environment" not in str(ConfigurationError("no variable named here"))
+
+
+def test_a_setting_found_missing_when_called_says_the_environment_was_not_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AgentCore and a LiteLLM proxy check their URL on the call, after the router's switch is gone."""
+    every_key_set(monkeypatch)
+    off = WebRouter(provider_config={"exa-litellm": {"api_key": "mine"}}, use_environment=False)
+
+    for name in ("agentcore", "exa-litellm"):
+        with pytest.raises(ConfigurationError, match="use_environment=False"):
+            off.search("q", provider=name)
