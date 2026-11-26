@@ -4,7 +4,7 @@ as ``site:`` operators."""
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from web_router.constants_search import EXCLUDE_SITE_OPERATOR, MSG_NOT_A_DOMAIN, SITE_DOMAIN_PATTERN, SITE_OPERATOR
@@ -68,16 +68,20 @@ def site_operators(
 
 
 def refused_domains(
-    request: SearchRequest, *, limit: int | None = None, both: Sequence[str] = DOMAIN_LISTS
+    request: SearchRequest, *, limit: int | Mapping[str, int] | None = None, both: Sequence[str] = DOMAIN_LISTS
 ) -> dict[str, list[str]]:
     """The domain lists a backend that takes one list at a time, of at most ``limit`` domains, refuses, by name.
 
     With both lists set, those in ``both`` are refused (the one the backend would ignore, or both); a list
-    longer than ``limit`` is refused on its own.
+    longer than ``limit`` is refused on its own. A mapping gives each list its own limit.
     """
     lists = {name: getattr(request, name) or [] for name in DOMAIN_LISTS}
     refused = {name: lists[name] for name in both} if all(lists.values()) else {}
-    over = {name: domains for name, domains in lists.items() if limit is not None and len(domains) > limit}
+    if isinstance(limit, Mapping):
+        caps: Mapping[str, int] = limit
+    else:
+        caps = {} if limit is None else dict.fromkeys(DOMAIN_LISTS, limit)
+    over = {name: domains for name, domains in lists.items() if name in caps and len(domains) > caps[name]}
     return refused | over
 
 

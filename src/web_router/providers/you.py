@@ -88,8 +88,8 @@ class YouProvider(HttpSearchProvider):
         """
         lists = {name: getattr(request, name) or [] for name in DOMAIN_LISTS}
         with_path = {name: domains for name, domains in lists.items() if any(map(_has_path, domains))}
-        too_long = {name: domains for name, domains in lists.items() if len(domains) > YOU_DOMAIN_LIMITS[name]}
-        return {**refused_domains(request), **with_path, **too_long, **off_the_lists(request, YOU_COUNTRIES)}
+        refused = refused_domains(request, limit=YOU_DOMAIN_LIMITS)
+        return {**refused, **with_path, **off_the_lists(request, YOU_COUNTRIES)}
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
         # A depth of None, or "lite" which needs no extraction, both map to None
