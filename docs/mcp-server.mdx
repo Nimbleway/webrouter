@@ -352,9 +352,9 @@ in `WEB_ROUTER_MCP_TOOLS` to keep those tools visible in that setup.
 | `live_data` | Run a source and get its `records` back, fetched for this call, with `fetched_at` when the vendor states it. Pass the `provider` the listing named for the source; it may be left out only when one vendor is configured. | seconds to a few minutes (Apify waits up to 300 s), and it bills one run at the vendor's own rate -- see `benchmarks/providers/PRICING.md` |
 | `answer` | One question, answered by the backend in a few sentences, with the sources it rests on. A source the answer cites inline carries its marker in `marker`. Only cited sources are listed by default; the rest are counted in `uncited_sources`, and `all_sources` lists them all. Unnamed, the configured answer backends are tried in ranked order, and one that fails is passed over. | a few seconds; each backend tried bills one call |
 | `research` | Start an agentic run that searches, reads and cross-checks over many turns. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the run** |
-| `research_status` | Poll a handle from `research`: its state, or the answer once it has one. | about a second, and free |
+| `research_status` | Poll a handle from `research`: waits up to 25 seconds for the run to finish, then its state, or the answer once it has one. | up to 25 seconds, and free |
 | `browse` | Hand a task to a hosted browser agent that clicks, types and reads through pages. Waits 25 seconds, then hands back a job handle. | **minutes, and it bills for the task** |
-| `browse_status` | Poll a handle from `browse`: its state, or the answer and the agent's steps once it has one. | about a second, and free |
+| `browse_status` | Poll a handle from `browse`: waits up to 25 seconds for the task to finish, then its state, or the answer and the agent's steps once it has one. | up to 25 seconds, and free |
 | `fetch_raw` | The backend's full, unshaped payload for a handle from any of the above. | instant — nothing is called again |
 | `load_env` | Load provider keys from a `.env` file the user names, by path; see [above](#loading-keys-mid-conversation-load_env). | instant |
 | `web_run` | Hand a request in words to web-router, which runs it: a search, or the method the operator's router picks; `dry_run` returns the plan only. See [Routing and budgets](#routing-and-budgets-web_run-budget_start-budget_status). | as the method it picks |
@@ -409,6 +409,9 @@ A research run takes minutes and an MCP client talks over one pipe. So
 `research` submits the run, waits 25 seconds, and either answers outright or
 hands back a handle with the run still going. Poll `research_status` with that
 handle — calling `research` again would start, and pay for, a second run.
+`research_status` waits too: up to 25 seconds, or less if the budget has less
+left, answering the moment the run finishes. So a model can call it again
+right away, and a run of a few minutes takes a handful of polls, not hundreds.
 `browse` and `browse_status` work the same way, and each status tool refuses a
 handle from the other.
 
