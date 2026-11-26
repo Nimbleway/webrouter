@@ -38,7 +38,7 @@ async def test_the_data_driven_arm_asks_its_router_on_every_search_and_auto_neve
     async with own["data-driven"] as routed, run.WithholdingRouter(DATASET) as plain:
         arm = run.build_arm("web-router:data-driven", routed, 5, run.CLAUDE)
         assert arm.executor.provider == "auto" and arm.executor.router is routed
-        assert routed._route_tools == frozenset({"search"}) and plain._route_tools == frozenset()
+        assert routed._route_tools == frozenset({"search"}) and plain._router is None, "auto attaches no router"
         assert "parallel" in routed._extra_modes, "the measured tiers are shown to the router"
         assert routed.dataset is DATASET, "the routed arm keeps the answer-key pages from the agent too"
 

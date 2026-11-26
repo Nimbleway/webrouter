@@ -5,7 +5,7 @@ call's `RouteRequest` as JSON and reads a `RouteDecision` back -- the wire
 format, schema 1, whose JSON Schema files ship in the package under
 `web_router/data/schemas/router/v1/`. This server implements it in a few
 lines: it checks the bearer key, reads the request, asks the built-in data-driven router
-(`web_router.routing.data_driven.DataDrivenRouter`, the library's default) and answers. Swap `decide` for your own
+(`web_router.routing.data_driven.DataDrivenRouter`) and answers. Swap `decide` for your own
 logic, or port it to any language: a service reads `"schema": 1` JSON, ignores request fields it does not know, and
 answers `{"schema": 1, ...}` with any of the decision's optional fields.
 

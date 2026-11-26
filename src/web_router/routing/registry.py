@@ -2,7 +2,7 @@
 
 Experimental. A name maps to a factory, called with ``router_config``'s
 entries as keyword arguments when a router is built; what it returns is
-attached as any ``router=`` object is. ``data-driven``, the routers' default,
+attached as any ``router=`` object is. ``data-driven``,
 ``remote``, ``llm``, ``systemone``, ``gemini``, ``fallback``, which asks a list of
 routers in turn, ``preferred``, its deprecated ``cheapest_first`` alias and the deprecated
 ``rules`` router are built in and imported only when used; registering a name overrides a built-in one of that name, and

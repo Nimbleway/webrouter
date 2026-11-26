@@ -81,8 +81,9 @@ Work up this ladder and stop at the first rung that serves the task:
 Beside the ladder:
 
 - **`web_run`**, where offered, takes the request in words and lets the
-  server's router pick the method and backends. The built-in router picks
-  `search`, `extract` or `research` from the request's wording. `research` is
+  server's router pick the method and backends. With no router set it
+  searches; the data-driven router, when the operator sets it, picks `search`,
+  `extract` or `research` from the request's wording. `research` is
   billed per run and takes minutes, and a simple how, why, compare or list
   question can be planned as one: call `search` yourself when a search is what
   you want, or pass `dry_run=true` first. An operator's router may pick other

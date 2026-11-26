@@ -1,7 +1,7 @@
 """Deprecated rules router, retained for one release with its original method selection.
 
 URLs select extract; an explicit research request selects research then search;
-other prompts select search. The default router is now ``data-driven``.
+other prompts select search. No router is attached by default.
 ``examples/router_rules.py`` is a starting point for a custom rules router.
 """
 
