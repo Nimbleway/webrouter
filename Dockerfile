@@ -22,11 +22,11 @@ RUN uv sync --frozen --no-dev --extra mcp --no-install-project
 COPY src ./src
 RUN uv sync --frozen --no-dev --extra mcp --no-editable
 
-FROM ${PYTHON_IMAGE}
+FROM ${PYTHON_IMAGE} AS runtime
 LABEL io.modelcontextprotocol.server.name="io.github.Nimbleway/webrouter" \
       org.opencontainers.image.source="https://github.com/Nimbleway/webrouter" \
       org.opencontainers.image.licenses="Apache-2.0" \
-      org.opencontainers.image.description="web-router MCP server over streamable HTTP; bring your own keys"
+      org.opencontainers.image.description="web-router MCP server; bring your own keys"
 RUN useradd --create-home --uid 10001 webrouter
 COPY --from=build /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH" \
@@ -36,6 +36,14 @@ ENV PATH="/app/.venv/bin:$PATH" \
     WEB_ROUTER_MCP_REMEMBERED_ENV=off
 USER webrouter
 WORKDIR /home/webrouter
+
+# The same server over stdio, for a client that starts one container per session (the Docker MCP Catalog):
+#   docker build --target stdio -t webrouter-mcp-stdio .
+FROM runtime AS stdio
+ENTRYPOINT ["web-router-mcp"]
+
+# The default target: streamable HTTP, as described at the top of this file.
+FROM runtime AS http
 EXPOSE 8000
 ENTRYPOINT ["web-router-mcp", "--transport", "http", "--host", "0.0.0.0"]
 CMD ["--port", "8000"]
