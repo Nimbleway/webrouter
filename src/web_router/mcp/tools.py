@@ -89,7 +89,7 @@ from web_router.mcp.browsers import BrowserSessions, check_target, playwright_in
 from web_router.mcp.budget import ConnectionBudget, browser_charged, wait_left
 from web_router.mcp.env import EnvSources, user_config_dir
 from web_router.mcp.env_tool import load_env_entry
-from web_router.mcp.jobs import settle, tool_waits
+from web_router.mcp.jobs import settle, shape_waited, tool_waits
 from web_router.mcp.key_text import env_hint, no_backend_hint, nothing_configured, server_instructions
 from web_router.mcp.live_data_tools import live_data_source_tool, live_data_sources_tool, live_data_tool
 from web_router.mcp.methods import METHODS
@@ -106,7 +106,6 @@ from web_router.mcp.shaping import (
     shape_browse,
     shape_extract,
     shape_pending,
-    shape_progress,
     shape_research,
     shape_search,
 )
@@ -311,7 +310,7 @@ class WebRouterTools:
             raise self._not_a_job(record, MCP_TOOL_RESEARCH_STATUS, MCP_TOOL_RESEARCH)
         progress = await settle(record.job, waited := wait_left(self.research_wait))
         if progress.response is None:
-            return shape_progress(progress, record.handle, wait=waited)
+            return shape_waited(progress, record.handle, wait=waited, tool=MCP_TOOL_RESEARCH_STATUS)
         record.raw = progress.response.raw
         return shape_research(progress.response, record.handle, budget=result_budget(MCP_TOOL_RESEARCH))
 
@@ -335,7 +334,7 @@ class WebRouterTools:
         progress = await settle(record.job, waited := wait_left(self.browse_wait))
         if progress.response is None:
             # A failed task's detail is the backend's own message, which can quote a session URL.
-            shaped, count = redact(shape_progress(progress, record.handle, wait=waited))
+            shaped, count = redact(shape_waited(progress, record.handle, wait=waited, tool=MCP_TOOL_BROWSE_STATUS))
             if count:
                 shaped["note"] = _noted(shaped.get("note", ""), [redaction_note(count).strip()])
             return dict(shaped)

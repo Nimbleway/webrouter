@@ -29,15 +29,8 @@ from web_router.constants import (
     MCP_HANDLE_LIMIT,
     MCP_HANDLE_TEMPLATE,
     MCP_MAX_RESPONSE_CHARS,
-    MCP_TOOL_BROWSE_STATUS,
-    MCP_TOOL_RESEARCH_STATUS,
 )
-from web_router.constants_mcp_context import (
-    MCP_BUDGET_FACTOR_BY_TOOL,
-    MCP_EMPTY_VALUES,
-    MCP_RESEARCH_ANSWER_SHARE,
-    MCP_STATUS_STILL_RUNNING,
-)
+from web_router.constants_mcp_context import MCP_BUDGET_FACTOR_BY_TOOL, MCP_EMPTY_VALUES, MCP_RESEARCH_ANSWER_SHARE
 from web_router.mcp.redaction import redact as redact  # re-exported: callers import it from here
 from web_router.mcp.redaction import redaction_note as redaction_note
 from web_router.mcp.shaping_cost import cost_fields
@@ -290,24 +283,15 @@ def shape_browse(response: BrowseResponse, handle: str, *, budget: int) -> dict[
     )
 
 
-def shape_progress(
-    progress: ResearchProgress | BrowseProgress, handle: str, *, wait: float | None = None
-) -> dict[str, Any]:
-    """A job that has not answered yet -- or one that stopped without answering.
-
-    ``wait`` is how long the status call waited; a job still going after it is told to call that tool again.
-    """
-    shaped: dict[str, Any] = {
+def shape_progress(progress: ResearchProgress | BrowseProgress, handle: str) -> dict[str, Any]:
+    """A job that has not answered yet -- or one that stopped without answering."""
+    return {
         "handle": handle,
         "job_id": progress.job_id,
         "state": progress.state,
         "detail": progress.detail,
         "truncated": False,
     }
-    if wait is not None and not progress.is_terminal:
-        tool = MCP_TOOL_RESEARCH_STATUS if isinstance(progress, ResearchProgress) else MCP_TOOL_BROWSE_STATUS
-        shaped["note"] = MCP_STATUS_STILL_RUNNING.format(wait=wait, tool=tool, handle=handle)
-    return shaped
 
 
 def shape_pending(job: ResearchJob | BrowseJob, handle: str, *, wait: float, note: str) -> dict[str, Any]:
