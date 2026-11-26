@@ -80,8 +80,8 @@ def to_response(provider: str, request: LiveDataRequest, payload: dict[str, Any]
             {
                 "metadata": payload.get("metadata"),
                 "pagination": payload.get("pagination"),
-                "warnings": warnings or None,
                 **{k: v for k, v in data.items() if k not in ("parsing", *NIMBLE_EXTRACT_FORMATS.values())},
+                "warnings": warnings or None,
             }
         ),
         raw=payload,

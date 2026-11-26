@@ -132,3 +132,24 @@ def test_nimbles_warnings_on_a_successful_run_are_kept(provider: NimbleLiveDataP
     assert bare.extra["warnings"] == ["render is ignored because driver is configured"]
     assert paged.document is not None
     assert paged.document.warnings == ["render is ignored because driver is configured"]
+
+
+@pytest.mark.parametrize("reported", [None, []])
+def test_a_run_without_warnings_leaves_extra_as_it_was(provider: NimbleLiveDataProvider, reported: Any) -> None:
+    """No warnings, no `warnings` key: an empty list in `extra` would read as a field Nimble sent."""
+    payload = _run_payload(RECORD, warnings=reported)
+
+    response = to_response(provider.name, LiveDataRequest(source=TEMPLATE, format="markdown"), payload)
+
+    assert "warnings" not in response.extra
+    assert response.document is not None
+    assert response.document.warnings == []
+
+
+def test_a_data_field_named_warnings_does_not_replace_nimbles_own(provider: NimbleLiveDataProvider) -> None:
+    payload = _run_payload(RECORD, warnings=["render is ignored because driver is configured"])
+    payload["data"]["warnings"] = None
+
+    response = to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
+
+    assert response.extra["warnings"] == ["render is ignored because driver is configured"]
