@@ -95,7 +95,7 @@ async def test_a_key_is_masked_before_the_payload_is_cut_into_pages(monkeypatch:
 
 @pytest.mark.parametrize(
     "arguments",
-    [{"offset": -1}, {"max_chars": 0}, {"max_chars": 5}, {"offset": "10"}, {"max_chars": True}, {"offset": 10**9}],
+    [{"offset": -1}, {"max_chars": 0}, {"max_chars": 5}, {"offset": "10"}, {"offset": True}, {"offset": 10**9}],
     ids=["negative-offset", "zero-size", "smaller-than-one-escaped-character", "string", "bool", "past-the-end"],
 )
 async def test_a_page_argument_it_cannot_serve_is_refused_with_a_reason(
