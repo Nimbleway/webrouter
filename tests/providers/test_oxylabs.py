@@ -15,7 +15,7 @@ import pytest
 
 from web_router import WebRouter
 from web_router.exceptions import ConfigurationError, UnsupportedFormatError
-from web_router.providers.oxylabs import OxylabsRealtimeExtractProvider
+from web_router.providers.oxylabs import OxylabsRealtimeExtractProvider, OxylabsWebApiExtractProvider
 from web_router.types import ExtractRequest
 
 URL = "https://example.com"
@@ -121,10 +121,13 @@ def test_live_extract_returns_page_content() -> None:
 
 @pytest.mark.integration
 @pytest.mark.skipif(not os.getenv("OXYLABS_WEB_API_KEY"), reason="OXYLABS_WEB_API_KEY not set")
-def test_live_extract_on_the_web_api_key() -> None:
+def test_live_extract_on_the_web_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OXYLABS_USERNAME", raising=False)
+    monkeypatch.delenv("OXYLABS_PASSWORD", raising=False)
     with WebRouter(
         "oxylabs", provider_config={"oxylabs": {"web_api_key": os.environ["OXYLABS_WEB_API_KEY"]}}
     ) as router:
+        assert isinstance(router.get_extract_provider("oxylabs").api, OxylabsWebApiExtractProvider)  # type: ignore[attr-defined]
         response = router.extract(URL, format="markdown")
 
     assert response.provider == "oxylabs"

@@ -84,6 +84,15 @@ def test_render_mode_runs_javascript() -> None:
     assert payload["run_js"] is True
 
 
+@pytest.mark.parametrize("realtime", [False, True])
+def test_the_serving_api_s_credential_is_what_auto_sees(monkeypatch: pytest.MonkeyPatch, realtime: bool) -> None:
+    if realtime:
+        monkeypatch.setenv("OXYLABS_USERNAME", "test-user")
+        monkeypatch.setenv("OXYLABS_PASSWORD", "test-pass")
+
+    assert OxylabsExtractProvider().holds_credential
+
+
 def test_a_web_api_key_in_code_serves_too(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OXYLABS_WEB_API_KEY")
 

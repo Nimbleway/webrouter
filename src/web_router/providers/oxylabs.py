@@ -199,6 +199,11 @@ class OxylabsExtractProvider(ExtractProvider):
         else:
             raise ConfigurationError(MSG_OXYLABS_EXTRACT_NO_CREDENTIALS)
 
+    @property
+    def holds_credential(self) -> bool:
+        """The serving API's, which holds the key: ``auto`` reads it before warning that a key was refused."""
+        return self.api.holds_credential
+
     def _build_payload(self, request: ExtractRequest, urls: list[str]) -> dict[str, Any]:
         """What the serving API sends for ``request``: its contract's body."""
         return self.api._build_payload(request, urls)

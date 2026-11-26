@@ -1,0 +1,1 @@
+`auto` extract now tries Oxylabs when only `OXYLABS_WEB_API_KEY` is set (before, only with the Web Scraper API's username and password), so a key set for live data also serves extracts, on its quota. `OxylabsExtractProvider` now picks between two API classes; its HTTP client is on `.api`.
