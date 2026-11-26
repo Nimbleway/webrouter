@@ -1,0 +1,1 @@
+Oxylabs extract runs on a Web API key alone (`OXYLABS_WEB_API_KEY`, or `web_api_key` in `provider_config`), over the Web API's scrape endpoint. The Web Scraper API username and password still serve when set.

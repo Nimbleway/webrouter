@@ -44,7 +44,8 @@ def build(pin: str, transport: httpx.MockTransport) -> Any:
         client = AsyncNimble(api_key="k", http_client=httpx.AsyncClient(transport=transport))
         return create_extract_provider(pin, async_client=client)
     provider = create_extract_provider(pin, api_key="k", **({"username": "u"} if name == "oxylabs" else {}))
-    provider._async = httpx.AsyncClient(**provider._client_kwargs, transport=transport)
+    http = getattr(provider, "api", provider)
+    http._async = httpx.AsyncClient(**http._client_kwargs, transport=transport)
     return provider
 
 

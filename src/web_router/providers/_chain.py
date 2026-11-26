@@ -30,6 +30,7 @@ from web_router.constants import (
     MSG_OPTION_VALUE,
     RESEARCH_ENV_BY_PROVIDER,
 )
+from web_router.constants_live_data import AUTO_KEY_SETTINGS
 from web_router.exceptions import (
     ConfigurationError,
     ProviderError,
@@ -136,6 +137,7 @@ def _configured_in(members_config: Mapping[str, Mapping[str, Any]]) -> frozenset
         if config.get("api_key")
         or (name in AUTO_CLIENT_PROVIDERS and config.get(AUTO_CLIENT_OPTION))
         or (name in AUTO_SETTING_PROVIDERS and config.get(AUTO_SETTING_PROVIDERS[name]))
+        or (name in AUTO_KEY_SETTINGS and config.get(AUTO_KEY_SETTINGS[name]))
     )
 
 

@@ -36,7 +36,11 @@ from web_router.constants import (
     EXTRACT_ENV_BY_PROVIDER,
     RESEARCH_ENV_BY_PROVIDER,
 )
-from web_router.constants_live_data import LIVE_DATA_ALT_ENV_BY_PROVIDER, LIVE_DATA_ENV_BY_PROVIDER
+from web_router.constants_live_data import (
+    EXTRACT_ALT_ENV_BY_PROVIDER,
+    LIVE_DATA_ALT_ENV_BY_PROVIDER,
+    LIVE_DATA_ENV_BY_PROVIDER,
+)
 from web_router.exceptions import WebRouterError
 from web_router.providers._clock import pinned_today
 from web_router.types import (
@@ -60,6 +64,9 @@ PROBE_KEY = "contract-probe-key"
 
 PROBE_TODAY = date(2026, 1, 15)
 """The date a request counted back from today is built on, so a contract's dates never go stale."""
+
+ALT_ENV = {"extract": EXTRACT_ALT_ENV_BY_PROVIDER, "live_data": LIVE_DATA_ALT_ENV_BY_PROVIDER}
+"""Per method, a second set of variables that configures a backend on its own."""
 
 PROBE_ENV = {
     "BRIGHTDATA_ZONE": "contract-probe-zone",
@@ -272,11 +279,7 @@ def generate(method: str, name: str) -> dict[str, Any]:
                 "transport": transport(cls),
                 "credentials": _credentials(spec, name),
                 # A second set of variables that configures the backend on its own: Oxylabs' two APIs.
-                **(
-                    {"or_credentials": list(LIVE_DATA_ALT_ENV_BY_PROVIDER[name])}
-                    if method == "live_data" and name in LIVE_DATA_ALT_ENV_BY_PROVIDER
-                    else {}
-                ),
+                **({"or_credentials": list(alt[name])} if (alt := ALT_ENV.get(method, {})) and name in alt else {}),
                 "keyless": _keyless(spec, name),
                 "always_sent": dict(sorted(_payload(provider, method, spec.request()).items())),
                 "options": {

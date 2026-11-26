@@ -48,6 +48,13 @@ MSG_OXYLABS_NO_CREDENTIALS: Final = (
 )
 """Neither of Oxylabs' two credentials is set: either one serves live data."""
 
+MSG_OXYLABS_EXTRACT_NO_CREDENTIALS: Final = (
+    "Oxylabs extract needs a credential: OXYLABS_USERNAME and OXYLABS_PASSWORD (the Web Scraper API) or"
+    " OXYLABS_WEB_API_KEY (the Web API), or the same in provider_config['oxylabs'] as 'username' and 'api_key',"
+    " or 'web_api_key'."
+)
+"""Neither of Oxylabs' two credentials is set: either one serves extract."""
+
 OXYLABS_WEB_API_FAILURE: Final = "oxylabs web_api"
 """The key a listing's ``failures`` names the Web API under when it could not answer and the Web Scraper API did."""
 

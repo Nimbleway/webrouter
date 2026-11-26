@@ -118,7 +118,7 @@ which ones this environment can use.
 | `Provider.EXA` | `exa` | [Exa Contents](https://exa.ai) | `EXA_API_KEY` | `text` |
 | `Provider.LINKUP` | `linkup` | [Linkup Fetch](https://docs.linkup.so) | `LINKUP_API_KEY` | `markdown`, `html` |
 | `Provider.FIRECRAWL` | `firecrawl` | [Firecrawl Scrape](https://firecrawl.dev) | `FIRECRAWL_API_KEY`, or keyless with `allow_keyless=True` (capped per IP per day) | `markdown`, `html` |
-| `Provider.OXYLABS` | `oxylabs` | [Oxylabs Web Scraper](https://oxylabs.io) | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD` | `markdown`, `html` |
+| `Provider.OXYLABS` | `oxylabs` | [Oxylabs Web Scraper](https://oxylabs.io), or its [Web API](https://developers.oxylabs.io/products/web-api/scrape) | `OXYLABS_USERNAME` + `OXYLABS_PASSWORD`, or `OXYLABS_WEB_API_KEY` | `markdown`, `html` |
 | `Provider.BRIGHTDATA` | `brightdata` | [Bright Data Web Unlocker](https://brightdata.com) | `BRIGHTDATA_API_TOKEN` + `BRIGHTDATA_ZONE` | `markdown`, `html` |
 | `Provider.WEBIQ` | `webiq` | [WebIQ Browse](https://api.microsoft.ai) (Microsoft AI) — pages in WebIQ's own index | `WEBIQ_API_KEY` | `markdown`, `text` |
 | `Provider.KEENABLE` | `keenable` | [Keenable Fetch](https://docs.keenable.ai/api-reference/fetch) | `KEENABLE_API_KEY`, or keyless with `allow_keyless=True` (rate-limited per IP) | `markdown` |
@@ -132,7 +132,8 @@ which ones this environment can use.
 
 Two need more than a key. Oxylabs authenticates with the username and password
 created under Web Scraper API in its dashboard — not the ones you sign in with —
-and Bright Data needs the zone that routes the request beside its token. Neither
+or with a Web API key alone (`OXYLABS_WEB_API_KEY`, `web_api_key` in
+`provider_config`); with both, the Web Scraper API serves. Bright Data needs the zone that routes the request beside its token. Neither
 has a default worth guessing, so a missing one is an error naming the variable
 to set.
 

@@ -78,6 +78,9 @@ OXYLABS_SCRAPERS_PATH: Final = "/v1/scrapers"
 
 OXYLABS_SCRAPE_PREFIX: Final = "/v1/scrape"
 OXYLABS_ASYNC_PREFIX: Final = "/v1/async/scrape"
+
+OXYLABS_WEB_API_OUTPUT_PARAM: Final = "output"
+"""Extract's formats by their own names (``html``, ``markdown``); the result carries each under the same key."""
 OXYLABS_BATCH_PREFIX: Final = "/v1/async/scrape/batch"
 """Realtime, async-job and batch paths. A source is the part after the prefix: ``amazon/product``."""
 

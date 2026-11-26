@@ -21,6 +21,8 @@ LINKUP_EXTRACT_FLAGS: Mapping[str, Flag] = {"linkup-render-js": Flag(wire={"rend
 
 OXYLABS_EXTRACT_TIERS: Mapping[str, Tier] = {"oxylabs-render": Tier(wire={"render": "html"})}
 """The page rendered in a browser first; unset, Oxylabs fetches it without JavaScript."""
+OXYLABS_WEB_API_EXTRACT_TIERS: Mapping[str, Tier] = {"oxylabs-render": Tier(wire={"run_js": True})}
+"""The same tier on the Web API, which asks for a browser with ``run_js``."""
 
 NIMBLE_EXTRACT_TIERS: Mapping[str, Tier] = {
     "nimble-vx8": Tier(wire={"driver": "vx8"}),

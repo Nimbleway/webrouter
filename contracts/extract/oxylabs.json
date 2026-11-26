@@ -3,17 +3,34 @@
   "method": "extract",
   "class": "web_router.providers.oxylabs.OxylabsExtractProvider",
   "transport": {
-    "kind": "http",
-    "base_url": "https://realtime.oxylabs.io",
-    "paths": {
-      "extract_path": "/v1/queries"
-    },
-    "method": "POST",
-    "auth_header": "Authorization"
+    "kind": "apis",
+    "apis": {
+      "OxylabsRealtimeExtractProvider": {
+        "kind": "http",
+        "base_url": "https://realtime.oxylabs.io",
+        "paths": {
+          "extract_path": "/v1/queries"
+        },
+        "method": "POST",
+        "auth_header": "Authorization"
+      },
+      "OxylabsWebApiExtractProvider": {
+        "kind": "http",
+        "base_url": "https://webapi.oxylabs.io",
+        "paths": {
+          "extract_path": "/v1/scrape"
+        },
+        "method": "POST",
+        "auth_header": "Authorization"
+      }
+    }
   },
   "credentials": [
     "OXYLABS_USERNAME",
     "OXYLABS_PASSWORD"
+  ],
+  "or_credentials": [
+    "OXYLABS_WEB_API_KEY"
   ],
   "keyless": null,
   "always_sent": {
