@@ -26,8 +26,8 @@ from web_router.constants_seltz import (
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpSearchProvider
-from web_router.providers._search_text import as_snippet
-from web_router.providers._utils import build_payload, mapped
+from web_router.providers._utils import build_payload, field_names, mapped
+from web_router.snippet import as_snippet
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "content", "published_date"})
@@ -61,7 +61,7 @@ class SeltzProvider(HttpSearchProvider):
     def _to_response(self, request: SearchRequest, payload: dict[str, Any]) -> SearchResponse:
         documents = payload.get("documents")
         if not isinstance(documents, list):
-            raise ProviderError(self.name, MSG_SELTZ_NO_DOCUMENTS.format(fields=", ".join(sorted(payload)) or "none"))
+            raise ProviderError(self.name, MSG_SELTZ_NO_DOCUMENTS.format(fields=field_names(payload)))
         return SearchResponse(
             provider=self.name,
             query=request.query,
@@ -76,7 +76,7 @@ class SeltzProvider(HttpSearchProvider):
         snippets = [str(s["text"]) for s in document.get("snippets") or [] if isinstance(s, dict) and s.get("text")]
         return SearchResult(
             url=document.get("url") or "",
-            description=snippets[0] if snippets else as_snippet(content),
+            description=as_snippet(snippets[0] if snippets else content),
             content=content or "\n\n".join(snippets),
             published_date=document.get("published_date"),
             extra={k: v for k, v in document.items() if k not in _MAPPED_RESULT_FIELDS},

@@ -21,7 +21,7 @@ def files_allowed() -> bool:
 
 
 def private_allowed() -> bool:
-    """Whether loopback and private-network addresses may be opened: yes unless the operator, or HTTP, said off.
+    """Whether loopback and private-network addresses may be opened: no unless the operator set it to ``on``.
 
     Raises:
         ConfigurationError: for a value :data:`ENV_MCP_PRIVATE_URLS` does not take.

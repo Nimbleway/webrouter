@@ -163,3 +163,33 @@ async def test_a_submitted_runs_answer_records_the_effort_the_budget_mapped(
             answer, again = job.result(), job.result()
     assert [request.effort for request in nimble_sent] == ["low"] and again is answer, "copied once, then kept"
     assert answer.decision is not None and answer.decision.params == {"effort": "low"}, "as research() records it"
+
+
+# -- a finished run's report reaches the model whole -------------------------------------
+
+_REPORT = "alpha beta gamma delta " * 1100
+"""About 25,000 characters: a typical research report, three times what an ordinary result may take."""
+
+
+class _LongReport(FakeResearchProvider):
+    def _progress(self, request: ResearchRequest) -> ResearchProgress:
+        progress = super()._progress(request)
+        if progress.response is None:
+            return progress
+        return progress.model_copy(update={"response": progress.response.model_copy(update={"answer": _REPORT})})
+
+
+@pytest.fixture
+def long_report() -> Iterator[None]:
+    yield from _as_members(_LongReport)
+
+
+@pytest.mark.usefixtures("long_report")
+@pytest.mark.parametrize(
+    ("tool", "arguments"), [(MCP_TOOL_WEB_RUN, {"prompt": "compare solar policy"}), ("research", {"query": "q"})]
+)
+async def test_a_finished_research_report_reaches_the_model_whole(tool: str, arguments: dict[str, Any]) -> None:
+    shaped = await ok_on(_researching(), tool, **arguments)
+
+    assert shaped["answer"] == _REPORT
+    assert shaped["truncated"] is False

@@ -36,6 +36,11 @@ class AcmeProvider(HttpSearchProvider):
 register_provider("acme", AcmeProvider)  # custom names are strings: the enum is closed
 ```
 
+Put the result's full text in `content` and a short snippet in `description`.
+When the backend sends no snippet, `web_router.snippet.as_snippet` cuts the text
+to one of at most 500 characters. Nothing shortens `description` after your
+provider returns it.
+
 Wrapping a real SDK instead? Subclass `SearchProvider` and implement `_search`
 and `_asearch`, as `nimble.py` and `tavily.py` do.
 

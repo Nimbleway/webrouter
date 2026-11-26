@@ -79,7 +79,7 @@ def json_value(text: str | None, what: str) -> Any:
     if text.startswith(CLI_FILE_PREFIX):
         path = Path(text[len(CLI_FILE_PREFIX) :]).expanduser()
         try:
-            text = path.read_text(encoding="utf-8")
+            text = path.read_text(encoding="utf-8-sig")
         except (OSError, UnicodeDecodeError) as exc:  # missing, unreadable, or not UTF-8 text: the caller's file
             reason = exc.strerror if isinstance(exc, OSError) and exc.strerror else exc
             raise CliInputError(MSG_UNREADABLE.format(path=path, error=reason)) from None

@@ -1,6 +1,6 @@
 """What kind of failure a backend's error is, and a URL an extract could not read, so callers branch on fields.
 
-A leaf of the import graph, like the other ``types_*`` modules: it imports nothing of web-router's, so
+A leaf of the import graph, like the other ``types_*`` modules: it imports only ``types_errors_network``, a leaf too, so
 :mod:`web_router.types` and :mod:`web_router.exceptions` can both build on it. Import its names from there.
 """
 
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import math
-from collections.abc import Iterator, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
@@ -16,7 +16,11 @@ from typing import Final, Literal, cast, get_args
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
-ProviderErrorKind = Literal["auth", "rate_limit", "bad_request", "not_found", "timeout", "target", "local", "upstream"]
+from web_router.types_errors_network import ERROR_KIND_NETWORK_BLOCKED, NETWORK_KINDS, NetworkKind, network_kind
+from web_router.types_errors_network import cause_chain as _chain
+
+_CallKind = Literal["auth", "rate_limit", "bad_request", "not_found", "timeout", "target", "local", "upstream"]
+ProviderErrorKind = Literal[_CallKind, NetworkKind]
 """Why a backend call failed.
 
 - ``auth``: the credential was refused (401, 403).
@@ -28,6 +32,8 @@ ProviderErrorKind = Literal["auth", "rate_limit", "bad_request", "not_found", "t
   another backend would fail the same way.
 - ``local``: a failure on this side of the call: a closed event loop, or a provider's own parsing bug.
 - ``upstream``: anything else the backend did: a 5xx, a dropped connection, an answer that could not be read.
+- ``network_blocked``: this machine's proxy refused the backend's host (a refused CONNECT, a 407).
+- ``unreachable``: the backend's host did not resolve from here, or refused the connection.
 """
 
 ERROR_KIND_AUTH: Final[ProviderErrorKind] = "auth"
@@ -44,7 +50,6 @@ RETRYABLE_KINDS: Final = frozenset({ERROR_KIND_RATE_LIMIT, ERROR_KIND_TIMEOUT, E
 CHAIN_STOPPING_KINDS: Final = frozenset({ERROR_KIND_LOCAL, ERROR_KIND_TARGET})
 """The kinds after which ``auto`` raises instead of trying its next backend: the next would fail the same way."""
 RETRY_AFTER_HEADER: Final = "retry-after"
-_CAUSE_DEPTH: Final = 4
 
 KIND_BY_STATUS: Final[dict[int, ProviderErrorKind]] = {
     400: ERROR_KIND_BAD_REQUEST,
@@ -114,6 +119,8 @@ def classify(original: BaseException | None, message: str = "") -> ErrorFacts:
     if by_status in (ERROR_KIND_AUTH, ERROR_KIND_RATE_LIMIT):
         # A refused key or a throttle is the backend's answer about the caller, whatever its body goes on to say.
         return ErrorFacts(by_status, status, retry_after)
+    if (network := network_kind(_chain(original), status)) is not None:
+        return ErrorFacts(network, status, retry_after)  # this side's network, whichever host the text names
     # A failure to reach the backend itself says nothing about the page, whatever its text.
     if not _connect_failed(original) and any(marker in text for marker in TARGET_MARKERS):
         return ErrorFacts(ERROR_KIND_TARGET, status, retry_after)
@@ -169,15 +176,6 @@ def _timed_out(original: BaseException | None) -> bool:
         isinstance(link, (TimeoutError, asyncio.TimeoutError)) or ERROR_KIND_TIMEOUT in type(link).__name__.lower()
         for link in _chain(original)
     )
-
-
-def _chain(exc: BaseException | None) -> Iterator[BaseException]:
-    """``exc`` and the errors it carries as its cause (else its context), at most :data:`_CAUSE_DEPTH`, each once."""
-    seen: set[int] = set()
-    while exc is not None and len(seen) < _CAUSE_DEPTH and id(exc) not in seen:
-        seen.add(id(exc))
-        yield exc
-        exc = getattr(exc, "__cause__", None) or getattr(exc, "__context__", None)
 
 
 def _retry_after(original: BaseException | None) -> float | None:
@@ -246,6 +244,8 @@ class ExtractFailure(BaseModel):
         if shared is not None:
             return shared
         kinds = {failure.kind for failure in failures}
+        if kinds and kinds <= NETWORK_KINDS:
+            return ERROR_KIND_NETWORK_BLOCKED  # a proxy refusing one call and DNS failing another: no retry helps
         return next((kind for kind in _RECOVERABLE_FIRST if kind in kinds), ERROR_KIND_UPSTREAM)
 
     @classmethod

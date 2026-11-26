@@ -251,6 +251,61 @@ call waits for a slot within its own `timeout`; a URL still waiting when the
 timeout runs out is a `timeout` failure. On `AsyncWebRouter` the cap applies
 per event loop.
 
+## Network access
+
+Each backend is an HTTPS API on its own host. A sandbox or a hosted agent that
+reaches the internet through an allowlisting proxy can call only the backends
+whose hosts it allows. When a proxy refuses a host, or the host does not
+resolve or refuses the connection, that hop fails with `kind`
+`network_blocked` or `unreachable`, not `upstream`, and `auto` moves on to the
+next backend, whose host may be allowed. If no backend's host was reachable,
+`auto` raises one `AllProvidersFailedError` that says so and lists the hosts in
+`blocked_hosts`; see [Errors](/errors#when-no-backend-is-reachable).
+
+The keyless backends, tried when no key is set:
+
+| Backend | Host | Serves |
+| --- | --- | --- |
+| `nimble` | `sdk.nimbleway.com` | search, extract |
+| `tavily` | `api.tavily.com` | search, extract |
+| `you-mcp` | `api.you.com` | search |
+| `exa-mcp` | `mcp.exa.ai` | search |
+| `parallel-mcp` | `search.parallel.ai` | search |
+| `keenable` | `api.keenable.ai` | search, extract |
+| `jina` | `r.jina.ai` | extract |
+| `firecrawl` | `api.firecrawl.dev` | extract |
+
+Allow at least one search host and one extract host; allowing all of them keeps
+the fallbacks. A backend you hold a key for needs its own host:
+
+| Backend | Host |
+| --- | --- |
+| `apify` | `api.apify.com` |
+| `brave` | `api.search.brave.com` |
+| `brightdata` | `api.brightdata.com` |
+| `browserbase` | `api.browserbase.com` |
+| `deepseek` | `api.deepseek.com` |
+| `exa` | `api.exa.ai` |
+| `keirolabs` | `api.keirolabs.cloud` |
+| `linkup` | `api.linkup.so` |
+| `octen` | `api.octen.ai` |
+| `oxylabs` | `realtime.oxylabs.io`, and `webapi.oxylabs.io` for live data |
+| `parallel` | `api.parallel.ai` |
+| `perplexity` | `api.perplexity.ai` |
+| `seltz` | `api.seltz.ai` |
+| `specstream` | `api.specstream.ai` |
+| `valyu` | `api.valyu.ai` |
+| `webiq` | `api.microsoft.ai` |
+| `you` | `ydc-index.io` for search, `api.you.com` for research |
+
+The browser backends need their API host (`api.anchorbrowser.io`,
+`api.browser-use.com`, `api.hyperbrowser.ai`, `api.onkernel.com`,
+`api.skyvern.com`, `api.steel.dev`) and the host of the browser connection URL
+that API hands back, such as `connect.steel.dev`. The `local`
+browser reaches the pages it opens directly, so those hosts must be allowed
+instead. A backend whose base URL you set yourself, such as `NIMBLE_BASE_URL`,
+needs that host.
+
 ## Keyless tiers
 
 The keyless backends (`tavily`'s anonymous tier, `you-mcp`, `exa-mcp`,

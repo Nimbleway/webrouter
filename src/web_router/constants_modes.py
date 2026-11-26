@@ -69,3 +69,5 @@ MSG_PIN_OPTION = "mode {mode!r} writes {field!r}, which provider_options sets to
 MSG_PIN_DEPTH = "mode {mode!r} stands for search_depth={depth!r}, not {asked!r}: drop one"
 MSG_PIN_EFFORT = "mode {mode!r} stands for effort={effort!r}, not {asked!r}: drop one"
 MSG_PIN_WRITES = "mode {mode!r} writes {field!r}, which {option}={value!r} sets to another value: drop one"
+MSG_PIN_NONE = "{text!r} names a mode, which {tools} takes none of: drop it"
+MSG_TOOL_UNKNOWN = "{tool!r} is not a router method"

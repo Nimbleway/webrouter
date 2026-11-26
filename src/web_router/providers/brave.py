@@ -46,6 +46,7 @@ from web_router.providers._search_text import lite_body, site_operators, unsited
 from web_router.providers._utils import build_payload, mapped
 from web_router.providers.brave_answer import BraveAnswerProvider as BraveAnswerProvider
 from web_router.providers.brave_answer import refused_token_kind
+from web_router.snippet import as_snippet
 from web_router.types import SearchDepth, SearchRequest, SearchResponse, SearchResult
 
 _MAPPED_RESULT_FIELDS = frozenset({"url", "title", "description", "extra_snippets", "page_age"})
@@ -132,7 +133,7 @@ class BraveProvider(HttpSearchProvider):
         return SearchResult(
             url=hit.get("url", ""),
             title=_unmark(hit.get("title") or ""),
-            description=description,
+            description=as_snippet(description),
             content=lite_body("\n\n".join([description, *snippets]).strip(), request.search_depth),
             published_date=hit.get("page_age"),
             extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},

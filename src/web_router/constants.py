@@ -39,6 +39,7 @@ from web_router.constants_mcp_env import MCP_DESC_LOAD_ENV, MCP_LOAD_ENV_PROPERT
 from web_router.constants_search import MCP_DESC_SEARCH, MCP_SEARCH_PROPERTIES
 from web_router.constants_search import described as _described
 from web_router.constants_vendors_mcp import VENDOR_MCP_DESCRIPTIONS, VENDOR_MCP_PROPERTIES, VENDOR_MCP_REQUIRED
+from web_router.snippet import SNIPPET_LIMIT as SNIPPET_LIMIT
 from web_router.types import (
     BROWSE_PARAMETERS,
     NORMALIZED_PARAMETERS,
@@ -87,6 +88,7 @@ PROVIDER_OXYLABS = Provider.OXYLABS.value
 PROVIDER_BRIGHTDATA = Provider.BRIGHTDATA.value
 PROVIDER_FIRECRAWL = Provider.FIRECRAWL.value
 PROVIDER_JINA = Provider.JINA.value
+PROVIDER_OBSCURA = Provider.OBSCURA.value
 PROVIDER_STEEL = Provider.STEEL.value
 PROVIDER_BROWSERBASE = Provider.BROWSERBASE.value
 PROVIDER_HYPERBROWSER = Provider.HYPERBROWSER.value
@@ -176,6 +178,7 @@ ENV_BRIGHTDATA_API_KEY = "BRIGHTDATA_API_TOKEN"
 ENV_BRIGHTDATA_ZONE = "BRIGHTDATA_ZONE"
 ENV_FIRECRAWL_API_KEY = "FIRECRAWL_API_KEY"
 ENV_JINA_API_KEY = "JINA_API_KEY"
+ENV_OBSCURA_PATH = "OBSCURA_PATH"
 ENV_STEEL_API_KEY = "STEEL_API_KEY"
 ENV_BROWSERBASE_API_KEY = "BROWSERBASE_API_KEY"
 ENV_HYPERBROWSER_API_KEY = "HYPERBROWSER_API_KEY"
@@ -201,6 +204,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_DEEPSEEK: ENV_DEEPSEEK_API_KEY,
     PROVIDER_VALYU: ENV_VALYU_API_KEY,
     PROVIDER_SPECSTREAM: ENV_SPECSTREAM_API_KEY,
+    PROVIDER_FIRECRAWL: ENV_FIRECRAWL_API_KEY,
     # Not a credential: the AWS one comes from botocore's chain. The gateway is
     # what has to exist before a call can be worth trying.
     PROVIDER_AGENTCORE: ENV_AGENTCORE_GATEWAY_URL,
@@ -233,6 +237,7 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_DEEPSEEK: (ENV_DEEPSEEK_API_KEY,),
     PROVIDER_SPECSTREAM: (ENV_SPECSTREAM_API_KEY,),
     PROVIDER_JINA: (),
+    PROVIDER_OBSCURA: (),
     PROVIDER_BROWSERBASE: (ENV_BROWSERBASE_API_KEY,),
     PROVIDER_AUTO: (),
     PROVIDER_MAX: (),
@@ -330,16 +335,6 @@ MSG_HTTP_ERROR = "HTTP {status}: {body}"
 HTTP_ERROR_BODY_LIMIT = 500
 """How much of an error response body to quote back, to keep messages readable."""
 
-
-# --- Normalization ----------------------------------------------------------
-
-SNIPPET_LIMIT = 500
-"""Cap for a description synthesized from body text.
-
-Some providers return no snippet, only page content. Using the head of that
-content keeps ``description`` populated without letting a 9 KB excerpt sit in a
-field every other provider fills with a sentence or two.
-"""
 
 # --- Nimble -----------------------------------------------------------------
 
@@ -567,7 +562,7 @@ AUTO_APPENDED: tuple[str, ...] = _chain("search", "appended")
 """Keyed members the frozen results do not rank, tried after the keyless tier, with a credential, in joining order.
 
 From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz``, ``octen``,
-``keirolabs`` and ``specstream`` joined after the scan that set the order, and the ranking set has no rows for them. A
+``keirolabs``, ``specstream`` and ``firecrawl`` joined after the scan that set the order, unranked by it. A
 backend that joins later goes at the end of the file's ``appended``, so joining changes no environment's routing;
 ``make chains`` moves it ahead of the keyless tier only once frozen results rank it.
 """
@@ -601,10 +596,10 @@ itself: ``effort`` in particular reaches a member only as the caller set it.
 """
 
 AUTO_EXTRA = EXTRA_ALL
-"""The extra that installs every member of the chain.
+"""The extra named when no member of an ``auto`` chain imports.
 
-``all`` rather than ``search`` because the chain is the fallback of last resort: when none of its members import, the
-useful advice is to install everything, not to guess which method the caller will reach for next.
+The keyless members ship in the core install, so only a chain of members that each need an extra (``agentcore`` needs
+``aws``) or a broken install gets here; ``all`` covers both rather than guessing which one the caller hit.
 """
 
 AUTO_EXTRACT_PREFERRED: tuple[str, ...] = (
@@ -658,9 +653,9 @@ AUTO_EXTRACT_FORMATS: frozenset[ExtractFormat] = frozenset({"markdown", "html", 
 """What some member of the chain can return: the union, not the intersection.
 
 Each request goes only to the members that return the format it asks for, so a
-format here is never relabelled: ``html`` passes over Tavily and Exa, ``text``
-over Nimble, Firecrawl, Oxylabs, Bright Data and Linkup. Listed rather than
-computed so importing ``auto`` does not drag in each member's SDK.
+format here is never relabelled: a member that cannot return it, Tavily for
+``html`` or Nimble for ``text``, is passed over. Listed rather than computed so
+importing ``auto`` does not drag in each member's SDK.
 ``tests/test_auto.py`` asserts it really is the union.
 """
 
@@ -3102,24 +3097,7 @@ BRIGHTDATA_ERROR_CODE_HEADER = "x-brd-error-code"
 Read on its own too, so a failure that names only a code is still a failure.
 """
 
-# --- Firecrawl --------------------------------------------------------------
-# Extract only. Verified live keyless on 2026-10-01: the request body and the
-# `success` / `data.<format>` response for markdown and html. The keyed path
-# differs only by its Bearer header.
-
-FIRECRAWL_BASE_URL = "https://api.firecrawl.dev"
-FIRECRAWL_EXTRACT_PATH = "/v2/scrape"
-FIRECRAWL_API_KEY_PREFIX = "Bearer "
-
-FIRECRAWL_EXTRACT_FORMATS: dict[ExtractFormat, str] = {
-    # Normalized format -> the `formats` entry to ask for, which is also the key
-    # under `data` the body lands in.
-    "markdown": "markdown",
-    "html": "html",
-}
-
-FIRECRAWL_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "markdown"
-
+# Firecrawl's endpoints, extract formats and search options are in constants_firecrawl.py.
 
 # --- Jina Reader, the keyless route -----------------------------------------
 # A key only raises the rate limit: 20 requests a minute without one, 500 with.
@@ -3147,11 +3125,7 @@ JINA_EXTRACT_FORMATS: dict[ExtractFormat, str] = {
     "text": "text",
 }
 
-JINA_BODY_FIELDS: dict[ExtractFormat, str] = {
-    "markdown": "content",
-    "html": "html",
-    "text": "text",
-}
+JINA_BODY_FIELDS: dict[ExtractFormat, str] = {"markdown": "content", "html": "html", "text": "text"}
 
 JINA_EXTRACT_DEFAULT_FORMAT: ExtractFormat = "markdown"
 """Verified live: with no ``X-Return-Format`` the body arrives as ``data.content``."""
@@ -3893,7 +3867,7 @@ MCP_DESC_RESEARCH = (
 )
 
 MCP_DESC_RESEARCH_STATUS = (
-    "Poll a run `research` started: its state, or the answer once it has one. Free, about a second."
+    "Waits up to {wait:g}s on a run `research` started: its state, or the answer once it has one. Free."
 )
 
 MCP_DESC_BROWSE = (
@@ -3904,8 +3878,8 @@ MCP_DESC_BROWSE = (
 )
 
 MCP_DESC_BROWSE_STATUS = (
-    "Poll a task `browse` started: its state, or the answer and the agent's steps once it has one. Free, "
-    "about a second."
+    "Waits up to {wait:g}s on a task `browse` started: its state, or the answer and the agent's steps once it "
+    "has one. Free."
 )
 
 MCP_DESC_FETCH_RAW = (

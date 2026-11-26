@@ -62,6 +62,7 @@ from web_router.providers.perplexity_answer import (
     output_citations,
     output_text,
 )
+from web_router.snippet import as_snippet
 from web_router.types import (
     ResearchProgress,
     ResearchRequest,
@@ -134,7 +135,7 @@ class PerplexityProvider(HttpSearchProvider):
         return SearchResult(
             url=hit.get("url", ""),
             title=hit.get("title") or "",
-            description=snippet,
+            description=as_snippet(snippet),
             content=snippet,
             published_date=hit.get("date"),
             extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},

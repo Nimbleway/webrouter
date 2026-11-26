@@ -8,8 +8,9 @@ sync router's check of its ``provider_config``, lives here for the same reason.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
@@ -19,11 +20,14 @@ from web_router.constants import AUTO_CLIENT_OPTION, DELEGATING_PROVIDERS
 from web_router.constants_production import MSG_INVALID_TIMEOUT
 from web_router.exceptions_typed import InvalidParameterError
 from web_router.routing.contract import Budget
+from web_router.routing.url_policy import any_web_url
 from web_router.types import (
     BrowseRequest,
     BrowserRequest,
+    ExtractFailure,
     ExtractFormat,
     ExtractRequest,
+    ExtractResponse,
     ResearchEffort,
     ResearchRequest,
     SearchRequest,
@@ -49,6 +53,22 @@ def build_search_request(
     return SearchRequest(query=query, provider_options=provider_options or {}, **options)
 
 
+_EXTRACT_SCHEME = re.compile(r"[a-zA-Z][a-zA-Z0-9+.-]*:")
+_EXTRACT_HOST_PORT = re.compile(r"(?:localhost|[a-z0-9-]+(?:\.[a-z0-9-]+)+\.?):[0-9]+(?:[/?#]|$)", re.IGNORECASE)
+
+
+@dataclass(frozen=True)
+class PreparedExtract:
+    request: ExtractRequest
+    original_urls: list[str]
+    refused: list[ExtractFailure]
+
+    def with_failures(self, response: ExtractResponse) -> ExtractResponse:
+        if not self.refused:
+            return response
+        return response.model_copy(update={"failures": [*response.failures, *self.refused]})
+
+
 @refused_as_parameter(ExtractRequest)
 def build_extract_request(
     urls: str | list[str],
@@ -56,8 +76,8 @@ def build_extract_request(
     format: ExtractFormat | None,
     provider_options: dict[str, Any] | None,
     profile: str | None = None,
-) -> ExtractRequest:
-    return ExtractRequest(
+) -> PreparedExtract:
+    request = ExtractRequest(
         # One URL is the common case and reads better unwrapped; the
         # request model carries a list either way, so providers that batch
         # and providers that do not see the same shape.
@@ -66,6 +86,24 @@ def build_extract_request(
         profile=profile,
         provider_options=provider_options or {},
     )
+    kept: list[str] = []
+    refused: list[ExtractFailure] = []
+    first: InvalidParameterError | None = None
+    for position, url in enumerate(request.urls):
+        # Keep bare hosts unchanged, including host:port forms that look like a scheme to urlsplit.
+        candidate = url.lstrip()
+        if (
+            candidate.startswith("//") or (_EXTRACT_SCHEME.match(candidate) and not _EXTRACT_HOST_PORT.match(candidate))
+        ) and (reason := any_web_url(candidate)):
+            error = InvalidParameterError(f"urls.{position}", f"{reason}.")
+            first = first or error
+            refused.append(ExtractFailure(url=url, error=str(error), kind="bad_request"))
+            continue
+        kept.append(url)
+    if not kept and first is not None:
+        raise first
+    screened = request.model_copy(update={"urls": kept}) if refused else request
+    return PreparedExtract(screened, request.urls, refused)
 
 
 @refused_as_parameter(ResearchRequest)

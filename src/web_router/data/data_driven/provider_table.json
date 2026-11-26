@@ -1,0 +1,110 @@
+{
+  "_about": "Written by `make data-driven-router`; do not edit by hand.",
+  "source": "webench.net top-150 per tool",
+  "judge": "WCE judge v3.3 (0-100)",
+  "measured": "2026-11-25",
+  "search": [
+    {
+      "id": "search:parallel:parallel-turbo+fast",
+      "arm": "parallel.search@low",
+      "quality": 60.3,
+      "ci95": 3.6,
+      "usd_per_1k": 1.0,
+      "p50_s": 0.54
+    },
+    {
+      "id": "search:exa:exa-lite+fast",
+      "arm": "exa.search@low",
+      "quality": 64.8,
+      "ci95": 3.3,
+      "usd_per_1k": 4.0,
+      "p50_s": 0.46
+    },
+    {
+      "id": "search:keenable:keenable-pro+fast",
+      "arm": "keenable.search@high",
+      "quality": 60.4,
+      "ci95": 3.2,
+      "usd_per_1k": 4.0,
+      "p50_s": 0.34
+    },
+    {
+      "id": "search:keenable:keenable-realtime+fast",
+      "arm": "keenable.search@low",
+      "quality": 58.3,
+      "ci95": 3.3,
+      "usd_per_1k": 4.0,
+      "p50_s": 0.32
+    },
+    {
+      "id": "search:you:fast",
+      "arm": "you.search@base",
+      "quality": 59.7,
+      "ci95": 3.4,
+      "usd_per_1k": 5.0,
+      "p50_s": 0.92
+    },
+    {
+      "id": "search:nimble:fast",
+      "arm": "nimble.search@base",
+      "quality": 58.1,
+      "ci95": 3.4,
+      "usd_per_1k": 5.0,
+      "p50_s": 0.43
+    },
+    {
+      "id": "search:brave",
+      "arm": "brave.search@base",
+      "quality": 56.3,
+      "ci95": 3.0,
+      "usd_per_1k": 5.0,
+      "p50_s": 0.63
+    },
+    {
+      "id": "search:parallel:parallel-advanced+fast",
+      "arm": "parallel.search@high",
+      "quality": 72.2,
+      "ci95": 3.4,
+      "usd_per_1k": 5.0,
+      "p50_s": 3.05
+    },
+    {
+      "id": "search:firecrawl",
+      "arm": "firecrawl.search@base",
+      "quality": 51.5,
+      "ci95": 2.8,
+      "usd_per_1k": 10.0,
+      "p50_s": 3.79
+    },
+    {
+      "id": "search:exa:exa-deep-lite+fast",
+      "arm": "exa.search@high",
+      "quality": 72.3,
+      "ci95": 3.5,
+      "usd_per_1k": 12.0,
+      "p50_s": 2.01
+    },
+    {
+      "id": "search:tavily:fast",
+      "arm": "tavily.search@base",
+      "quality": 55.0,
+      "ci95": 3.0,
+      "usd_per_1k": 16.0,
+      "p50_s": 3.23
+    }
+  ],
+  "left_out": [
+    {
+      "arm": "jina.search@base",
+      "why": "web-router has no search backend of this name"
+    },
+    {
+      "arm": "oxylabs.search@base",
+      "why": "web-router has no search backend of this name"
+    },
+    {
+      "arm": "brightdata.search@base",
+      "why": "web-router has no search backend of this name"
+    }
+  ]
+}

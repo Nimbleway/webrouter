@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from web_router.constants import MCP_TOOL_ANSWER
 from web_router.constants_answer import MCP_ARG_ALL_SOURCES, MCP_ARG_SNIPPETS, MCP_MSG_ANSWER_BAD_FLAGS
-from web_router.mcp.shaping import max_response_chars
+from web_router.mcp.shaping import result_budget
 from web_router.mcp.shaping_answer import shape_answer
 
 if TYPE_CHECKING:
@@ -30,5 +30,5 @@ async def answer_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) -> di
     response = await tools.router.answer(**kwargs)
     record = tools.store.add(MCP_TOOL_ANSWER, raw=response.raw)
     return shape_answer(
-        response, record.handle, budget=max_response_chars(), all_sources=all_sources, snippets=snippets
+        response, record.handle, budget=result_budget(MCP_TOOL_ANSWER), all_sources=all_sources, snippets=snippets
     )

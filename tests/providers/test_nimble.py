@@ -109,6 +109,14 @@ def test_nimble_payload_is_normalized(provider: NimbleProvider) -> None:
     assert response.raw == payload
 
 
+def test_a_result_field_nimble_does_not_map_is_kept_in_extra(provider: NimbleProvider) -> None:
+    """focus='company' returns each company's record in `entities`, beside the fields that are mapped."""
+    entities = [{"type": "company", "name": "Example Inc."}]
+    payload = {"results": [{"url": "https://example.com", "title": "Example", "metadata": {}, "entities": entities}]}
+    result = provider._to_response(SearchRequest(query="hi"), payload).results[0]
+    assert result.extra == {"metadata": {}, "entities": entities}
+
+
 def test_missing_optional_fields_become_empty_strings(provider: NimbleProvider) -> None:
     response = provider._to_response(SearchRequest(query="hi"), {"results": [{"url": "https://a.com"}]})
     result = response.results[0]

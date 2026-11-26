@@ -538,7 +538,7 @@ async def test_an_open_the_backend_never_answers_gives_up_and_frees_its_slot(
 
 
 async def test_without_playwright_the_tools_are_hidden_and_open_refuses_before_billing(
-    session: WebRouterTools, monkeypatch: pytest.MonkeyPatch
+    session: WebRouterTools, monkeypatch: pytest.MonkeyPatch, all_runnable: None
 ) -> None:
     monkeypatch.setattr(browsers_module, "playwright_installed", lambda: False)
     monkeypatch.setattr(tools_module, "playwright_installed", lambda: False)
@@ -649,7 +649,7 @@ async def test_read_is_shaped_like_extract_and_its_raw_payload_is_scrubbed(sessi
     payload = _ok(await call_tool(session, MCP_TOOL_BROWSER_READ, {"session_id": session_id, "format": "html"}))
     raw = _ok(await call_tool(session, MCP_TOOL_FETCH_RAW, {"handle": payload["handle"]}))
 
-    assert payload["documents"][0]["format"] == "html"
+    assert (payload["documents"][0]["format"], payload["origin"]) == ("html", "web page")
     assert payload["handle"].startswith(MCP_TOOL_BROWSER_READ)
     assert "The rest is ordinary text." in raw["raw"]["content"]
     assert SECRET not in json.dumps(raw) and "session-1" not in json.dumps(raw)

@@ -68,17 +68,17 @@ print(results.provider, [doc.url for doc in pages.documents])
 ## Install
 
 ```bash
-pip install "webrouter[all]"     # or: uv add "webrouter[all]"
+pip install webrouter     # or: uv add webrouter
 ```
 
 Or try the command line with no install and no key:
 
 ```bash
-uvx --from "webrouter[search,extract]" webrouter search "rust async runtimes" -n 5
+uvx --from webrouter webrouter search "rust async runtimes" -n 5
 ```
 
-Python 3.11 or later. Extras per method (`search`, `extract`, `research`,
-`answer`, `browser`, `mcp`, ...) keep the install small; see the
+Python 3.11 or later. The base install runs search and extract with no key.
+Extras add the rest: `browser`, `mcp`, `aws`, or `all` for every one; see the
 [Quickstart](https://docs.webrouter.net/quickstart).
 
 Keys are read from the environment. Copy [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example), which
@@ -113,8 +113,8 @@ Every method has an async twin on `AsyncWebRouter`.
 
 | Method | Providers |
 | --- | --- |
-| Search | Nimble, Tavily, Exa, Brave, Perplexity, Parallel, Linkup, You.com, WebIQ, Keenable, DeepSeek, AWS AgentCore, Valyu, Seltz, Octen, Keirolabs, SpecStream, plus the keyless You.com, Exa and Parallel MCP endpoints |
-| Extract | Nimble, Tavily, Firecrawl, Exa, Linkup, Oxylabs, Bright Data, Jina Reader, WebIQ, Keenable, DeepSeek, Browserbase, SpecStream |
+| Search | Nimble, Tavily, Exa, Brave, Perplexity, Parallel, Linkup, You.com, WebIQ, Keenable, DeepSeek, AWS AgentCore, Valyu, Seltz, Octen, Keirolabs, SpecStream, Firecrawl, plus the keyless You.com, Exa and Parallel MCP endpoints |
+| Extract | Nimble, Tavily, Firecrawl, Exa, Linkup, Oxylabs, Bright Data, Jina Reader, WebIQ, Keenable, DeepSeek, Browserbase, SpecStream, plus Obscura run on your machine |
 | Answer | Perplexity, You.com, Linkup, Parallel, Exa, Brave |
 | Research | Nimble, Parallel, Perplexity, Linkup, You.com |
 | Live data | Nimble, Apify, Bright Data, Oxylabs |
@@ -175,9 +175,9 @@ prices.estimate("tavily", "search")  # 0.008: list price of one request
 
 Every response carries `cost_usd`: the backend's own figure where it states
 one (`cost_source="reported"`), `0` for a call on a backend's keyless tier
-(`cost_source="keyless"`), else an estimate. Unless a router ranks the
-backends itself (the default `rules` router does not), a cost cap makes `auto`
-try the cheaper of the backends that score alike first.
+(`cost_source="keyless"`), else an estimate. The `data-driven` router, when attached, orders measured search candidates in `plan()`,
+`run()` and MCP `web_run`. When no router orders the backends, a cost cap makes
+`auto` try the cheaper of the backends that score alike first.
 
 Each attempt is checked against what is left before it starts, so parallel
 calls never overspend together, and a backend that does not fit is skipped

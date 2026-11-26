@@ -94,7 +94,7 @@ def test_a_pin_that_names_another_method_is_refused() -> None:
 async def test_the_urls_one_member_failed_are_retried_in_the_next_members_mode() -> None:
     other = "https://b.example/page"
     answered = {
-        "results": [{"url": URL, "text": "body"}],
+        "results": [{"url": URL, "text": "body " * 20}],
         "statuses": [{"id": URL, "status": "success"}, {"id": other, "status": "error", "error": "blocked"}],
     }
     tavily: list[dict[str, Any]] = []

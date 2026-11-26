@@ -16,17 +16,58 @@ from web_router.constants import (
     MCP_TOOL_BROWSER_CLOSE,
     MCP_TOOL_BROWSER_OPEN,
     MCP_TOOL_EXTRACT,
+    MCP_TOOL_FETCH_RAW,
+    MCP_TOOL_LOAD_ENV,
     MCP_TOOL_RESEARCH,
     MCP_TOOL_RESEARCH_STATUS,
     MCP_TOOL_SEARCH,
 )
+from web_router.constants_mcp import MCP_TOOL_BUDGET_START, MCP_TOOL_BUDGET_STATUS, MCP_TOOL_WEB_RUN
 
 ENV_MCP_TOOLS = "WEB_ROUTER_MCP_TOOLS"
 """A comma-separated allowlist of the tools the server lists and serves, e.g. ``search,extract,answer``.
 
-A name may end in ``*`` (``browser_*``). Unset or blank, every tool is served.
-Read once, when the server starts, from the process environment only.
+A name may end in ``*`` (``browser_*``). Unset or blank, the profile (``WEB_ROUTER_MCP_PROFILE``) decides; set, it
+wins over the profile. Read once, when the server starts, from the process environment only.
 """
+
+MCP_PROFILE_SLIM_TOOLS = frozenset(
+    {
+        MCP_TOOL_SEARCH,
+        MCP_TOOL_EXTRACT,
+        MCP_TOOL_ANSWER,
+        MCP_TOOL_RESEARCH,
+        MCP_TOOL_RESEARCH_STATUS,
+        MCP_TOOL_WEB_RUN,
+        MCP_TOOL_FETCH_RAW,
+        MCP_TOOL_BUDGET_START,
+        MCP_TOOL_BUDGET_STATUS,
+        MCP_TOOL_LOAD_ENV,
+    }
+)
+"""The slim profile: read the web and spend within a budget. No browser, no vendor API, no ``live_data``.
+
+``load_env`` is in it, but is served only when its own switch turns it on.
+"""
+
+MCP_KEYLESS_TOOLS = frozenset({MCP_TOOL_SEARCH, MCP_TOOL_EXTRACT})
+"""Tools whose ``auto`` chain ends in a keyless backend, so they run with no key and are always listed."""
+
+MCP_MSG_PROFILE_SWITCH = (
+    "Left off by the slim profile. {profile}=full serves every tool; {tools} names tools one by one, "
+    "e.g. {tools}=search,extract,browser_*."
+)
+MCP_MSG_ALLOWLIST_SWITCH = (
+    "Left off by the explicit {tools} allowlist. Add the required tools to {tools}, or unset it "
+    "to use {profile}; {profile}=full serves every tool only when no allowlist is set."
+)
+"""The capabilities resource's ``tools.switch``, when the profile left tools off."""
+
+MCP_LOG_PROFILE_SLIM = (
+    "web-router: serving the slim tool profile, without the browser_* tools, browse, live_data or the data API tools. "
+    "Set %s=full for every tool, or name the ones you want in %s."
+)
+"""Logged at startup when the slim profile is in force, so the operator knows the switch."""
 
 MCP_TOOLS_SEPARATOR = ","
 
@@ -41,15 +82,44 @@ MCP_MSG_TOOLS_UNKNOWN = "%s names no tool this server has, so it was ignored: %s
 """Logged at startup for each allowlist entry that matches nothing: a typo should not pass in silence."""
 
 MCP_MSG_PLAN_NOT_SERVED = (
-    "web_run planned {tool}, which {env_var} leaves off this server, so nothing was run. Call a tool it serves."
+    "web_run planned {tool}, left off by this server's tool profile or allowlist "
+    "(WEB_ROUTER_MCP_PROFILE or {env_var}), so nothing was run. Call a tool it serves."
 )
 """``web_run`` refusing to run a method the allowlist excludes: the allowlist is not bypassed by routing."""
+
+MCP_STATUS_STILL_RUNNING = (
+    "Still going after this call waited {wait:g}s. Call {tool} with handle {handle!r} again; it waits on its own, "
+    "so there is no need to pause first."
+)
+"""A status tool's note on a job its wait did not see finish.
+
+The status tools wait as long as the tool that started the job, rather than answering at once. Answering at once
+left the pacing to the model, and models do not pace: against Nimble research runs of a few minutes, a fast model
+polled every 1.5 seconds, 130 to 150 times a run, and a careful one spent 6 to 14 turns of its turn limit on polls.
+"""
 
 MCP_JSON_SEPARATORS = (",", ":")
 """How a result is serialized: compact, since every space is a token the model pays for and never reads."""
 
 MCP_EMPTY_VALUES: tuple[Any, ...] = ("", [])
 """Values a shaped row leaves out with ``None``: a key that says nothing costs as much as one that does."""
+
+MCP_BUDGET_FACTOR_BY_TOOL: dict[str, int] = {MCP_TOOL_RESEARCH: 5}
+"""How many per-result budgets one result of a tool may take; a tool not named here takes one.
+
+A finished research run is a report the caller waited minutes and paid for, written from reading
+the model never has to repeat. Reports measured 7,000 to 74,000 characters, about 37,000 at the
+median, and at one budget the report got 4,000 of them: the rest only through ``fetch_raw``, whose
+untouched payload is two to three times the report's size. Five budgets is 40,000 characters,
+about 10,000 tokens, the same as a browser snapshot.
+"""
+
+MCP_RESEARCH_ANSWER_SHARE = 0.75
+"""Fraction of a research result's budget its report may take; the rest is its citations.
+
+The report is what the run was paid for. A run cites 20 to 80 sources, whose snippets are cut
+before any is dropped, so a quarter of the budget still lists most of them.
+"""
 
 _STRING = {"type": "string"}
 _HANDLE: dict[str, Any] = {"handle": _STRING, "truncated": {"type": "boolean"}, "note": _STRING}

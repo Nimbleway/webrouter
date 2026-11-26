@@ -20,6 +20,7 @@ from web_router.constants import MAX_AGGREGATE_FAILURE
 from web_router.exceptions import DeadlineExceededError, WebRouterError
 from web_router.providers._chain import RECOVERABLE, _exhausted
 from web_router.providers._chain_deadline import _deadline_error
+from web_router.providers._delegated import delegating
 from web_router.providers.base import ExtractProvider
 from web_router.types import ExtractRequest, ExtractResponse
 
@@ -72,7 +73,8 @@ class _AsyncRace:
     def start(self, runners: list[_Runner], delegated: ExtractRequest) -> list[_Runner]:
         """Start every runner's call; returns the empty list of runners left to start."""
         for provider_name, member in runners:
-            task = asyncio.create_task(member.aextract(delegated))
+            with delegating():
+                task = asyncio.create_task(member.aextract(delegated))
             self._tasks[task] = provider_name
             self.running += 1
             task.add_done_callback(self._finished_one)

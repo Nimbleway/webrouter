@@ -78,12 +78,14 @@ class SyncCore(_CoreLookup, SyncRouted):
         cost, and never called: run one with :meth:`call_data_api`.
         ``configured_only`` keeps the ones this router holds credentials for.
         """
-        request = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
+        prepared = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
         chain = self.get_extract_provider(provider)
         catalog = load_catalog(data_apis)
-        response = self._routed(chain, request, with_timeout(budget, timeout), chain.extract)
+        response = self._routed(chain, prepared.request, with_timeout(budget, timeout), chain.extract)
         source = self.vendor_credential_source()
-        return with_site_matches(response, source, catalog=catalog, configured_only=configured_only)
+        return with_site_matches(
+            prepared.with_failures(response), source, catalog=catalog, configured_only=configured_only
+        )
 
 
 class AsyncCore(_CoreLookup, AsyncRouted):
@@ -110,9 +112,11 @@ class AsyncCore(_CoreLookup, AsyncRouted):
         """
         budget = with_timeout(budget, timeout)
         await asyncio.to_thread(warm_catalog, data_apis)  # the first read is file IO
-        request = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
+        prepared = build_extract_request(urls, format=format, profile=profile, provider_options=provider_options)
         chain = self.get_extract_provider(provider)
         catalog = load_catalog(data_apis)
-        response = await self._arouted(chain, request, budget, chain.aextract)
+        response = await self._arouted(chain, prepared.request, budget, chain.aextract)
         source = self.vendor_credential_source()
-        return with_site_matches(response, source, catalog=catalog, configured_only=configured_only)
+        return with_site_matches(
+            prepared.with_failures(response), source, catalog=catalog, configured_only=configured_only
+        )

@@ -50,11 +50,12 @@ def test_output_flags_work_before_or_after_the_command(
     assert capsys.readouterr().out.startswith("{\n")
 
 
+@pytest.mark.parametrize("encoding", ["utf-8", "utf-8-sig"])
 def test_research_schema_from_a_file_asks_for_a_structured_answer(
-    fake_research_provider: Any, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    encoding: str, fake_research_provider: Any, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     schema = tmp_path / "schema.json"
-    schema.write_text('{"type": "object"}', encoding="utf-8")
+    schema.write_text('{"type": "object"}', encoding=encoding)
     status, out, _ = _run(capsys, "research", "q", "-p", "fake", "--schema", f"@{schema}", "--timeout", "5")
     assert status == EXIT_OK
     assert out["structured"] == {"ok": True}
@@ -88,8 +89,8 @@ def test_refused_input_exits_with_usage(argv: tuple[str, ...], capsys: pytest.Ca
 def test_providers_lists_each_method(capsys: pytest.CaptureFixture[str]) -> None:
     status, out, _ = _run(capsys, "providers")
     assert status == EXIT_OK
-    assert {"search", "extract", "answer", "research", "browse", "browser", "live_data"} == set(out)
-    assert "auto" in out["search"]
+    assert {"search", "extract", "answer", "research", "browse", "browser", "live_data"} < set(out)
+    assert "auto" in out["search"] and {"keyless", "needs_key"} <= set(out)
 
 
 def _spy(monkeypatch: pytest.MonkeyPatch, cls: type[Any]) -> list[Any]:

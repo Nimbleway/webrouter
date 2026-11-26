@@ -1,6 +1,6 @@
 """``plan()`` and ``run()`` under a cost cap: a router that ranks no backends leaves them in ``auto``'s cost order.
 
-The default ``rules`` router picks the method and ranks nothing, so a capped plan runs cheapest first, as a capped
+The default ``data-driven`` router picks the method and ranks nothing, so a capped plan runs cheapest first, as a capped
 ``search()`` does; a router that ranks the backends itself keeps its order. The members are the harness's fakes.
 """
 
@@ -32,13 +32,13 @@ def costed(chain: Chain, priced: Table, monkeypatch: pytest.MonkeyPatch) -> Chai
     return chain
 
 
-def _router(cls: type = WebRouter, router: Any = "rules") -> Any:
+def _router(cls: type = WebRouter, router: Any = "data-driven") -> Any:
     return cls(provider_config={"auto": {"chain": list(MEMBERS)}}, router=router)
 
 
 def test_a_capped_plan_on_the_default_router_is_in_cost_order(costed: Chain) -> None:
     plan = _router().plan("q", budget=CAP)
-    assert plan.decision.router == "rules"
+    assert plan.decision.router == "data-driven"
     assert plan.providers == {"search": CHEAPEST_FIRST}
     assert _router().plan("q").providers == {"search": MEMBERS}, "no cost cap: the static order"
 

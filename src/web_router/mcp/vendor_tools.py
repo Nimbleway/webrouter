@@ -30,7 +30,7 @@ from web_router.constants_vendors_mcp import (
     MSG_VENDOR_MCP_WRITE_REFUSED,
 )
 from web_router.exceptions_vendors import VendorWriteRefusedError
-from web_router.mcp.shaping import max_response_chars, redact
+from web_router.mcp.shaping import redact, result_budget
 from web_router.mcp.shaping_vendors import (
     shape_endpoint,
     shape_endpoint_list,
@@ -72,9 +72,11 @@ async def vendors_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) -> d
             query or "", vendor=vendor, category=arguments.get("category"), limit=arguments.get("limit")
         )
         vendors = {name: router.data_api(name) for name in {endpoint.vendor for endpoint in endpoints}}
-        return shape_endpoint_list(endpoints, vendors, router.vendor_credential_source(), budget=max_response_chars())
+        return shape_endpoint_list(
+            endpoints, vendors, router.vendor_credential_source(), budget=result_budget(MCP_TOOL_VENDORS)
+        )
     rows = router.data_apis(category=arguments.get("category"), configured=arguments.get("configured"))
-    return shape_vendor_list(rows, budget=max_response_chars())
+    return shape_vendor_list(rows, budget=result_budget(MCP_TOOL_VENDORS))
 
 
 async def vendor_endpoint_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) -> dict[str, Any]:
@@ -85,7 +87,9 @@ async def vendor_endpoint_tool(tools: WebRouterTools, arguments: Mapping[str, An
         raise ValueError(MCP_MSG_MISSING_ARGUMENT.format(tool=MCP_TOOL_VENDOR_ENDPOINT, name="endpoint"))
     endpoint = router.data_api_endpoint(name)
     vendor = router.data_api(endpoint.vendor)
-    return shape_endpoint(endpoint, vendor, router.vendor_credential_source(), budget=max_response_chars())
+    return shape_endpoint(
+        endpoint, vendor, router.vendor_credential_source(), budget=result_budget(MCP_TOOL_VENDOR_ENDPOINT)
+    )
 
 
 def renamed_tool(name: str) -> tuple[str, str | None]:
@@ -155,7 +159,7 @@ async def call_vendor_tool(tools: WebRouterTools, arguments: Mapping[str, Any]) 
     # before the answer is kept, so fetch_raw shows no more than the answer itself does.
     raw, _ = redact(response.model_dump(mode="json"))
     record = tools.store.add(MCP_TOOL_CALL_VENDOR, raw=raw)
-    return shape_vendor_response(response, record.handle, budget=max_response_chars())
+    return shape_vendor_response(response, record.handle, budget=result_budget(MCP_TOOL_CALL_VENDOR))
 
 
 TOOLS: dict[str, Callable[[WebRouterTools, Mapping[str, Any]], Awaitable[dict[str, Any]]]] = {

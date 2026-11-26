@@ -504,9 +504,9 @@ def _backends(setup: dict[str, Any]) -> str:
         for tool, backend, request in backend_lines(config)
     ]
     return (
-        '<section><h2>What each backend was sent</h2><p class="section-lede">The request each web-router arm\'s '
-        "backends received, with the model's query or URL as a placeholder. A field that is not listed was not "
-        "sent, so the backend's own default decided it. Page reads go to the arm's own backend when it reads "
+        '<section><h2>Backend request setup</h2><p class="section-lede">Per-call routed search requests are '
+        "not recorded. Static bodies use query or URL placeholders; absent fields use backend defaults. "
+        "Page reads go to the arm's own backend when it reads "
         "pages, else to <code>auto</code>, which tries its members in order.</p>"
         '<div class="scroll"><table class="results"><thead><tr><th>Arm</th><th>Tool</th><th>Backend</th>'
         f"<th>Request</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div></section>"

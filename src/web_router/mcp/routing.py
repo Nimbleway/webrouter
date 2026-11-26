@@ -33,8 +33,8 @@ from web_router.constants_mcp_context import ENV_MCP_TOOLS, MCP_MSG_PLAN_NOT_SER
 from web_router.exceptions import BrowseTimeoutError, ResearchTimeoutError
 from web_router.mcp.budget import budget_start, budget_status, positive_limit, wait_left
 from web_router.mcp.shaping import (
-    max_response_chars,
     redact,
+    result_budget,
     shape_browse,
     shape_extract,
     shape_pending,
@@ -133,7 +133,7 @@ async def _ran(tools: WebRouterTools, plan: Plan, budget: Budget | None) -> dict
     handle = tools.store.add(MCP_TOOL_WEB_RUN, raw=raw).handle
     return {
         "tool": tool,
-        **shape(response, handle, budget=max_response_chars()),
+        **shape(response, handle, budget=result_budget(tool)),
         "decision": _shown(tools, response.decision),
     }
 

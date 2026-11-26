@@ -1,0 +1,1 @@
+MCP: `research_status` and `browse_status` now wait up to 25 seconds (the same wait as `research` and `browse`, cut to what the budget has left) for the job to finish, and answer the moment it does. Before, each poll answered at once, so a model either polled in a tight loop or spent many turns waiting.

@@ -36,7 +36,8 @@
       "seltz",
       "octen",
       "keirolabs",
-      "specstream"
+      "specstream",
+      "firecrawl"
     ],
     "unmeasured": [
       "keenable",
@@ -49,7 +50,8 @@
       "seltz",
       "octen",
       "keirolabs",
-      "specstream"
+      "specstream",
+      "firecrawl"
     ],
     "too_few_questions": [],
     "no_row_served": [],

@@ -55,8 +55,8 @@ def static_order(found: CandidateSet) -> dict[ToolName, list[str]]:
 
 def _base_order(found: CandidateSet, decision: object) -> dict[ToolName, list[str]]:
     """The order the merge starts from: the static order, and the cost order of each method ``decision`` -- a
-    well-formed one, else ``None`` -- ranks no backend of. The default ``rules`` router ranks none, so a plan
-    under a cost cap runs cheapest first as an unrouted call does; a router's own ranking is kept as it gave it.
+    well-formed one, else ``None`` -- ranks no backend of. A router that ranks none leaves
+    a plan under a cost cap running cheapest first, as an unrouted call does; a router's own ranking is kept.
     """
     order = static_order(found)
     providers: Mapping[Any, Any] = getattr(decision, "providers", None) or {}
