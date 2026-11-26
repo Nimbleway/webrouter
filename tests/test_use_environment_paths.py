@@ -15,6 +15,7 @@ from web_router.constants import (
 )
 from web_router.constants_remote import ENV_REMOTE_ROUTER_API_KEY
 from web_router.live_data_backends import usable_backends
+from web_router.routing.cost_order import _runs_default
 from web_router.routing.remote_config import bearer_key
 
 
@@ -94,6 +95,7 @@ def test_an_error_off_says_the_environment_was_not_read(monkeypatch: pytest.Monk
     assert "A .env exists" not in str(raised.value)
     with environment(False):
         assert "use_environment" not in str(ConfigurationError("no variable named here"))
+        assert str(ConfigurationError(str(raised.value))) == str(raised.value)  # an error re-raised from its text
 
 
 def test_a_setting_found_missing_when_called_says_the_environment_was_not_read(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -104,3 +106,11 @@ def test_a_setting_found_missing_when_called_says_the_environment_was_not_read(m
     for name in ("agentcore", "exa-litellm"):
         with pytest.raises(ConfigurationError, match="use_environment=False"):
             off.search("q", provider=name)
+
+
+def test_a_budget_orders_an_off_routers_default_chain_by_cost(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Cost ordering applies to a default chain only, and rebuilds it to tell: off, without the environment."""
+    every_key_set(monkeypatch)
+
+    assert _runs_default(WebRouter(use_environment=False).get_provider())
+    assert _runs_default(WebRouter().get_provider())

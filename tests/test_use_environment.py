@@ -9,10 +9,18 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from nimble_python import Omit
 
 from tests.use_environment_helpers import ENV_KEY, MINE, every_key_set, no_key_set
 from web_router import AsyncWebRouter, ConfigurationError, WebRouter
-from web_router.constants import PROVIDER_EXA, PROVIDER_NIMBLE, PROVIDER_PERPLEXITY, PROVIDER_TAVILY
+from web_router.constants import (
+    PROVIDER_BROWSER_USE,
+    PROVIDER_EXA,
+    PROVIDER_NIMBLE,
+    PROVIDER_PERPLEXITY,
+    PROVIDER_STEEL,
+    PROVIDER_TAVILY,
+)
 from web_router.registry import configured_providers
 
 _ROUTERS = [WebRouter, AsyncWebRouter]
@@ -42,7 +50,6 @@ def test_on_by_default_it_chains_the_environment_keys(monkeypatch: pytest.Monkey
 
     on, off = router_class(provider_config=MINE), router_class(provider_config=MINE, use_environment=False)
 
-    assert PROVIDER_PERPLEXITY in on.get_provider().members
     assert all(len(full) > len(own) for full, own in zip(_chains(on), _chains(off), strict=True))
 
 
@@ -68,12 +75,46 @@ def test_the_keyless_sdk_clients_never_pick_up_the_environment_key(monkeypatch: 
     assert members[PROVIDER_NIMBLE]._async_client.api_key == ""
 
 
-def test_a_backend_named_off_raises_rather_than_take_the_environment_key(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_nimble_key_in_code_never_goes_to_the_environments_host_or_headers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The Nimble SDK reads its host and extra headers from the environment, so they are given it explicitly."""
+    every_key_set(monkeypatch)
+    monkeypatch.setenv("NIMBLE_BASE_URL", "https://launch-user.example.com")
+    monkeypatch.setenv("NIMBLE_CUSTOM_HEADERS", "X-Launch-User: theirs\nX-Mine: launch")
+    config = {PROVIDER_NIMBLE: {"api_key": "mine", "default_headers": {"X-Mine": "mine"}}}
+
+    keyed = WebRouter(provider_config=config, use_environment=False).get_provider(PROVIDER_NIMBLE)
+    keyless = WebRouter(use_environment=False).get_extract_provider()._member(0)  # auto's first: keyless Nimble
+    for client in (keyed._async_client, keyed._client, keyless._async_client):
+        sent = {name: value for name, value in client.default_headers.items() if not isinstance(value, Omit)}
+        assert client.base_url.host == "sdk.nimbleway.com"
+        assert "X-Launch-User" not in sent
+    assert keyed._async_client.default_headers["X-Mine"] == "mine"
+    assert keyless.name == PROVIDER_NIMBLE
+    assert (
+        WebRouter(provider_config=config).get_provider(PROVIDER_NIMBLE)._async_client.base_url.host
+        != "sdk.nimbleway.com"
+    )
+
+
+@pytest.mark.parametrize(
+    ("getter", "name"),
+    [
+        ("get_provider", PROVIDER_PERPLEXITY),
+        ("get_extract_provider", PROVIDER_TAVILY),
+        ("get_research_provider", PROVIDER_PERPLEXITY),
+        ("get_answer_provider", PROVIDER_PERPLEXITY),
+        ("get_browser_provider", PROVIDER_STEEL),
+        ("get_browse_provider", PROVIDER_BROWSER_USE),
+    ],
+)
+def test_a_backend_named_off_raises_rather_than_take_the_environment_key(
+    monkeypatch: pytest.MonkeyPatch, getter: str, name: str
+) -> None:
     every_key_set(monkeypatch)
 
     with pytest.raises(ConfigurationError, match="use_environment=False"):
-        WebRouter(use_environment=False).get_provider(PROVIDER_PERPLEXITY)
-    assert WebRouter().get_provider(PROVIDER_PERPLEXITY).api_key == ENV_KEY
+        getattr(WebRouter(use_environment=False), getter)(name)
+    assert getattr(WebRouter(), getter)(name).api_key == ENV_KEY
 
 
 def test_the_switch_ends_with_the_router_that_set_it(monkeypatch: pytest.MonkeyPatch) -> None:

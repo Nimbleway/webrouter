@@ -6,12 +6,13 @@ Kept apart from :mod:`web_router.providers.nimble` so that module stays small;
 
 from __future__ import annotations
 
+import os
 from typing import Any, ClassVar, TypeVar
 
 from nimble_python import AsyncNimble, Nimble, omit
 
 from web_router.constants import ENV_NIMBLE_API_KEY, MSG_NIMBLE_ASYNC_CLIENT_ONLY, MSG_NIMBLE_CLIENT_AND_KEY
-from web_router.constants_nimble import NIMBLE_AUTH_HEADER
+from web_router.constants_nimble import ENV_NIMBLE_CUSTOM_HEADERS, NIMBLE_AUTH_HEADER, NIMBLE_SDK_BASE_URL
 from web_router.exceptions import ConfigurationError
 from web_router.providers._clamp import clamp_timeout
 from web_router.providers._deadline import current_deadline
@@ -80,6 +81,7 @@ class _NimbleClients(_BaseProvider):
     def _connect(self, api_key: str | None, async_client: AsyncNimble | None) -> None:
         client_kwargs = compact({**self.options, "api_key": api_key})
         if async_client is None:
+            client_kwargs = client_kwargs if self.reads_environment else _unread(client_kwargs)
             self._client = Nimble(**client_kwargs)
             self._async_client = AsyncNimble(**client_kwargs)
             self._owns_clients = True
@@ -114,6 +116,19 @@ class _NimbleClients(_BaseProvider):
     async def aclose(self) -> None:
         if self._owns_clients:
             await self._async_client.close()
+
+
+def _unread(client_kwargs: dict[str, Any]) -> dict[str, Any]:
+    """SDK kwargs that keep the SDK's own environment reads out of a client built not to read it.
+
+    For an unset key, host or header the SDK reads ``NIMBLE_API_KEY``, ``NIMBLE_BASE_URL`` and
+    ``NIMBLE_CUSTOM_HEADERS``: each is given here instead -- no key, the SDK's host, and every header that
+    variable names omitted unless the caller set it -- so a key passed in code never reaches another host.
+    """
+    launch = (os.environ.get(ENV_NIMBLE_CUSTOM_HEADERS) or "").split("\n")
+    unread = {line.split(":", 1)[0].strip(): omit for line in launch if ":" in line}
+    headers = {**unread, **(client_kwargs.get("default_headers") or {})}
+    return {"api_key": "", "base_url": NIMBLE_SDK_BASE_URL, **client_kwargs, "default_headers": headers}
 
 
 def _resolve_key(api_key: str | None, async_client: AsyncNimble | None, provider: str) -> str | None:
@@ -167,8 +182,7 @@ class _NimbleKeyless(_NimbleClients):
         # A spent daily cap answers 429; retrying it only delays the fallback to the next keyless backend.
         if self._keyless:
             self.options = {"max_retries": 0, **self.options}
-        # The SDK reads NIMBLE_API_KEY for a None: an empty key keeps it out of a client that reads no environment.
-        super()._connect("" if self._keyless and not self.reads_environment else api_key, async_client)
+        super()._connect(api_key, async_client)
 
     def _authed(self, payload: dict[str, Any]) -> dict[str, Any]:
         """``payload``, keyless, with the key's header omitted beside any ``extra_headers`` the caller set."""

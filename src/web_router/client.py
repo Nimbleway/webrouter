@@ -125,7 +125,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         Args:
             provider: Name of the default provider, e.g. ``"nimble"`` or :attr:`Provider.NIMBLE`; omit it for ``auto``.
             provider_config: Constructor kwargs per provider, keyed by provider name: ``{"tavily": {"api_key": ...}}``.
-                This is the only place credentials are passed explicitly; everything else comes from the environment.
+                The only place credentials are passed explicitly; the rest come from the environment, unless off below.
             use_environment: ``False`` reads no backend key or setting from the environment: ``auto`` chains only the
                 backends keyed in ``provider_config`` and the keyless ones, which run keyless. ``call_data_api``'s
                 vendor credentials are apart: see ``data_api_credentials``.

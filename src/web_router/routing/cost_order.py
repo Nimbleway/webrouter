@@ -28,6 +28,7 @@ from collections.abc import Collection, Sequence
 from typing import Any
 
 from web_router._chains import chains
+from web_router._environment import environment
 from web_router.constants import PROVIDER_AUTO
 from web_router.constants_budget import ACCURACY_TOLERANCE
 from web_router.providers._chain import _configured_in, _default_chain
@@ -94,4 +95,5 @@ def _runs_default(chain: Any) -> bool:
     members, resolved = getattr(chain, "_members_config", None), getattr(chain, "_chain", None)
     if default is None or members is None or resolved is None:
         return False
-    return list(resolved) == list(_default_chain(default, _configured_in(members)))  # as construction calls it
+    with environment(getattr(chain, "reads_environment", True)):  # the environment it was built reading, or not
+        return list(resolved) == list(_default_chain(default, _configured_in(members)))  # as construction calls it
