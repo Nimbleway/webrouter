@@ -4,7 +4,7 @@
     from web_router import WebRouter
     from web_router.integrations.langchain import web_router_tools
 
-    router = WebRouter("nimble")
+    router = WebRouter()  # keyless; a provider key in the environment adds that backend
     agent = create_agent("openai:gpt-4.1", tools=web_router_tools(router, max_results=5))
 
 The router's options -- the provider, ``max_results``, ``search_depth``, domain
