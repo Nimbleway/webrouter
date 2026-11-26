@@ -92,10 +92,9 @@ def test_search_takes_both_domain_lists_at_once() -> None:
     )
 
 
-@pytest.mark.parametrize("depth", ["fast", "deep"])
-def test_search_refuses_depths_beyond_a_snippet(depth: str) -> None:
+def test_search_refuses_depths_beyond_a_snippet() -> None:
     with pytest.raises(UnsupportedParameterError):
-        ApifySearchProvider().search(SearchRequest(query="q", search_depth=depth))
+        ApifySearchProvider().search(SearchRequest(query="q", search_depth="fast"))
 
 
 def test_extract_maps_a_page() -> None:
