@@ -121,7 +121,8 @@ Beside the ladder:
   `BudgetExceededError` did not run; do not retry it unchanged.
 - `fetch_raw` is free and instant: every result carries a `handle`, and the
   backend's full payload is already held for it. Reach for `fetch_raw` before
-  re-calling a tool for more detail.
+  re-calling a tool for more detail. If your client cuts long tool results,
+  read it in pages: `max_chars`, then `offset` from each page's `next_offset`.
 - Close every browser session with `browser_close` the moment you are done.
   Prefer `provider="local"` unless the task needs stealth, a proxy country or
   CAPTCHA solving, which only billed cloud vendors serve.

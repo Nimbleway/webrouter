@@ -890,6 +890,14 @@ untouched payload, uncapped — nothing is lost, it is just not spent on the
 context window unless you ask for it. The session keeps the 64 most recent
 handles and evicts the oldest, so a long conversation stays bounded.
 
+Some clients cut a long tool result before the model sees it: Codex CLI 0.167
+keeps about 10 KiB of each and drops the middle. Pass `fetch_raw` an `offset` or a
+`max_chars` and it returns one page of the payload's JSON instead, with
+`total_chars` and the `next_offset` to ask for next (a page is the server's
+result size when only `offset` is set), so such a client reads the whole
+payload a page per call. `max_chars` counts the page as it is sent, its JSON
+escapes included, so a page of quotes or line breaks stays under the cut too.
+
 Everything else — parameter names, provider selection, error messages — is a
 thin projection of the library. A failure comes back as a tool error carrying
 the library's own message, which names the environment variable to set; where
@@ -911,7 +919,7 @@ are about 26 KB (some 6.4k tokens). So the server serves a profile,
 
 | Profile | Serves | With every key |
 | --- | --- | --- |
-| `slim` (default) | `search`, `extract`, `answer`, `research`, `research_status`, `fetch_raw`, `web_run`, `budget_start`, `budget_status`, and `load_env` when its switch is on | about 10.7 KB (some 2.7k tokens) |
+| `slim` (default) | `search`, `extract`, `answer`, `research`, `research_status`, `fetch_raw`, `web_run`, `budget_start`, `budget_status`, and `load_env` when its switch is on | about 10.8 KB (some 2.7k tokens) |
 | `full` | every tool: also the `browser_*` tools, `browse`, the live data tools and the data API tools, `call_data_api` among them | about 26 KB |
 
 With no key at all, the slim profile lists six tools: the ones that need a key

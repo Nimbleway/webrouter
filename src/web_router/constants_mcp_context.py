@@ -152,3 +152,17 @@ MCP_COST_DIGITS = 6
 MCP_MSG_ERROR_FACTS = " (kind={kind}, retryable={retryable})"
 """Appended to a failed tool call's text when the error says what kind it was, so a model branches on fields."""
 MCP_LOG_TOOL_RAISED = "A tool raised %s: %s\n%s"
+
+
+MCP_MSG_NO_RAW = "The backend returned no raw payload for handle {handle!r}."
+
+MCP_ARG_OFFSET = "offset"
+"""Where a page of ``fetch_raw``'s payload starts; its size is ``max_chars``, as a browser snapshot's is."""
+
+MCP_MSG_RAW_PAGE = "Characters {start} to {end} of {total}."
+
+MCP_MSG_RAW_NEXT_PAGE = " Call fetch_raw with handle {handle!r} and offset {next_offset} for the next page."
+
+MCP_MSG_RAW_PAST_END = "offset {offset} is past the end of handle {handle!r}'s payload, which is {total} characters."
+
+MCP_MSG_RAW_BAD_PAGE = "fetch_raw's {name!r} must be a whole number of at least {minimum}, not {value!r}."

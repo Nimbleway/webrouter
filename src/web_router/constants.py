@@ -3662,15 +3662,17 @@ MCP_BROWSE_STATUS_PROPERTIES: dict[str, dict[str, Any]] = {
     MCP_ARG_HANDLE: {"type": "string", "description": "The handle a `browse` call handed back."},
 }
 
-MCP_FETCH_RAW_PROPERTIES: dict[str, dict[str, Any]] = {
-    MCP_ARG_HANDLE: {"type": "string", "description": "The handle an earlier result carried."},
-}
-
 MCP_ARG_SESSION_ID = "session_id"
 MCP_ARG_FORMAT = "format"
 MCP_ARG_REF = "ref"
 MCP_ARG_SELECTOR = "selector"
 MCP_ARG_MAX_CHARS = "max_chars"
+
+MCP_FETCH_RAW_PROPERTIES: dict[str, dict[str, Any]] = {
+    MCP_ARG_HANDLE: {"type": "string", "description": "The handle an earlier result carried."},
+    "offset": {"type": "integer", "minimum": 0},
+    MCP_ARG_MAX_CHARS: {"type": "integer", "minimum": 6},
+}
 MCP_ARG_STEALTH = "stealth"
 
 # `provider_options`, `profile` and `persist_profile` are left out on purpose.
@@ -3883,8 +3885,8 @@ MCP_DESC_BROWSE_STATUS = (
 )
 
 MCP_DESC_FETCH_RAW = (
-    "The backend's full, unshaped payload for a handle: instant, but can be very large. Use it when a "
-    "result was cut and you need the rest. Session URLs and credentials in browser payloads are redacted."
+    "The backend's full, unshaped payload for a handle, for the rest of a cut result: instant, but can be very "
+    "large. offset/max_chars page it if your client cuts long results. Browser session URLs and keys are redacted."
 )
 
 MCP_DESC_BROWSER_OPEN = (
@@ -4032,8 +4034,6 @@ MCP_MSG_UNKNOWN_HANDLE = (
 MCP_MSG_NOT_A_JOB = (
     "Handle {handle!r} came from {tool!r}, which {poller} cannot poll -- only a handle from {job_tool!r} can."
 )
-
-MCP_MSG_NO_RAW = "The backend returned no raw payload for handle {handle!r}."
 
 MCP_MSG_MISSING_ARGUMENT = "Tool {tool!r} needs a {name!r} argument."
 

@@ -96,7 +96,8 @@ Cost discipline:
   that may bill, and check it before a billed run. A call refused with
   BudgetExceededError did not run; do not retry it unchanged.
 - Every result carries a handle, and fetch_raw returns its full payload for
-  free. Use it before repeating a call for more detail.
+  free. Use it before repeating a call for more detail. If your client cuts long
+  tool results, read it in pages: max_chars, then offset from each next_offset.
 - A truncated result is not a failed result; the note names the handle that
   holds the rest.
 - Leave provider unset unless you have a reason to pin one. extract with
