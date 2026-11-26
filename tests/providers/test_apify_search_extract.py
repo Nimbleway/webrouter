@@ -110,6 +110,13 @@ def test_extract_reports_a_404_page_as_a_failed_url() -> None:
         provider.extract(ExtractRequest(urls=["https://example.com/x"]))
 
 
+def test_extract_reports_a_web_fetch_error_reply_as_a_failed_url() -> None:
+    reply = {"url": "https://example.com/x.zip", "fetch": {"httpStatusCode": 200}, "error": "UNSUPPORTED_CONTENT_TYPE"}
+    provider = ApifyExtractProvider(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=reply)))
+    with pytest.raises(ExtractFailedError, match="UNSUPPORTED_CONTENT_TYPE"):
+        provider.extract(ExtractRequest(urls=["https://example.com/x.zip"]))
+
+
 @pytest.mark.integration
 def test_live_search_returns_web_results() -> None:
     if not os.environ.get("APIFY_TOKEN"):
