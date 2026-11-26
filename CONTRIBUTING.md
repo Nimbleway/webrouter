@@ -195,7 +195,7 @@ for each format, and Bright Data's own reference shows a JSON envelope beside a
 `format="raw"` request that does not return one.
 
 Where no account is available, say so in the test module's docstring the way
-`tests/providers/test_oxylabs.py`, `test_brightdata.py` and `test_firecrawl.py`
+`tests/providers/test_seltz.py`, `test_valyu.py` and `test_octen.py`
 do, so the next person knows the mapping is documentation-derived rather than
 verified.
 

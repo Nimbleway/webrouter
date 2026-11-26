@@ -642,9 +642,9 @@ would use — validation, wrapping and normalization included — so what is
 measured is what a caller gets. Neither has a registry of its own and no
 provider implements anything for them. A `BenchmarkReport` holds one
 `BenchmarkRun` per provider, in the order asked, and an `ExtractBenchmarkReport`
-one `ExtractBenchmarkRun`; the two pairs share a base in `types.py`, and the
-threads, the deadline and the rows that outlive it live once in `client.py`'s
-`_fan_out` / `_afan_out`, so a change to how a comparison runs is made there
+one `ExtractBenchmarkRun`; the two pairs share a base in `types_benchmark.py`, and
+the threads, the deadline and the rows that outlive it live once in `_benchmark.py`'s
+`fan_out` / `afan_out`, so a change to how a comparison runs is made there
 for both. A row whose call raised —
 a refused option or format, a missing key, a backend failure, or
 `BenchmarkTimeoutError` when the comparison's single `timeout` ran out —
@@ -971,7 +971,7 @@ mapping keyed by method (`AUTO_CHAIN_METHODS`) sets only the ones it names.
 **A billed chain falls through only when nothing started.** A session that is
 opened is paid for, and so is a task or research run that was accepted, so the
 browser, browse and research chains try the next member only on a failure
-`_nothing_started` in `auto.py` allows — a missing credential or extra, a 4xx, a connection that
+`nothing_started` in `providers/_chain.py` allows — a missing credential or extra, a 4xx, a connection that
 never reached the backend (an SDK's catch-all connection error counts only when raised from a connect
 error). A 5xx, a read timeout or an unreadable 200 may come
 after the vendor created the session or task, so it raises rather than leaving
@@ -1280,7 +1280,7 @@ drift and runs each check only against providers that map the option — add to 
 when you map one.
 
 Where no account was available, say so in the test module's docstring the way
-`tests/providers/test_oxylabs.py`, `test_brightdata.py` and `test_firecrawl.py`
+`tests/providers/test_seltz.py`, `test_valyu.py` and `test_octen.py`
 do, so the next person knows the mapping is documentation-derived rather than
 verified.
 
