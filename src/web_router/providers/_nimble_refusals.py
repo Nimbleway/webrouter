@@ -25,7 +25,10 @@ def refused_search_options(request: SearchRequest) -> dict[str, Any]:
     refused: dict[str, Any] = {"recency": request.recency} if request.recency and lite else {}
     for name in DOMAIN_LISTS:
         domains = getattr(request, name) or []
-        # The raw cap holds at every depth; lite's is checked after duplicates are dropped.
-        if len(domains) > NIMBLE_DOMAIN_LIMITS[name] or (lite and len(set(domains)) > NIMBLE_LITE_DOMAIN_LIMIT):
-            refused[name] = domains
+        # The raw cap holds at every depth; lite's is checked after duplicates are dropped. The refusal names the
+        # count rather than the list, which can run to thousands of entries in the error message.
+        if len(domains) > NIMBLE_DOMAIN_LIMITS[name]:
+            refused[name] = len(domains)
+        elif lite and len(set(domains)) > NIMBLE_LITE_DOMAIN_LIMIT:
+            refused[name] = len(set(domains))
     return refused

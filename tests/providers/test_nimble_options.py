@@ -55,10 +55,12 @@ def test_a_domain_list_past_nimbles_limit_is_refused(
     """Checked live: one entry past the limit answers 422; with no depth, the account's default depth decides."""
     domains = [f"site-{i}.com" for i in range(count)]
     request = SearchRequest(query="hi", search_depth=depth, **{field: domains})
-    assert NimbleProvider.refused_values(request) == ({field: domains} if refused else {})
+    assert NimbleProvider.refused_values(request) == ({field: count} if refused else {})
     if refused:
-        with pytest.raises(UnsupportedParameterError, match="at most 400 include_domains"):
+        with pytest.raises(UnsupportedParameterError, match="at most 400 include_domains") as caught:
             provider.search(request)
+        assert str(count) in str(caught.value)
+        assert "site-0.com" not in str(caught.value)
 
 
 def test_lite_counts_distinct_domains() -> None:
