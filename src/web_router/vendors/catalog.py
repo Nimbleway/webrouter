@@ -12,7 +12,6 @@ from __future__ import annotations
 import functools
 import json
 import os
-import re
 from collections.abc import Iterable
 from importlib import resources
 from pathlib import Path
@@ -33,16 +32,7 @@ from web_router.constants_vendors import (
 from web_router.exceptions import ConfigurationError
 from web_router.exceptions_vendors import VendorNotFoundError
 from web_router.vendors.schema import Vendor, VendorEndpoint
-
-_WORD = re.compile(r"[a-z0-9]+")
-
-
-def words(text: str) -> set[str]:
-    """Lowercase words, plurals folded: "monitors" and "monitor" are one word to a search."""
-    return {
-        word[:-1] if len(word) > 3 and word.endswith("s") and not word.endswith("ss") else word
-        for word in _WORD.findall(text.lower())
-    }
+from web_router.vendors.text import words
 
 
 class VendorCatalog:
@@ -52,6 +42,18 @@ class VendorCatalog:
         self._vendors: dict[str, Vendor] = {vendor.vendor: vendor for vendor in vendors}
         self._endpoints: dict[str, VendorEndpoint] = {
             endpoint.id: endpoint for vendor in self._vendors.values() for endpoint in vendor.endpoints
+        }
+
+    @functools.cached_property
+    def _terms(self) -> dict[str, tuple[frozenset[str], frozenset[str]]]:
+        """Endpoint words, tokenized once: strong (id, job, vendor id/name); weak (name, summary, category)."""
+        return {
+            endpoint.id: (
+                words(f"{endpoint.id} {endpoint.job or ''} {owner.name} {owner.vendor}"),
+                words(f"{endpoint.name} {endpoint.summary} {owner.category}"),
+            )
+            for endpoint in self._endpoints.values()
+            for owner in (self._vendors[endpoint.vendor],)
         }
 
     def __len__(self) -> int:
@@ -96,16 +98,15 @@ class VendorCatalog:
     ) -> list[VendorEndpoint]:
         """Endpoints whose words match ``query``, best match first.
 
-        A plain word-overlap score over the id, name, summary, job and the
-        vendor's own name and category, with filler words ("a", "for", "the")
-        left out of the query (a query of nothing else finds nothing) -- enough to go from "google ads spend
-        by campaign" to the GAQL endpoint without a model in the loop, and
-        deterministic, so the same query lists the same endpoints.
+        A plain word-overlap score over the id, name, summary, job and the vendor's own
+        name and category, filler words left out of the query, deterministic: enough
+        to go from "google ads spend by campaign" to the GAQL endpoint without a model.
         """
         if vendor is not None:
             self.vendor(vendor)
-        query_words = words(query) - VENDOR_FIND_STOP_WORDS
-        if not query_words and words(query):
+        asked = words(query)
+        query_words = asked - VENDOR_FIND_STOP_WORDS
+        if not query_words and asked:
             return []  # a query of filler words only asks for nothing, not for everything
         scored: list[tuple[int, str, VendorEndpoint]] = []
         for endpoint in self._endpoints.values():
@@ -116,7 +117,7 @@ class VendorCatalog:
                 continue
             if kind is not None and endpoint.kind != kind:
                 continue
-            score = _score(query_words, endpoint, owner)
+            score = _score(query_words, *self._terms[endpoint.id])
             if query_words and score == 0:
                 continue
             scored.append((-score, endpoint.id, endpoint))
@@ -125,11 +126,7 @@ class VendorCatalog:
         return found if limit is None else found[:limit]
 
 
-def _score(query_words: set[str], endpoint: VendorEndpoint, vendor: Vendor) -> int:
-    if not query_words:
-        return 0
-    strong = words(f"{endpoint.id} {endpoint.job or ''} {vendor.name} {vendor.vendor}")
-    weak = words(f"{endpoint.name} {endpoint.summary} {vendor.category}")
+def _score(query_words: frozenset[str], strong: frozenset[str], weak: frozenset[str]) -> int:
     return 3 * len(query_words & strong) + len(query_words & weak)
 
 

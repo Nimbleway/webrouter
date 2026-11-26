@@ -1,0 +1,1 @@
+Vendor endpoint search is 8-15x faster: the same 20 queries take 47-71 ms instead of 595-723 ms on one machine. Endpoint text is tokenized once into the catalog instead of on every query; results, their order and their scores are unchanged.
