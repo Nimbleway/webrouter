@@ -1,1 +1,0 @@
-MCP: a finished `research` run's result may now be five times `WEB_ROUTER_MCP_MAX_CHARS` (40,000 characters by default), with three quarters for the report. Before, a report of any length reached the model as its first 4,000 characters, and the rest only through `fetch_raw`'s untouched payload.
