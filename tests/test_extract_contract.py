@@ -425,7 +425,7 @@ def _answered(provider: ExtractProvider, urls: list[str]) -> ExtractResponse:
 
     def _extract(request: ExtractRequest, batch: list[str]) -> ExtractResponse:
         calls.append(batch)
-        return provider._to_response(request, batch, _STUB_PAYLOADS[provider.name](batch))
+        return getattr(provider, "api", provider)._to_response(request, batch, _STUB_PAYLOADS[provider.name](batch))
 
     provider._extract = _extract  # type: ignore[method-assign]
     response = provider.extract(ExtractRequest(urls=urls))

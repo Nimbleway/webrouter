@@ -177,6 +177,12 @@ LIVE_DATA_ALT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 }
 """A second set of variables that configures a live data provider on its own: Oxylabs' Web Scraper API's."""
 
+EXTRACT_ALT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {Provider.OXYLABS.value: ("OXYLABS_WEB_API_KEY",)}
+"""The same for extract: Oxylabs' Web API key, beside the username and password ``EXTRACT_ENV_BY_PROVIDER`` names."""
+
+AUTO_KEY_SETTINGS: dict[str, str] = {Provider.OXYLABS.value: "web_api_key"}
+"""Beside ``api_key``, the ``provider_config`` setting that keys a backend in code for ``auto``: Oxylabs' Web API."""
+
 LIVE_DATA_CREDENTIAL_SETS: dict[str, tuple[tuple[str, ...], ...]] = {
     name: (env, *((LIVE_DATA_ALT_ENV_BY_PROVIDER[name],) if name in LIVE_DATA_ALT_ENV_BY_PROVIDER else ()))
     for name, env in LIVE_DATA_ENV_BY_PROVIDER.items()

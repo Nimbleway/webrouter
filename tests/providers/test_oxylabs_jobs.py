@@ -179,7 +179,7 @@ def test_one_oxylabs_config_entry_serves_extract_and_live_data(monkeypatch: pyte
     with WebRouter(provider_config=config) as router:
         extract = router.get_extract_provider("oxylabs")
         live = router.get_live_data_provider("oxylabs")
-        assert extract._client.headers["Authorization"].startswith("Basic ")  # type: ignore[attr-defined]
+        assert extract.api._client.headers["Authorization"].startswith("Basic ")  # type: ignore[attr-defined]
         assert live.web_api._client.headers["Authorization"] == "Bearer web-key"  # type: ignore[attr-defined]
         # The same entry's username and password are the Web Scraper API's, so live data runs on both.
         assert live.classic._client.headers["Authorization"].startswith("Basic ")  # type: ignore[attr-defined]

@@ -15,20 +15,20 @@ import pytest
 
 from web_router import WebRouter
 from web_router.exceptions import ConfigurationError, UnsupportedFormatError
-from web_router.providers.oxylabs import OxylabsExtractProvider
+from web_router.providers.oxylabs import OxylabsRealtimeExtractProvider, OxylabsWebApiExtractProvider
 from web_router.types import ExtractRequest
 
 URL = "https://example.com"
 
 
 @pytest.fixture
-def provider(monkeypatch: pytest.MonkeyPatch) -> OxylabsExtractProvider:
+def provider(monkeypatch: pytest.MonkeyPatch) -> OxylabsRealtimeExtractProvider:
     monkeypatch.setenv("OXYLABS_USERNAME", "test-user")
     monkeypatch.setenv("OXYLABS_PASSWORD", "test-pass")
-    return OxylabsExtractProvider()
+    return OxylabsRealtimeExtractProvider()
 
 
-def test_credentials_are_sent_as_http_basic(provider: OxylabsExtractProvider) -> None:
+def test_credentials_are_sent_as_http_basic(provider: OxylabsRealtimeExtractProvider) -> None:
     """Oxylabs takes a username and password, not the bearer token every other backend does."""
     header = provider._client_kwargs["headers"]["Authorization"]
     scheme, credentials = header.split(" ", 1)
@@ -42,28 +42,28 @@ def test_a_missing_username_names_the_variable_to_set(monkeypatch: pytest.Monkey
     monkeypatch.setenv("OXYLABS_PASSWORD", "test-pass")
 
     with pytest.raises(ConfigurationError, match="OXYLABS_USERNAME"):
-        OxylabsExtractProvider()
+        OxylabsRealtimeExtractProvider()
 
 
-def test_the_universal_source_is_what_asks_for_any_website(provider: OxylabsExtractProvider) -> None:
+def test_the_universal_source_is_what_asks_for_any_website(provider: OxylabsRealtimeExtractProvider) -> None:
     assert provider._build_payload(ExtractRequest(urls=[URL], format="html"), [URL]) == {
         "source": "universal",
         "url": URL,
     }
 
 
-def test_markdown_adds_a_flag_rather_than_replacing_the_html(provider: OxylabsExtractProvider) -> None:
+def test_markdown_adds_a_flag_rather_than_replacing_the_html(provider: OxylabsRealtimeExtractProvider) -> None:
     payload = provider._build_payload(ExtractRequest(urls=[URL], format="markdown"), [URL])
     assert payload == {"source": "universal", "url": URL, "markdown": True}
     assert provider._build_payload(ExtractRequest(urls=[URL]), [URL]) == payload  # markdown is the default
 
 
-def test_plain_text_is_rejected_until_someone_maps_it(provider: OxylabsExtractProvider) -> None:
+def test_plain_text_is_rejected_until_someone_maps_it(provider: OxylabsRealtimeExtractProvider) -> None:
     with pytest.raises(UnsupportedFormatError, match="text"):
         provider.validate(ExtractRequest(urls=[URL], format="text"))
 
 
-def test_the_result_is_chosen_by_its_type_not_its_position(provider: OxylabsExtractProvider) -> None:
+def test_the_result_is_chosen_by_its_type_not_its_position(provider: OxylabsRealtimeExtractProvider) -> None:
     """A multi-format request returns one entry per representation, in no fixed order."""
     payload = {
         "results": [
@@ -79,7 +79,7 @@ def test_the_result_is_chosen_by_its_type_not_its_position(provider: OxylabsExtr
     assert [document.content for document in html] == ["<html>"]
 
 
-def test_oxylabs_payload_is_normalized(provider: OxylabsExtractProvider) -> None:
+def test_oxylabs_payload_is_normalized(provider: OxylabsRealtimeExtractProvider) -> None:
     payload = {
         "results": [
             {
@@ -117,3 +117,19 @@ def test_live_extract_returns_page_content() -> None:
     assert response.provider == "oxylabs"
     assert response.documents[0].content
     assert response.documents[0].format == "markdown"
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not os.getenv("OXYLABS_WEB_API_KEY"), reason="OXYLABS_WEB_API_KEY not set")
+def test_live_extract_on_the_web_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OXYLABS_USERNAME", raising=False)
+    monkeypatch.delenv("OXYLABS_PASSWORD", raising=False)
+    with WebRouter(
+        "oxylabs", provider_config={"oxylabs": {"web_api_key": os.environ["OXYLABS_WEB_API_KEY"]}}
+    ) as router:
+        assert isinstance(router.get_extract_provider("oxylabs").api, OxylabsWebApiExtractProvider)  # type: ignore[attr-defined]
+        response = router.extract(URL, format="markdown")
+
+    assert response.provider == "oxylabs"
+    assert response.documents[0].content
+    assert response.documents[0].status_code == 200

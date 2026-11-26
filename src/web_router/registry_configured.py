@@ -15,7 +15,7 @@ from web_router.constants import (
     RESEARCH_ENV_BY_PROVIDER,
 )
 from web_router.constants_litellm import LITELLM_SEARCH_SETTINGS_BY_PROVIDER as SEARCH_SETTINGS
-from web_router.constants_live_data import LIVE_DATA_CREDENTIAL_SETS
+from web_router.constants_live_data import EXTRACT_ALT_ENV_BY_PROVIDER, LIVE_DATA_CREDENTIAL_SETS
 
 
 def is_set(env_var: str) -> bool:
@@ -45,15 +45,20 @@ def configured_extract_providers() -> list[str]:
     """Every builtin extract provider you currently have credentials for, plus the keyless ones.
 
     The same caveats as :func:`configured_providers`. A backend needing more than one variable -- Oxylabs its
-    username and password, Bright Data its token and zone -- is reported only when it has all of them. ``obscura``
-    runs a program on this machine, so it is reported only when that program is found.
+    username and password, Bright Data its token and zone -- is reported only when it has all of them, or its
+    second set (Oxylabs' Web API key, from ``EXTRACT_ALT_ENV_BY_PROVIDER``). ``obscura`` runs a program on this
+    machine, so it is reported only when that program is found.
     """
     from web_router.providers.obscura import obscura_installed  # its module imports the provider base classes
 
     return sorted(
         name
         for name, env_vars in EXTRACT_ENV_BY_PROVIDER.items()
-        if all(is_set(env_var) for env_var in env_vars) and (name != PROVIDER_OBSCURA or obscura_installed())
+        if (
+            all(map(is_set, env_vars))
+            or (name in EXTRACT_ALT_ENV_BY_PROVIDER and all(map(is_set, EXTRACT_ALT_ENV_BY_PROVIDER[name])))
+        )
+        and (name != PROVIDER_OBSCURA or obscura_installed())
     )
 
 
