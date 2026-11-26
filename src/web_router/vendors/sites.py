@@ -5,8 +5,9 @@ from __future__ import annotations
 from urllib.parse import urlsplit
 
 from web_router.constants_vendors import VENDOR_FIND_STOP_WORDS
-from web_router.vendors.catalog import VendorCatalog, _score, words
+from web_router.vendors.catalog import VendorCatalog, _score
 from web_router.vendors.schema import Vendor, VendorEndpoint
+from web_router.vendors.text import words
 
 
 def vendors_for_site(catalog: VendorCatalog, url: str) -> list[Vendor]:

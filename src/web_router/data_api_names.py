@@ -21,8 +21,9 @@ from web_router.constants_data_api import (
     DATA_API_NAME_MIN_LENGTH,
 )
 from web_router.constants_vendors import VENDOR_FIND_STOP_WORDS
-from web_router.vendors.catalog import VendorCatalog, words
+from web_router.vendors.catalog import VendorCatalog
 from web_router.vendors.schema import Vendor, VendorEndpoint
+from web_router.vendors.text import words
 
 _TOKEN = re.compile(r"[a-z0-9]+")
 _ID_BONUS = 10
