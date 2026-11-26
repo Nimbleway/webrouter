@@ -5,7 +5,7 @@ beyond the shared HTTP client. Install with the ``search`` extra or ``extract``.
 ``WEBIQ_API_KEY`` unless a key is passed explicitly.
 
 Search maps ``max_results``, ``search_depth`` (as ``maxLength``, and whole-page
-text for ``deep``), the domain filters (as ``site:`` operators in the query),
+text for ``deep``), the domain filters (as ``includeSites`` and ``excludeSites``),
 ``country`` (as ``region``) and ``locale`` (as ``language``); extract maps only
 ``format``. Everything else -- ``safeSearch``, ``location``, Browse's
 ``liveCrawl`` and link lists -- is reachable through ``provider_options``.
@@ -30,18 +30,19 @@ from web_router.constants import (
     WEBIQ_SEARCH_PATH,
 )
 from web_router.constants_languages import ISO_639_1
-from web_router.constants_search import MSG_SITE_DOMAINS
 from web_router.constants_webiq import (
     MSG_WEBIQ_CODE,
     MSG_WEBIQ_QUERY_TOO_LONG,
+    MSG_WEBIQ_SITES,
     WEBIQ_PARAMS_BY_DEPTH,
     WEBIQ_QUERY_LIMIT,
     WEBIQ_SEARCH_PARAMETERS,
+    WEBIQ_SITES_LIMIT,
 )
 from web_router.exceptions import ProviderError
 from web_router.providers._http import HttpExtractProvider, HttpSearchProvider
 from web_router.providers._language import language_code
-from web_router.providers._search_text import site_operators, unsited_domains
+from web_router.providers._search_text import refused_domains, unsited_domains
 from web_router.providers._utils import build_payload
 from web_router.snippet import as_snippet
 from web_router.types import (
@@ -73,7 +74,7 @@ class WebIQProvider(HttpSearchProvider):
     supported_parameters: ClassVar[frozenset[str]] = WEBIQ_SEARCH_PARAMETERS
     refusal_reasons: ClassVar[dict[str, str]] = {
         **dict.fromkeys(("country", "locale"), MSG_WEBIQ_CODE),
-        **dict.fromkeys(("include_domains", "exclude_domains"), MSG_SITE_DOMAINS),
+        **dict.fromkeys(("include_domains", "exclude_domains"), MSG_WEBIQ_SITES),
     }
 
     base_url: ClassVar[str] = WEBIQ_BASE_URL
@@ -82,26 +83,27 @@ class WebIQProvider(HttpSearchProvider):
     api_key_header: ClassVar[str] = WEBIQ_API_KEY_HEADER
 
     def _build_payload(self, request: SearchRequest) -> dict[str, Any]:
-        query = self._query(request)
-        if len(query) > WEBIQ_QUERY_LIMIT:
-            raise ProviderError(self.name, MSG_WEBIQ_QUERY_TOO_LONG.format(limit=WEBIQ_QUERY_LIMIT, length=len(query)))
+        if len(request.query) > WEBIQ_QUERY_LIMIT:
+            raise ProviderError(
+                self.name, MSG_WEBIQ_QUERY_TOO_LONG.format(limit=WEBIQ_QUERY_LIMIT, length=len(request.query))
+            )
         depth = WEBIQ_PARAMS_BY_DEPTH[request.search_depth] if request.search_depth else {}
         return build_payload(
             request,
             WEBIQ_PARAM_NAMES,
-            query=query,
+            query=request.query,
+            includeSites=request.include_domains or None,
+            excludeSites=request.exclude_domains or None,
             region=request.country.upper() if request.country else None,
             language=language_code(request.locale) if request.locale else None,
             **{**WEBIQ_CONTENT_FORMAT, **depth},
         )
 
-    @staticmethod
-    def _query(request: SearchRequest) -> str:
-        return " ".join([request.query, *site_operators(request.include_domains, request.exclude_domains)])
-
     @classmethod
     def refused_options(cls, request: SearchRequest) -> dict[str, Any]:
-        refused: dict[str, Any] = unsited_domains(request)
+        # The same host names, with an optional path, that the site: operators
+        # this replaced accepted, so no filter that worked before is now refused.
+        refused: dict[str, Any] = unsited_domains(request) | refused_domains(request, limit=WEBIQ_SITES_LIMIT, both=())
         if request.country is not None and not _two_letters(request.country):
             refused["country"] = request.country
         if request.locale is not None and language_code(request.locale) not in ISO_639_1:

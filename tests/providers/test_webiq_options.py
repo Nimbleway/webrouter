@@ -31,21 +31,52 @@ def test_depth_caps_the_passages_and_deep_asks_for_the_page(provider: WebIQProvi
     assert provider._build_payload(SearchRequest(query="hi", search_depth=depth)) == {"query": "hi", **fields}
 
 
-def test_domain_filters_become_site_operators_and_codes_their_fields(provider: WebIQProvider) -> None:
+def test_domain_filters_go_in_their_own_fields_and_the_query_is_sent_as_given(provider: WebIQProvider) -> None:
+    """WebIQ's reference says site: operators in the query reduce relevance; includeSites does not."""
     request = SearchRequest(
-        query="coffee", include_domains=["a.com", "b.org"], exclude_domains=["c.net"], country="gb", locale="en-GB"
+        query="coffee", include_domains=["a.com", "b.org/blog"], exclude_domains=["c.net"], country="gb", locale="en-GB"
     )
     assert provider._build_payload(request) == {
-        "query": "coffee site:a.com OR site:b.org -site:c.net",
+        "query": "coffee",
+        "includeSites": ["a.com", "b.org/blog"],
+        "excludeSites": ["c.net"],
         "contentFormat": "passage",
         "region": "GB",
         "language": "en",
     }
 
 
-def test_a_query_past_webiqs_limit_with_its_operators_is_refused(provider: WebIQProvider) -> None:
+def test_an_empty_domain_filter_is_not_sent(provider: WebIQProvider) -> None:
+    payload = provider._build_payload(SearchRequest(query="hi", include_domains=[], exclude_domains=[]))
+    assert "includeSites" not in payload and "excludeSites" not in payload
+
+
+def test_domain_filters_no_longer_count_toward_the_query_limit(provider: WebIQProvider) -> None:
+    payload = provider._build_payload(SearchRequest(query="x" * 990, include_domains=["example.com"]))
+    assert payload["query"] == "x" * 990
+
+
+def test_a_query_past_webiqs_limit_is_refused(provider: WebIQProvider) -> None:
     with pytest.raises(ProviderError, match="at most 1000 characters"):
-        provider._build_payload(SearchRequest(query="x" * 990, include_domains=["example.com"]))
+        provider._build_payload(SearchRequest(query="x" * 1001))
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {"include_domains": ["https://example.com"]},
+        {"exclude_domains": ["example.com OR spam.com"]},
+        {"include_domains": [f"site{n}.com" for n in range(251)]},
+    ],
+)
+def test_a_domain_filter_webiq_cannot_take_is_refused_unsent(monkeypatch: pytest.MonkeyPatch, options: dict) -> None:
+    monkeypatch.setenv("WEBIQ_API_KEY", "test-key")
+    sent: list[httpx.Request] = []
+    provider = WebIQProvider(transport=httpx.MockTransport(lambda r: sent.append(r) or httpx.Response(200, json={})))
+
+    with pytest.raises(UnsupportedParameterError, match="at most 250 host names"):
+        provider.search(SearchRequest(query="hi", **options))
+    assert sent == []
 
 
 @pytest.mark.parametrize(

@@ -163,8 +163,8 @@ on to the next eligible backend.
 | Perplexity | Both domain lists at once; more than 20 domains; a `locale` that is not a bare two-letter language (`en`, not `en-US`) |
 | Valyu | A `country` off its 36 codes |
 | Octen | A `locale` whose language is not among the 18 it lists (`pt-BR` is checked as `pt`) |
-| WebIQ | A `country` or `locale` that is not two letters (a regional locale sends its language); a query past 1,000 characters with its `site:` operators |
+| WebIQ | A `country` or `locale` that is not two letters (a regional locale sends its language); a query past 1,000 characters; a domain filter that is not a host name, optionally with a path; more than 250 domains in either list |
 | Keenable | More than one `include_domains` entry |
 | DeepSeek | A query past 128 characters with its operators |
-| Brave, WebIQ, DeepSeek | A domain filter that is not a host name, optionally with a path, because it goes into the query as `site:` |
+| Brave, DeepSeek | A domain filter that is not a host name, optionally with a path, because it goes into the query as `site:` |
 | You.com MCP | An `include_domains` entry that is not a host name, because it goes into the query as `site:` |

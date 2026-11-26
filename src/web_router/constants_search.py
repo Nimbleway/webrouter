@@ -84,7 +84,7 @@ MSG_AUTO_REFUSES = "will not serve {values}"
 
 SITE_OPERATOR = "site:{domain}"
 EXCLUDE_SITE_OPERATOR = "-site:{domain}"
-"""A domain filter as the query operators Brave, WebIQ, DeepSeek and You.com MCP read (Brave excludes with ``NOT``)."""
+"""A domain filter as the query operators Brave, DeepSeek and You.com MCP read (Brave excludes with ``NOT``)."""
 _LABEL = r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?"
 SITE_DOMAIN_PATTERN = rf"{_LABEL}(?:\.{_LABEL})+(?:/[A-Za-z0-9._~%/-]*)?"
 """A host name, optionally with a path: what a domain filter may hold when it goes into the query as ``site:``."""

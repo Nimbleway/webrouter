@@ -28,20 +28,25 @@ less. Unset, passages run to WebIQ's default of 10,000 characters.
 """
 
 WEBIQ_QUERY_LIMIT = 1000
-"""The longest query WebIQ accepts, operators included; a longer one is refused before it is sent."""
+"""The longest query WebIQ accepts; a longer one is refused before it is sent."""
 
-# WebIQ filters by domain through site: and -site: operators in the query, its
-# only domain filter. Several included sites are joined with OR, so a result may
-# come from any of them.
+WEBIQ_SITES_LIMIT = 250
+"""The most entries WebIQ takes in ``includeSites`` or in ``excludeSites``."""
+
+# WebIQ filters by domain through its includeSites and excludeSites fields
+# rather than site: operators in the query: its own reference says the operators
+# reduce relevance, and they would count toward the query's 1,000 characters.
 WEBIQ_SEARCH_PARAMETERS = frozenset(
     {"max_results", "search_depth", "include_domains", "exclude_domains", "country", "locale"}
 )
 """What WebIQ search maps. ``recency`` and ``effort`` have no WebIQ field."""
 
 MSG_WEBIQ_QUERY_TOO_LONG = (
-    "WebIQ takes a query of at most {limit} characters, and this one would be {length}; include_domains and "
-    "exclude_domains are sent inside the query and count toward it. Shorten the query, drop a filter, or use "
-    "another provider."
+    "WebIQ takes a query of at most {limit} characters, and this one would be {length}. Shorten the query, "
+    "or use another provider."
+)
+MSG_WEBIQ_SITES = (
+    f"WebIQ takes each domain filter as a list of at most {WEBIQ_SITES_LIMIT} host names, each optionally with a path."
 )
 MSG_WEBIQ_CODE = (
     "WebIQ takes a country as a two-letter region code such as 'US', and a locale as a two-letter ISO 639-1 "
