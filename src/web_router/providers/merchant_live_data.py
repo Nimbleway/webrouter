@@ -13,9 +13,9 @@ The caller's agent profile URL identifies the caller to the store; it is not a s
 
 from __future__ import annotations
 
-import os
 from typing import Any, ClassVar
 
+from web_router._environment import explicit_or_env
 from web_router.constants import MCP_ACCEPT
 from web_router.constants_live_data import LIVE_DATA_HTTP_TIMEOUT
 from web_router.constants_merchant import (
@@ -85,7 +85,7 @@ class MerchantLiveDataProvider(HttpLiveDataProvider, RegistryReader):
             raise ConfigurationError(MSG_REDIRECTS_REFUSED)
         url = (registry_url or REGISTRY_URL).rstrip("/") + "/"
         super().__init__(base_url=url, timeout=timeout, **kwargs)
-        profile = (agent_profile_url or os.environ.get(ENV_MERCHANT_AGENT_PROFILE_URL) or "").strip()
+        profile = explicit_or_env(agent_profile_url, ENV_MERCHANT_AGENT_PROFILE_URL)
         self.agent_profile_url = profile or None
         self._init_registry()
 

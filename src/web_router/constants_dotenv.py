@@ -17,3 +17,8 @@ MSG_DOTENV_NOT_READ = (
     "`load_dotenv()` from python-dotenv before building the router."
 )
 """Appended to a configuration error naming a variable that the nearest ``.env`` sets and the environment lacks."""
+
+MSG_ENVIRONMENT_UNREAD = (
+    " This router was built with use_environment=False, so it reads no key or setting from the environment:"
+    " pass it in provider_config."
+)

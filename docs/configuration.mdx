@@ -10,7 +10,9 @@ WebRouter never logs or stores your keys, and sends each key only to its own pro
 requests are handled.
 
 Keys are read from the environment, or passed explicitly through
-`provider_config={Provider.NIMBLE: {"api_key": "..."}}`:
+`provider_config={Provider.NIMBLE: {"api_key": "..."}}`. A router built with
+`use_environment=False` takes them from `provider_config` only: see
+[Keys from code only](#keys-from-code-only).
 
 | Provider | Variable | Serves |
 | --- | --- | --- |
@@ -89,7 +91,8 @@ response = router.search("query", provider=Provider.TAVILY)  # per-call override
 ```
 
 `provider_config` is the one place credentials and client settings are passed
-explicitly; everything else comes from the environment. It reaches a backend
+explicitly; everything else comes from the environment, unless the router is built
+with [`use_environment=False`](#keys-from-code-only). It reaches a backend
 `auto` calls as well as one you name, and a backend given an `api_key` there
 joins `auto`'s default chain as one whose key is in the environment does. Providers are
 constructed lazily and cached, so configuring a backend you never call costs
@@ -138,6 +141,39 @@ One `WebRouter` may be shared across threads, such as the workers of a
 `ThreadPoolExecutor`: each provider builds its HTTP client once and every
 thread reuses it, and `close()` shuts it.
 
+## Keys from code only
+
+A process serving several users, each with their own keys -- a gateway, say --
+must not fall back on the keys in its own environment, which belong to whoever
+launched it. Build each user's router with `use_environment=False`:
+
+```python
+router = WebRouter(
+    provider_config={Provider.TAVILY: {"api_key": user.tavily_key}},
+    use_environment=False,
+)
+```
+
+That router reads no backend key or setting from the environment:
+
+- `auto`'s default chain, for every method, holds the backends keyed in
+  `provider_config`, then the keyless ones. A backend keyed only in the
+  environment is left out.
+- Nimble, Tavily, Firecrawl and Keenable, as `auto`'s keyless members, run on
+  their keyless tiers unless `provider_config` gives them a key.
+- A backend named with `provider=` and given no key in `provider_config`
+  raises `ConfigurationError`, its variable set or not.
+- Settings it would read like a key are left unread too: `AGENTCORE_GATEWAY_URL`,
+  `LITELLM_PROXY_API_BASE`, `WEB_ROUTER_MERCHANT_AGENT_PROFILE_URL`, and the key of
+  a router named with `router=`. Pass them in `provider_config` or `router_config`.
+
+The switch belongs to the router: another router in the same process, and
+`configured_providers()`, still read the environment. It covers backend keys
+and settings, not AgentCore's AWS credential (botocore resolves it), `CHROME_PATH`
+or `OBSCURA_PATH`, a vendor SDK's own non-key variables such as a proxy, or
+`call_data_api`'s vendor credentials, which `data_api_credentials` passes in
+code. The default, `use_environment=True`, reads the environment as before.
+
 ## Which providers can I actually use?
 
 ```python
@@ -152,7 +188,8 @@ registered at runtime, which includes backends you added yourself and so cannot
 be an enum. Feed a result straight back to `search(provider=...)`.
 
 `configured_providers()` reads environment variables only — a key passed through
-`provider_config` will not show up there (a router's `auto` still counts it), and a key that is present may still be
+`provider_config` will not show up there (a router's `auto` still counts it), it lists the environment's keys even
+for a router built with `use_environment=False`, which uses none of them, and a key that is present may still be
 rejected by the service. It answers "worth trying", not "guaranteed to work".
 
 ## Reaching a provider's own options

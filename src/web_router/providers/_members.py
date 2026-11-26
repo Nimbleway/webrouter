@@ -6,6 +6,7 @@ import threading
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from typing import Any, Generic, TypeVar, cast
 
+from web_router._environment import environment, reads_environment
 from web_router.exceptions import WebRouterError
 from web_router.providers._chain import _member_options
 
@@ -17,11 +18,13 @@ class _Members(dict[int, _MemberT], Generic[_MemberT]):
 
     Built under a lock: threads sharing one router must not each build, and
     leak, a member of their own, of which ``close()`` would see only the last.
+    Each is built mid-call, reading the environment only if its ``auto`` was built reading it.
     """
 
     def __init__(self) -> None:
         super().__init__()
         self._lock = threading.Lock()
+        self._reads_environment = reads_environment()
 
     def member(
         self,
@@ -34,7 +37,8 @@ class _Members(dict[int, _MemberT], Generic[_MemberT]):
         with self._lock:
             if position not in self:
                 name, options = chain[position]
-                self[position] = create(name, **_member_options(members_config, name, options))
+                with environment(self._reads_environment):
+                    self[position] = create(name, **_member_options(members_config, name, options))
             return self[position]
 
 

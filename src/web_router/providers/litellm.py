@@ -15,11 +15,11 @@ Install with the ``search`` extra.
 
 from __future__ import annotations
 
-import os
 from typing import Any, ClassVar
 
 import httpx
 
+from web_router._environment import explicit_or_env
 from web_router.constants_litellm import (
     ENV_LITELLM_PROXY_API_BASE,
     ENV_LITELLM_PROXY_API_KEY,
@@ -47,6 +47,7 @@ from web_router.constants_litellm import (
 from web_router.constants_tavily import TAVILY_SEARCH_PARAMETERS
 from web_router.exceptions import ConfigurationError
 from web_router.modes import ModeDeclarations
+from web_router.providers._credential import _CredentialMixin
 from web_router.providers._http import HttpSearchProvider
 from web_router.providers._search_text import lite_body
 from web_router.providers._utils import best_text
@@ -58,7 +59,7 @@ from web_router.snippet import as_snippet
 from web_router.types import SearchRequest, SearchResponse, SearchResult
 
 
-class LiteLLMSearchMixin:
+class LiteLLMSearchMixin(_CredentialMixin):
     """Mixed in ahead of a vendor's :class:`HttpSearchProvider` to send its search through a LiteLLM proxy."""
 
     name: ClassVar[str]
@@ -83,7 +84,7 @@ class LiteLLMSearchMixin:
         ``remote`` router's rule (``https``, or ``http`` to loopback; no credentials, query or fragment), since the
         proxy key rides on every request; an unsafe one is never given to the client.
         """
-        url = (base_url or os.environ.get(ENV_LITELLM_PROXY_API_BASE) or "").strip()
+        url = explicit_or_env(base_url, ENV_LITELLM_PROXY_API_BASE)
         self._url_error: ConfigurationError | None = None
         try:
             url = checked_url(url, httpx).rstrip("/") if url else ""
@@ -103,7 +104,7 @@ class LiteLLMSearchMixin:
         if self._url_error is not None:
             raise self._url_error
         if not self._proxy_url:
-            raise ConfigurationError.missing_setting(self.name, env_var=ENV_LITELLM_PROXY_API_BASE, setting="base_url")
+            raise self._missing_setting(ENV_LITELLM_PROXY_API_BASE, "base_url")
 
     def _search(self, request: SearchRequest) -> SearchResponse:
         self._require_proxy()

@@ -36,6 +36,7 @@ from types import TracebackType
 from typing import Any, Literal
 
 from web_router._benchmark import Stragglers
+from web_router._environment import environment
 from web_router.client_answer import AsyncAnswer, SyncAnswer
 from web_router.client_benchmark import AsyncBenchmark, SyncBenchmark
 from web_router.client_budget import AsyncBudget, SyncBudget
@@ -118,12 +119,16 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         max_concurrency: int | None = None,
         hop_timeout: float | Literal[False] | None = None,
         timeout_cooldown: bool = True,
+        use_environment: bool = True,
     ) -> None:
         """
         Args:
             provider: Name of the default provider, e.g. ``"nimble"`` or :attr:`Provider.NIMBLE`; omit it for ``auto``.
             provider_config: Constructor kwargs per provider, keyed by provider name: ``{"tavily": {"api_key": ...}}``.
-                This is the only place credentials are passed explicitly; everything else comes from the environment.
+                The only place credentials are passed explicitly; the rest come from the environment, unless off below.
+            use_environment: ``False`` reads no backend key or setting from the environment: ``auto`` chains only the
+                backends keyed in ``provider_config`` and the keyless ones, which run keyless. ``call_data_api``'s
+                vendor credentials are apart: see ``data_api_credentials``.
             router, route_tools, fail_on_router_error: a router that orders ``auto``'s backends, the tools that
                 ask it (the router's own ``route_tools``, else all five) and if its failure raises (experimental):
                 none unless set, so ``plan()`` and ``run()`` search; ``"data-driven"`` names the built-in table router
@@ -138,6 +143,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
             hop_timeout, timeout_cooldown: an ``auto`` hop's cap (half the time left unless set; ``False`` for none),
                 and a cooldown after timeouts in a row -- see :mod:`web_router.providers._hop`.
         """
+        self.use_environment = use_environment
         self._runtime = Runtime.capped(max_concurrency, hop_timeout, timeout_cooldown)
         self._init_vendors(renamed_credentials(data_api_credentials, vendor_credentials))
         name = provider_name(provider)
@@ -167,7 +173,8 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         self._providers_lock = threading.Lock()
         # Rows the sync benchmark() gave up on whose calls still run; close() waits for them, never shutting one.
         self._stragglers = Stragglers()
-        self._attach_router(router, route_tools, fail_on_router_error, url_policy, router_config, route_modes)
+        with environment(use_environment):  # a router named here reads its key now, as it is built
+            self._attach_router(router, route_tools, fail_on_router_error, url_policy, router_config, route_modes)
 
     def _config_for(self, key: str) -> dict[str, Any]:
         """Constructor kwargs for one backend: see :func:`~web_router.client_config.config_for`."""
@@ -184,7 +191,7 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
             return name
 
         key = provider_name(name) if name is not None else self.default_provider
-        with self._providers_lock:
+        with self._providers_lock, environment(self.use_environment):
             if key not in self._instances:
                 self._instances[key] = create_provider(key, **self._config_for(key))
             return self._instances[key]
@@ -195,49 +202,40 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
             return name
 
         key = provider_name(name) if name is not None else backend_of(self.default_provider)  # a pin: its backend
-        with self._providers_lock:
+        with self._providers_lock, environment(self.use_environment):
             if key not in self._extract_instances:
                 self._extract_instances[key] = create_extract_provider(key, **self._config_for(key))
             return self._extract_instances[key]
 
     def get_research_provider(self, name: str | Provider | ResearchProvider | None = None) -> ResearchProvider:
-        """Return the named research provider, constructing and caching it on first use.
-
-        The research counterpart of :meth:`get_provider`, with the same ownership rule.
-        """
+        """The research counterpart of :meth:`get_provider`, with the same caching and ownership rules."""
         if isinstance(name, ResearchProvider):
             return name
 
         key = provider_name(name) if name is not None else backend_of(self.default_provider)
-        with self._providers_lock:
+        with self._providers_lock, environment(self.use_environment):
             if key not in self._research_instances:
                 self._research_instances[key] = create_research_provider(key, **self._config_for(key))
             return self._research_instances[key]
 
     def get_browser_provider(self, name: str | Provider | BrowserProvider | None = None) -> BrowserProvider:
-        """Return the named browser provider, constructing and caching it on first use.
-
-        The browser counterpart of :meth:`get_provider`, with the same ownership rule.
-        """
+        """The browser counterpart of :meth:`get_provider`, with the same caching and ownership rules."""
         if isinstance(name, BrowserProvider):
             return name
 
         key = provider_name(name) if name is not None else backend_of(self.default_provider)
-        with self._providers_lock:
+        with self._providers_lock, environment(self.use_environment):
             if key not in self._browser_instances:
                 self._browser_instances[key] = create_browser_provider(key, **self._config_for(key))
             return self._browser_instances[key]
 
     def get_browse_provider(self, name: str | Provider | BrowseProvider | None = None) -> BrowseProvider:
-        """Return the named browse provider, constructing and caching it on first use.
-
-        The browse counterpart of :meth:`get_provider`, with the same ownership rule.
-        """
+        """The browse counterpart of :meth:`get_provider`, with the same caching and ownership rules."""
         if isinstance(name, BrowseProvider):
             return name
 
         key = provider_name(name) if name is not None else backend_of(self.default_provider)
-        with self._providers_lock:
+        with self._providers_lock, environment(self.use_environment):
             if key not in self._browse_instances:
                 self._browse_instances[key] = create_browse_provider(key, **self._config_for(key))
             return self._browse_instances[key]
@@ -297,6 +295,7 @@ class WebRouter(
         max_concurrency: int | None = None,
         hop_timeout: float | Literal[False] | None = None,
         timeout_cooldown: bool = True,
+        use_environment: bool = True,
     ) -> None:
         """
         Raises:
@@ -316,6 +315,7 @@ class WebRouter(
             max_concurrency=max_concurrency,
             hop_timeout=hop_timeout,
             timeout_cooldown=timeout_cooldown,
+            use_environment=use_environment,
         )
         async_only = sorted(async_client_holders(self._config))
         if async_only:

@@ -9,6 +9,7 @@ from __future__ import annotations
 import threading
 from typing import Any
 
+from web_router._environment import environment
 from web_router._validation import refused_as_parameter
 from web_router.client_requests import with_timeout
 from web_router.providers.answer import AnswerProvider
@@ -23,6 +24,7 @@ class _AnswerLookup:
     """What both routers share for ``answer()``: which backend serves it, and the request it is sent."""
 
     default_provider: str
+    use_environment: bool
     _config: dict[str, dict[str, Any]]
     _providers_lock: threading.Lock
     _answer_instances: dict[str, AnswerProvider]
@@ -43,8 +45,11 @@ class _AnswerLookup:
         if isinstance(name, AnswerProvider):
             return name
 
-        key = provider_name(name) if name is not None else default_answer_provider(self.default_provider, self._config)
-        with self._providers_lock:
+        if name is None:
+            with environment(self.use_environment):  # the configured backends, read here
+                name = default_answer_provider(self.default_provider, self._config)
+        key = provider_name(name)
+        with self._providers_lock, environment(self.use_environment):
             if key not in self._answer_instances:
                 self._answer_instances[key] = create_answer_provider(key, **self._config_for(key))
             return self._answer_instances[key]

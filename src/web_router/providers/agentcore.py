@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import contextlib
 import json
-import os
 from collections.abc import Generator
 from typing import Any, ClassVar
 from urllib.parse import urlsplit
@@ -33,6 +32,7 @@ from urllib.parse import urlsplit
 import httpx
 from botocore.session import get_session
 
+from web_router._environment import explicit_or_env
 from web_router.constants import (
     ENV_AGENTCORE_GATEWAY_URL,
     MCP_JSONRPC_VERSION,
@@ -105,7 +105,7 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
         """
         # Checked when called, not here: a provider is built by auto, or by a
         # test, on machines with no gateway at all.
-        self._gateway_url = (gateway_url or os.environ.get(ENV_AGENTCORE_GATEWAY_URL) or "").strip()
+        self._gateway_url = explicit_or_env(gateway_url, ENV_AGENTCORE_GATEWAY_URL)
         try:
             parts = urlsplit(self._gateway_url)
             self._host = parts.hostname or ""
@@ -229,9 +229,7 @@ class AgentCoreProvider(McpSearchMixin, HttpSearchProvider):
 
     def _check_gateway(self) -> None:
         if not self._gateway_url:
-            raise ConfigurationError.missing_setting(
-                self.name, env_var=ENV_AGENTCORE_GATEWAY_URL, setting="gateway_url"
-            )
+            raise self._missing_setting(ENV_AGENTCORE_GATEWAY_URL, "gateway_url")
         if not (self._is_https and self._host):
             raise ConfigurationError(MSG_AGENTCORE_BAD_URL.format(url=self._gateway_url, doc=AGENTCORE_SETUP_DOC))
 

@@ -23,6 +23,7 @@ import threading
 from collections.abc import Mapping
 from typing import Any
 
+from web_router._environment import environment
 from web_router._validation import refused_as_parameter
 from web_router.live_data_any import asearch_every_backend, search_every_backend
 from web_router.live_data_backends import backend_for
@@ -37,6 +38,7 @@ from web_router.types_live_data import LiveDataRequest, LiveDataResponse, LiveDa
 class _LiveDataLookup:
     """What both routers share for live data: which backend serves it, and the request it is sent."""
 
+    use_environment: bool
     _providers_lock: threading.Lock
     _live_data_instances: dict[str, LiveDataProvider]
 
@@ -55,7 +57,7 @@ class _LiveDataLookup:
             return name
 
         key = provider_name(name)
-        with self._providers_lock:
+        with self._providers_lock, environment(self.use_environment):
             if key not in self._live_data_instances:
                 self._live_data_instances[key] = create_live_data_provider(key, **self._config_for(key))
             return self._live_data_instances[key]

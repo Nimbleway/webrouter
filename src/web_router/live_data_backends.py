@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from web_router._environment import environment
 from web_router.constants_live_data import LIVE_DATA_CREDENTIAL_SETS, LIVE_DATA_ENV_BY_PROVIDER
 from web_router.constants_live_data_any import (
     MSG_LIVE_DATA_EVERY_BACKEND_FAILED,
@@ -49,7 +50,8 @@ def usable_backends(router: _LiveDataLookup, failures: dict[str, str] | None = N
     named in ``failures`` when the caller passes a dict for them.
     """
     custom = custom_live_data_backends()
-    in_env = set(configured_live_data_providers())
+    with environment(router.use_environment):
+        in_env = set(configured_live_data_providers())
     backends: list[LiveDataProvider] = []
     for name in available_live_data_providers():
         if name not in custom and name not in in_env and not _keyed_in_code(router, name):

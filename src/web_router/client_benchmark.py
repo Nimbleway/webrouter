@@ -11,6 +11,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, cast
 
 from web_router._benchmark import Stragglers, afan_out, fan_out, members_of
+from web_router._environment import environment
 from web_router.client_requests import build_extract_request, build_search_request
 from web_router.constants import (
     BENCHMARK_EXCLUDED,
@@ -41,6 +42,7 @@ class _BenchmarkMembers:
     """What both routers share for the comparisons: which backends a comparison runs by default."""
 
     _config: dict[str, dict[str, Any]]
+    use_environment: bool
 
     def get_provider(self, name: str | Provider | SearchProvider | None = None) -> SearchProvider:
         raise NotImplementedError
@@ -55,11 +57,13 @@ class _BenchmarkMembers:
         reads them, plus any search backend given a ``provider_config`` here --
         a key handed to the router is as good as one in the environment.
         """
-        return self._default_members(available_providers(), configured_providers())
+        with environment(self.use_environment):
+            return self._default_members(available_providers(), configured_providers())
 
     def _default_extract_benchmark_providers(self) -> list[str]:
         """Every extract backend this router can use, less ``auto``: the extract twin of the search default."""
-        return self._default_members(available_extract_providers(), configured_extract_providers())
+        with environment(self.use_environment):
+            return self._default_members(available_extract_providers(), configured_extract_providers())
 
     def _default_members(self, available: list[str], configured: list[str]) -> list[str]:
         """One method's default comparison: its configured backends and those keyed here, less the excluded."""

@@ -27,3 +27,9 @@ NIMBLE_INDEX_ENTRY = re.compile(
 
 NIMBLE_MARKER = "[{number}]"
 """How the prose cites list entry ``number`` inline."""
+
+NIMBLE_SDK_BASE_URL = "https://sdk.nimbleway.com"
+"""The Nimble SDK's own host, given explicitly where the SDK would otherwise take ``NIMBLE_BASE_URL``."""
+
+ENV_NIMBLE_CUSTOM_HEADERS = "NIMBLE_CUSTOM_HEADERS"
+"""Headers the Nimble SDK adds from the environment, one ``Name: value`` per line; never on a client reading none."""

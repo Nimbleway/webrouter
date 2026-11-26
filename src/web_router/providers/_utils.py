@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable, Mapping
 from typing import Any, Protocol, TypeVar, cast, runtime_checkable
 
 from pydantic import BaseModel
 
+from web_router._environment import explicit_or_env
 from web_router.constants import (
     BROWSER_FIELD_CASES,
     BROWSER_SECONDS_PARAMETERS,
@@ -33,14 +33,9 @@ _K = TypeVar("_K")
 _V = TypeVar("_V")
 
 
-def _explicit_or_env(value: str | None, env_var: str) -> str:
-    """The explicit value, else the one in ``env_var``, stripped; empty when neither has more than whitespace."""
-    return (value or "").strip() or (os.environ.get(env_var) or "").strip()
-
-
 def credential_given(value: str | None, env_var: str) -> bool:
     """Whether a credential is set, by the same rule :func:`resolve_api_key` applies, without raising."""
-    return bool(_explicit_or_env(value, env_var))
+    return bool(explicit_or_env(value, env_var))
 
 
 def resolve_api_key(api_key: str | None, *, env_var: str, provider: str) -> str:
@@ -50,7 +45,7 @@ def resolve_api_key(api_key: str | None, *, env_var: str, provider: str) -> str:
         ConfigurationError: if neither is available, naming the variable to set.
             An empty or whitespace-only value counts as missing.
     """
-    key = _explicit_or_env(api_key, env_var)
+    key = explicit_or_env(api_key, env_var)
     if not key:
         raise ConfigurationError.missing_api_key(provider, env_var)
     return key
@@ -63,7 +58,7 @@ def resolve_setting(value: str | None, *, env_var: str, provider: str, setting: 
         ConfigurationError: if neither is available, naming the variable to set.
             An empty or whitespace-only value counts as missing.
     """
-    resolved = _explicit_or_env(value, env_var)
+    resolved = explicit_or_env(value, env_var)
     if not resolved:
         raise ConfigurationError.missing_setting(provider, env_var=env_var, setting=setting)
     return resolved

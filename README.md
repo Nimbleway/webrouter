@@ -82,7 +82,8 @@ Extras add the rest: `browser`, `mcp`, `aws`, or `all` for every one; see the
 [Quickstart](https://docs.webrouter.net/quickstart).
 
 Keys are read from the environment. Copy [`.env.example`](https://github.com/Nimbleway/webrouter/blob/main/.env.example), which
-names every variable and where to get it, and fill in the ones you hold.
+names every variable and where to get it, and fill in the ones you hold. To pass them in code instead, and never
+from the environment, see [keys from code only](https://docs.webrouter.net/configuration#keys-from-code-only).
 
 ## Methods
 

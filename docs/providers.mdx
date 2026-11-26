@@ -340,7 +340,8 @@ router = WebRouter(
 Each member is a name, or `(name, kwargs)` for one that needs its own settings.
 A member is built with its own `provider_config` entry, the chain's kwargs laid
 over it, so a key passed in code reaches it through `auto` exactly as it does by
-name. One backend first and another when it fails is a chain of two:
+name (and is its only key on a router built with
+[`use_environment=False`](/configuration#keys-from-code-only)). One backend first and another when it fails is a chain of two:
 
 ```python
 router = WebRouter(

@@ -28,6 +28,7 @@ from tavily.errors import (
     UsageLimitExceededError,
 )
 
+from web_router._environment import reads_environment
 from web_router.constants_tavily import TAVILY_LIMIT_MARKER
 from web_router.exceptions import ProviderError, describe
 from web_router.providers._utils import WarmClients, compact
@@ -74,7 +75,10 @@ class TavilyClients:
         shared = compact({"api_base_url": api_base_url, **kwargs})
         session, client = shared.pop("session", None), shared.pop("client", None)
         # api_key=None is what puts the SDK in keyless mode; it is not the same
-        # as omitting the argument, so pass it through either way.
+        # as omitting the argument, so pass it through either way. The SDK reads
+        # TAVILY_API_KEY for a None; an empty key is keyless without that read.
+        if key is None and not reads_environment():
+            key = ""
         self._sync_kwargs = {"api_key": key, **shared, **compact({"session": session})}
         self._async_kwargs = {"api_key": key, **shared, **compact({"client": client})}
         self._sync: TavilyClient | None = None

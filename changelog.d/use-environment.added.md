@@ -1,0 +1,1 @@
+`WebRouter(use_environment=False)` and its async twin read no backend key or setting from the environment: `auto` chains only the backends keyed in `provider_config` plus the keyless ones, which stay keyless, and a backend named without a key raises. For a process serving several users whose keys must never mix with the launch environment's.
