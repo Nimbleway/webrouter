@@ -94,6 +94,33 @@ def _fit(
             shortened = shortened or main
 
 
+def _leading_records(payload: dict[str, Any], *, handle: str, budget: int) -> None:
+    """Keep the most leading ``records`` that fit, at least one, saying how many were left out.
+
+    A live data listing's records are each whole, so the ones that fit are
+    worth more than none; a first record too large on its own is left to the
+    caller, which leaves it out with a pointer to the handle.
+    """
+    records, earlier = payload["records"], payload.get("note")
+    if len(records) < 2 or len(render(payload)) <= budget:
+        return
+
+    def keep(count: int) -> bool:
+        dropped = MCP_MSG_DROPPED.format(dropped=len(records) - count, total=len(records))
+        note = MCP_MSG_TRUNCATED.format(dropped=dropped, handle=handle)
+        payload["records"] = records[:count]
+        payload["note"] = f"{earlier} {note}" if earlier else note
+        return len(render(payload)) <= budget
+
+    payload["truncated"] = True
+    # The most that fit, found by halving: rendering once per record dropped is quadratic on a long listing.
+    low, high = 1, len(records) - 1
+    while low < high:
+        middle = (low + high + 1) // 2
+        low, high = (middle, high) if keep(middle) else (low, middle - 1)
+    keep(low)
+
+
 def _set_note(payload: dict[str, Any], handle: str, dropped: int, total: int, extra_note: str) -> None:
     note = ""
     if payload["truncated"]:
