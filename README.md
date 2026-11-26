@@ -21,6 +21,8 @@ One typed interface for search, extract, answer, research, live data and browser
   <a href="https://docs.webrouter.net/quickstart">Quickstart</a> ·
   <a href="https://docs.webrouter.net/providers">Providers</a> ·
   <a href="https://github.com/Nimbleway/webrouter/tree/main/examples">Examples</a> ·
+  <a href="https://webench.net">WebBench</a> ·
+  <a href="https://webrouter.net">Website</a> ·
   <a href="https://discord.gg/MGztFWSjZh">Discord</a>
 </p>
 
@@ -51,7 +53,8 @@ print(results.provider, [doc.url for doc in pages.documents])
   under looser constraints than you asked for.
 - **Routing based on published benchmarks.** `auto` tries the providers you hold keys for in the
   order committed benchmark results rank them, and falls back on an error or an
-  empty answer. `response.provider` always says who answered.
+  empty answer. `response.provider` always says who answered. Compare the
+  providers yourself on [WebBench](https://webench.net).
 - **Cost control.** Search, extract, answer, research and browse responses say
   how long they took and, where the backend's price is known, what they cost. Cap
   a call or a whole session in dollars and seconds, try the free backends
