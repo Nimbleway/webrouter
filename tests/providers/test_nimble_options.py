@@ -35,6 +35,38 @@ def test_recency_is_refused_at_lite_which_does_not_filter_by_it(provider: Nimble
         provider.search(lite)
 
 
+@pytest.mark.parametrize(
+    ("depth", "field", "count", "refused"),
+    [
+        ("fast", "include_domains", 400, False),
+        ("fast", "include_domains", 401, True),
+        (None, "include_domains", 401, True),
+        ("deep", "exclude_domains", 1000, False),
+        ("deep", "exclude_domains", 1001, True),
+        ("lite", "include_domains", 50, False),
+        ("lite", "include_domains", 51, True),
+        ("lite", "exclude_domains", 51, True),
+        (None, "include_domains", 51, False),
+    ],
+)
+def test_a_domain_list_past_nimbles_limit_is_refused(
+    provider: NimbleProvider, depth: SearchDepth | None, field: str, count: int, refused: bool
+) -> None:
+    """Checked live: one entry past the limit answers 422; with no depth, the account's default depth decides."""
+    domains = [f"site-{i}.com" for i in range(count)]
+    request = SearchRequest(query="hi", search_depth=depth, **{field: domains})
+    assert NimbleProvider.refused_values(request) == ({field: domains} if refused else {})
+    if refused:
+        with pytest.raises(UnsupportedParameterError, match="at most 400 include_domains"):
+            provider.search(request)
+
+
+def test_lite_counts_distinct_domains() -> None:
+    """Nimble checks lite's limit after dropping duplicates."""
+    domains = [f"site-{i}.com" for i in range(50)] * 2
+    assert NimbleProvider.refused_values(SearchRequest(query="hi", search_depth="lite", include_domains=domains)) == {}
+
+
 def test_effort_is_refused_unsent_since_nimble_has_no_search_tier(provider: NimbleProvider) -> None:
     assert "effort" not in NimbleProvider.supported_parameters
     with pytest.raises(UnsupportedParameterError, match="effort"):
