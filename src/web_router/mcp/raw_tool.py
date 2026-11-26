@@ -121,7 +121,7 @@ def _page_end(text: str, offset: int, max_chars: int) -> int:
 def _page(record: Record, offset: int, max_chars: int) -> dict[str, Any]:
     """One page of the payload's JSON, from ``offset``, and where the next one starts.
 
-    A client that shortens a long tool result keeps its start and end and drops the middle: Codex as shipped keeps
+    A client that shortens a long tool result keeps its start and end and drops the middle: Codex CLI 0.167 keeps
     about 10 KiB, while a finished research run's payload is two to three times its report, 40,000 characters and
     more. The whole payload in one result reached such a model with its middle gone; pages of it reach it whole, a
     page per call, and a model stops once it has what it needs. Masking and redaction ran on the whole payload

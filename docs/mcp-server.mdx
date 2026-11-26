@@ -890,8 +890,8 @@ untouched payload, uncapped — nothing is lost, it is just not spent on the
 context window unless you ask for it. The session keeps the 64 most recent
 handles and evicts the oldest, so a long conversation stays bounded.
 
-Some clients cut a long tool result before the model sees it: Codex keeps about
-10 KiB of each and drops the middle. Pass `fetch_raw` an `offset` or a
+Some clients cut a long tool result before the model sees it: Codex CLI 0.167
+keeps about 10 KiB of each and drops the middle. Pass `fetch_raw` an `offset` or a
 `max_chars` and it returns one page of the payload's JSON instead, with
 `total_chars` and the `next_offset` to ask for next (a page is the server's
 result size when only `offset` is set), so such a client reads the whole
