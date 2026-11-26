@@ -36,3 +36,8 @@ def environment(enabled: bool) -> Iterator[None]:
 def env_value(env_var: str) -> str:
     """``env_var``'s value, stripped; empty when it is unset, blank, or the environment is not read here."""
     return (os.environ.get(env_var) or "").strip() if reads_environment() else ""
+
+
+def explicit_or_env(value: str | None, env_var: str) -> str:
+    """The explicit value, else the one in ``env_var`` where the environment is read, stripped; else empty."""
+    return (value or "").strip() or env_value(env_var)

@@ -19,7 +19,7 @@ from typing import Any, ClassVar
 
 import httpx
 
-from web_router._environment import env_value
+from web_router._environment import explicit_or_env
 from web_router.constants_litellm import (
     ENV_LITELLM_PROXY_API_BASE,
     ENV_LITELLM_PROXY_API_KEY,
@@ -84,7 +84,7 @@ class LiteLLMSearchMixin(_CredentialMixin):
         ``remote`` router's rule (``https``, or ``http`` to loopback; no credentials, query or fragment), since the
         proxy key rides on every request; an unsafe one is never given to the client.
         """
-        url = (base_url or "").strip() or env_value(ENV_LITELLM_PROXY_API_BASE)
+        url = explicit_or_env(base_url, ENV_LITELLM_PROXY_API_BASE)
         self._url_error: ConfigurationError | None = None
         try:
             url = checked_url(url, httpx).rstrip("/") if url else ""
