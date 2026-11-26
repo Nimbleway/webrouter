@@ -119,3 +119,46 @@ def test_pagination_and_unmapped_data_land_in_extra(provider: NimbleLiveDataProv
 
     assert response.extra["pagination"] == {"next_page_params": {"page": 2}}
     assert response.extra["links"] == ["https://books.example/"]
+
+
+def test_nimbles_warnings_on_a_successful_run_are_kept(provider: NimbleLiveDataProvider) -> None:
+    """Nimble can run a template and still say it ignored part of the request, as it does for render beside driver."""
+    payload = _run_payload(RECORD, warnings=["render is ignored because driver is configured"])
+    payload["data"]["markdown"] = "# A Light in the Attic"
+
+    bare = to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
+    paged = to_response(provider.name, LiveDataRequest(source=TEMPLATE, format="markdown"), payload)
+
+    assert bare.extra["warnings"] == ["render is ignored because driver is configured"]
+    assert paged.document is not None
+    assert paged.document.warnings == ["render is ignored because driver is configured"]
+
+
+@pytest.mark.parametrize("reported", [None, []])
+def test_a_run_without_warnings_leaves_extra_as_it_was(provider: NimbleLiveDataProvider, reported: Any) -> None:
+    """No warnings, no `warnings` key: an empty list in `extra` would read as a field Nimble sent."""
+    payload = _run_payload(RECORD, warnings=reported)
+
+    response = to_response(provider.name, LiveDataRequest(source=TEMPLATE, format="markdown"), payload)
+
+    assert "warnings" not in response.extra
+    assert response.document is not None
+    assert response.document.warnings == []
+
+
+def test_a_data_field_named_warnings_does_not_replace_nimbles_own(provider: NimbleLiveDataProvider) -> None:
+    payload = _run_payload(RECORD, warnings=["render is ignored because driver is configured"])
+    payload["data"]["warnings"] = None
+
+    response = to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
+
+    assert response.extra["warnings"] == ["render is ignored because driver is configured"]
+
+
+def test_a_data_field_named_warnings_is_kept_when_nimble_sends_none(provider: NimbleLiveDataProvider) -> None:
+    payload = _run_payload(RECORD, warnings=None)
+    payload["data"]["warnings"] = ["x"]
+
+    response = to_response(provider.name, LiveDataRequest(source=TEMPLATE), payload)
+
+    assert response.extra["warnings"] == ["x"]
