@@ -316,10 +316,9 @@ time.
   (CI, docs, tests, refactors) takes the `skip-changelog` label instead (release bumps too, and a
   typo fix in an entry already in `CHANGELOG.md`).
 - Direct commits to `main` are blocked; work on a branch and open a PR.
-- Open the PR as a draft. Mark it ready once Qodo's review covers the latest commit and each
-  finding has a reply starting with `@qodo` (`Fixed in <sha>: <what>` or
-  `Not fixing: <reason>`); the maintainers are asked to review only then. Qodo does not review
-  drafts on its own; a `/agentic_review` comment asks it to.
+- Open the PR ready for review. Before merging, confirm that Qodo's review covers the latest
+  commit and that each finding has a reply starting with `@qodo` (`Fixed in <sha>: <what>`
+  or `Not fixing: <reason>`).
 - Don't commit drafts, decks, PDFs or images for feedback; open a
   [Discussion](https://github.com/Nimbleway/webrouter/discussions) and attach them.
 

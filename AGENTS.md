@@ -1,4 +1,3 @@
-<!-- Updated by Accomplish on behalf of Yogev Heskia on 2026-11-26 -->
 # AGENTS.md
 
 Guidance for AI coding agents working in this repository. Humans: see
