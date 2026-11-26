@@ -43,7 +43,8 @@ class ValyuProvider(HttpSearchProvider):
 
     ``score`` is Valyu's ``relevance_score``, from 0 to 1. A result's content is
     its page body in markdown, cut at Valyu's ``response_length`` (25,000
-    characters unless set); ``source``, ``price`` and the rest stay in ``extra``.
+    characters unless set); ``source``, ``price`` and the rest stay in ``extra``,
+    as does the content of a structured dataset hit, which is rows rather than text.
     """
 
     name: ClassVar[str] = PROVIDER_VALYU
@@ -90,6 +91,10 @@ class ValyuProvider(HttpSearchProvider):
     def _to_result(hit: dict[str, Any]) -> SearchResult:
         content = hit.get("content")
         body = content if isinstance(content, str) else ""
+        extra = {k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS}
+        if content is not None and not isinstance(content, str):
+            # A structured dataset hit's content is rows, not text: kept as Valyu sent it.
+            extra["content"] = content
         # With no description of its own, the opening of the body is the snippet.
         description = hit.get("description") or body
         return SearchResult(
@@ -100,5 +105,5 @@ class ValyuProvider(HttpSearchProvider):
             score=hit.get("relevance_score"),
             # Valyu sends "" for a page with no known date.
             published_date=hit.get("publication_date") or None,
-            extra={k: v for k, v in hit.items() if k not in _MAPPED_RESULT_FIELDS},
+            extra=extra,
         )
