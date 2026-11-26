@@ -1,9 +1,9 @@
 {
   "_about": "The data-driven router's release: one version for its data files and the features they were trained with. Written by `make data-driven-router`; do not edit by hand.",
   "router": "data-driven",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "schema": 1,
-  "built": "2026-11-24",
+  "built": "2026-11-25",
   "tool_table": {
     "file": "tool_table.json",
     "sha256": "6e993a376dd4269068b3e36dcdced9474f702453238d4145b73ec2e3bb7c8170",
@@ -134,7 +134,7 @@
   },
   "provider_table": {
     "file": "provider_table.json",
-    "sha256": "b67232b4fcc1935dc9300b49ff7d95cc3badcfb1c78f8ff340de927ae80a869d",
-    "measured": "2026-11-23"
+    "sha256": "10a697c2a73a3d71441b1533fa077ac0f7c63b06fda881564ac46da211f1db26",
+    "measured": "2026-11-25"
   }
 }

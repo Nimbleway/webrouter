@@ -45,7 +45,7 @@ research's words: "What is market research?", "How do I compare two columns in E
 
 MSG_RULES_DEPRECATED = (
     "router='rules' is deprecated, retained for one release and removed in the following release; "
-    "use 'data-driven' (the default), router=None for a plain search plan, "
+    "use 'data-driven', router=None (the default) for a plain search plan, "
     "or use examples/router_rules.py as a starting point for a custom router."
 )
 

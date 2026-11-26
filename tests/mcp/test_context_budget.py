@@ -15,7 +15,7 @@ import jsonschema
 import pytest
 
 from mcp import Client
-from tests.mcp.conftest import URL, outcome, routed
+from tests.mcp.conftest import URL, data_driven, outcome
 from web_router.client import AsyncWebRouter
 from web_router.constants import MCP_TOOL_ANSWER, MCP_TOOL_EXTRACT, MCP_TOOL_FETCH_RAW, MCP_TOOL_SEARCH
 from web_router.constants_answer import MCP_DESC_ANSWER
@@ -179,7 +179,7 @@ async def test_web_run_will_not_run_a_method_the_allowlist_leaves_out(
 ) -> None:
     monkeypatch.setenv(ENV_MCP_TOOLS, f"{MCP_TOOL_WEB_RUN},{MCP_TOOL_SEARCH}")
 
-    failed, text = await outcome(routed(), MCP_TOOL_WEB_RUN, prompt=f"read {URL}")
+    failed, text = await outcome(data_driven(), MCP_TOOL_WEB_RUN, prompt=f"read {URL}")
 
     assert failed and f"web_run planned {MCP_TOOL_EXTRACT}" in text and ENV_MCP_TOOLS in text
     assert members == [] and "WEB_ROUTER_MCP_PROFILE" in text, "nothing was run"

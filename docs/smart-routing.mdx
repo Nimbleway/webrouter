@@ -6,9 +6,10 @@ icon: "route"
 
 Everything in this section is experimental: any name in it may change before
 1.0, except budgets, which are stable and covered in [Cost and budgets](/budgets).
-The default router, `data-driven`, is asked by `plan()` and `run()` alone: with no
-budget, `search()`, `extract()` and every other method you call run as they
-would with no router. `router=None` attaches none.
+No router is attached by default, so `plan()` and `run()` search; `router=None`
+says so explicitly. A router you attach, such as `router="data-driven"`, is asked
+by `plan()` and `run()` alone: with no budget, `search()`, `extract()` and every
+other method you call run as they would with no router.
 
 A router is your code. WebRouter shows it a prompt and the candidates that
 could serve it, each priced and timed; the router picks the method and orders
@@ -107,11 +108,11 @@ the network and the hour: rerun the script for your own router.
 
 `plan(prompt, budget=, tool=)` runs nothing. It returns a `Plan`: the method
 (`tool`), its options (`params`), the backends in order (`providers`) and the
-decision record. The default `data-driven` router picks the method the prompt's
+decision record. The `data-driven` router (`router="data-driven"`) picks the method the prompt's
 wording was most often served by in its training requests: a search, a read of
 the page the prompt names, or research (billed per run: pass a `budget`). With
 no research backend configured, the row's next method runs. With
-`router=None` it is a search. `tool` pins a method either way.
+no router, the default, it is a search. `tool` pins a method either way.
 `run(plan)` calls that method on `auto` in that order and returns its own
 response: a `SearchResponse`, `ExtractResponse`, `AnswerResponse`,
 `ResearchResponse` or `BrowseResponse`. `run(prompt)` does both. A saved
@@ -152,13 +153,13 @@ the lowest estimated cost first ($0 first), `fast` the lowest p90 latency, and
 `accurate` the highest accuracy score the router holds. A backend with no
 estimate or score goes last, and ties keep the default order. It orders and
 never caps: a `Budget` still caps, and a backend with no known price never runs
-under a cost cap. The default `data-driven` router takes no preference.
+under a cost cap. The `data-driven` router takes no preference unless you give it one.
 
 The built-in `preferred` router sorts each method's backends by its
 preference, with no model and no key. It orders backends without choosing a
 method: `plan()` and `run()` default to search even when the prompt contains a
 URL. Set `tool="extract"` to read that URL, or call `extract()` directly; a
-method you name is kept. The default `data-driven` router chooses the method instead.
+method you name is kept. The `data-driven` router chooses the method instead.
 
 ```python
 from web_router import PreferredRouter, WebRouter
@@ -258,8 +259,8 @@ results against the static order. The default search and answer orders come
 from it; research, extract and browse are hand-ordered and unmeasured. See
 [`benchmarks/providers/`](https://github.com/Nimbleway/webrouter/blob/main/benchmarks/providers/README.md#route-eval-replaying-a-router).
 
-The built-in keyless router, `data-driven`, is attached unless you pass
-`router=` (`router="data-driven"` names it, `router=None` attaches none). It ranks
+No router is attached unless you pass `router=`: `router="data-driven"` attaches the
+built-in keyless router, and `router=None`, the default, attaches none. It ranks
 web methods and search providers from bundled data without a routing model call: see
 [The data-driven router](/smart-routing#the-data-driven-router). It orders measured search
 candidates by its provider table. Other methods keep `auto`'s order; a cost cap
@@ -281,15 +282,15 @@ sets: see [the MCP guide](/mcp-server#routing-and-budgets-web_run-budget_start-b
 
 ## The data-driven router
 
-The default `data-driven` router ranks web methods and providers from bundled data
+Attached with `router="data-driven"`, the `data-driven` router ranks web methods and providers from bundled data
 without a routing model call. The method data is a table built from 1,600
 requests from public benchmarks and 1,078 synthetic requests, all labelled by
 the trainers. It is experimental, needs no key, calls nothing and answers in
-microseconds. Only `plan()` and `run()` ask it by default. When the call
+microseconds. Once attached, only `plan()` and `run()` ask it unless you set `route_tools`. When the call
 searches, it also orders the search candidates a benchmark measured: see
 [Which search backend](/smart-routing#which-search-backend).
 
-It replaces `rules` as the default. That deprecated router reads a prompt with a URL,
+It is the built-in replacement for the deprecated `rules` router, which reads a prompt with a URL,
 researches one asking in so many words for a report or a comparison, and
 searches everything else. Against that, expect three differences:
 
@@ -306,7 +307,7 @@ searches everything else. Against that, expect three differences:
   search.
 - **`router="rules"` is deprecated.** It keeps its old behavior for one release and warns when built;
   it is removed in the following release. The same applies to `WEB_ROUTER_MCP_ROUTER=rules`.
-  Use the default `data-driven`, `router=None` for a plain search plan, or use
+  Use `router="data-driven"`, `router=None` (the default) for a plain search plan, or use
   [`examples/router_rules.py`](https://github.com/Nimbleway/webrouter/blob/main/examples/router_rules.py)
   as a starting point for a custom router.
 
@@ -316,7 +317,7 @@ from web_router import WebRouter
 router = WebRouter(router="data-driven")
 plan = router.plan("compare the pricing plans of the top 5 CRM tools")
 plan.tool             # "research", with a research backend configured
-plan.decision.reason  # "data-driven 0.1.2: research for verb=analyze, url_target=none"
+plan.decision.reason  # "data-driven 0.1.3: research for verb=analyze, url_target=none"
 ```
 
 It reads five things in the prompt, each with a regular expression:
@@ -347,11 +348,11 @@ Three methods are treated apart:
 
 ### Which search backend
 
-By default, `plan()`, `run()` and MCP `web_run` ask this router. When the method
-is search, it orders the backends by a second table:
+Once attached (`router="data-driven"`, or `WEB_ROUTER_MCP_ROUTER=data-driven`), `plan()`, `run()` and MCP
+`web_run` ask this router. When the method is search, it orders the backends by a second table:
 search backends and vendor tiers, each with the quality
 [webench.net](https://webench.net) measured for it (0 to 100, scored by WCE
-judge v2.8, with a 95% confidence interval), its price per thousand requests
+judge v3.3, with a 95% confidence interval), its price per thousand requests
 and its median latency. A row ships only when web-router can send the same
 request it was measured with, so the router names each as a candidate, such as
 `search:parallel:parallel-turbo+fast`
@@ -409,10 +410,10 @@ Read the numbers for what they are:
   advanced ($5 in both). Use a cost cap to filter what fits the budget's prices;
   `cheap` itself does not promise the lowest estimated bill.
 - **A dated snapshot, not the live leaderboard.** The table is dated
-  2026-11-23 and covers that 150-question subset. webench.net has since been refreshed
-  with newer models, so its published search scores differ from these by up to
-  2.5 points a row, and these cannot be checked against it. The next table is
-  planned to carry scores that match a published page.
+  2026-11-25 and covers that 150-question subset. webench.net is refreshed with
+  newer models and questions, so its published scores can move away from these.
+  Compare rows within one table only: judge v3.3 scores run a few points lower
+  than the v2.8 scores of the 2026-11-23 table it replaced.
 - **Search only.** Research, extract and browse backends keep `auto`'s order.
 
 ### The release
@@ -420,9 +421,12 @@ Read the numbers for what they are:
 The tables ship as a versioned release, apart from the
 library's own version: `src/web_router/data/data_driven/manifest.json` names the
 version, and every decision's `reason` starts with it. The version changes only
-when newly trained or newly measured tables ship. Release `0.1.2` holds tool
-table `0.1.1`, whose own version the manifest keeps beside it, and the first
-provider table. A golden file of two thousand requests, with
+when newly trained or newly measured tables ship. Release `0.1.3` holds tool
+table `0.1.1`, whose own version the manifest keeps beside it, and the provider
+table measured on 2026-11-25. It re-scores the same questions and answers as
+release `0.1.2`'s table with a newer judge. Its first pick is the same for every
+`prefer` and every set of keys; some later fallbacks moved, and it adds a
+Firecrawl row. A golden file of two thousand requests, with
 the features and method the training code gave each one, is replayed in the
 tests, so the shipped expressions cannot drift from the ones the table was
 trained with.
