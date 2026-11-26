@@ -9,7 +9,7 @@ so both read the URL through the same functions here.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from urllib.parse import quote, urldefrag, urlsplit, urlunsplit
 
 _ASCII_SAFE = "".join(chr(code) for code in range(0x21, 0x7F))
@@ -74,13 +74,27 @@ def _by_bare(urls: Iterable[str]) -> dict[str, set[str]]:
     return index
 
 
+def _matcher(urls: Sequence[str]) -> Callable[[str], set[str]]:
+    """The rule :func:`asked_for` applies, with the groups built on the first answer that is not an exact hit."""
+    known = set(urls)
+    index: dict[str, set[str]] | None = None
+
+    def match(url: str) -> set[str]:
+        nonlocal index
+        if url in known:
+            return {url}
+        if index is None:
+            index = _by_bare(urls)
+        found = index.get(bare_url(url))
+        # A rewrite that could be either of two URLs asked for proves neither was read.
+        return found if found and len(found) == 1 else set()
+
+    return match
+
+
 def asked_for(url: str, urls: Sequence[str]) -> set[str]:
     """The requested URLs ``url`` stands for: itself when asked for exactly, else the one a backend rewrote into it."""
-    if url in urls:
-        return {url}
-    # A rewrite that could be either of two URLs asked for proves neither was read.
-    matches = _by_bare(urls).get(bare_url(url))
-    return matches if matches and len(matches) == 1 else set()
+    return _matcher(urls)(url)
 
 
 def owners(answered: Sequence[str], urls: Sequence[str], also_claimed: Iterable[str] = ()) -> list[str | None]:
@@ -92,24 +106,9 @@ def owners(answered: Sequence[str], urls: Sequence[str], also_claimed: Iterable[
     that redirect is the unclaimed URL's. So one requested URL owns its own
     page, or the one redirect it led to, never a second unrelated page.
     """
-    known = set(urls)
-    # Built on the first answer that is not asked for verbatim, so a run of exact
-    # answers pays nothing for it -- and a URL no parser can read only reaches
-    # :func:`bare_url` once an answer actually needs the rewrite rule.
-    index: dict[str, set[str]] | None = None
-
-    def owner_of(url: str) -> str | None:
-        """What :func:`asked_for` answers for ``url``, against the index built once on first need."""
-        nonlocal index
-        if url in known:
-            return url
-        if index is None:
-            index = _by_bare(urls)
-        found = index.get(bare_url(url))
-        return next(iter(found)) if found and len(found) == 1 else None
-
-    matched = [owner_of(url) for url in answered]
-    claimed = {owner for owner in matched if owner} | {owner for url in also_claimed if (owner := owner_of(url))}
+    match = _matcher(urls)
+    matched = [next(iter(match(url)), None) for url in answered]
+    claimed = {owner for url in [*answered, *also_claimed] if (owner := next(iter(match(url)), None))}
     unclaimed = [url for url in urls if url not in claimed]
     if matched.count(None) == 1 and len(unclaimed) == 1:
         matched[matched.index(None)] = unclaimed[0]
