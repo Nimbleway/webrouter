@@ -1,6 +1,6 @@
 ---
 title: "Running in production"
-description: "Timeouts, one shared router per process, closing it, threads and event loops, logging, cooldowns after a 429, a concurrency cap and warm-up."
+description: "A go-live checklist, then timeouts, one shared router per process, closing it, threads and event loops, logging, cooldowns after a 429, a concurrency cap and warm-up."
 sidebarTitle: "Production"
 icon: "server"
 ---
@@ -22,6 +22,38 @@ def handle(query: str):
 # at shutdown
 router.close()
 ```
+
+## Checklist
+
+Before a service goes live, check each line. The rest of this page, and the
+pages it links, say why and how.
+
+- **Pin the version.** WebRouter is a developer preview and its API may
+  change before 1.0: pin an exact version (`webrouter==X.Y.Z`) and upgrade on
+  purpose, after reading the [changelog](https://github.com/Nimbleway/webrouter/blob/main/CHANGELOG.md).
+- **Keys come from your secret store.** The library reads the process
+  environment only, never a `.env` file: inject each key as an environment
+  variable. Hold a key for at least one backend of every method you call;
+  [Providers](/providers) lists each variable.
+- **Don't rely on the keyless tiers.** They are rate-limited per IP address
+  with limits that are not published, and pods behind one egress IP share
+  them. Keep them as the fallback, not the plan: see [Keyless tiers](#keyless-tiers).
+- **A timeout on every call.** Pass `timeout=` on every `search`, `extract`
+  and `answer`; otherwise one call can take minutes. See [Timeouts](#timeouts).
+- **A cap on spend.** Set a budget in dollars and seconds on each call or
+  session, and keep a spend log. See [Cost and budgets](/budgets).
+- **One router per process,** built at startup, shared, and closed at
+  shutdown. See [One router per process](#one-router-per-process) and
+  [Closing a router](#closing-a-router).
+- **A concurrency cap** with `max_concurrency=`, sized to your backends'
+  rate limits. See [Capping concurrent calls](#capping-concurrent-calls).
+- **Logging on.** Configure the `web_router` logger so a slow or failed
+  call can be explained afterwards. See [Logging](#logging).
+- **Errors handled by kind.** Catch the library's errors and act on what
+  kind of failure it was, rather than retrying everything. See
+  [Errors](/errors).
+- **Warm-up at startup** with `warmup()`, so the first request does not pay
+  for building clients. See [Warm-up](#warm-up).
 
 ## Timeouts
 
