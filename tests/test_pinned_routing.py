@@ -52,9 +52,9 @@ def test_a_pinned_id_is_a_routers_search_default(monkeypatch: pytest.MonkeyPatch
     [
         ("get_extract_provider", "exa:exa-instant", "exa", "EXA_API_KEY"),
         ("get_research_provider", "parallel:parallel-turbo", "parallel", "PARALLEL_API_KEY"),
-        # No browser backend declares a mode: the getter takes any pin's backend, which is what is under test.
-        ("get_browser_provider", "browserbase:pinned", "browserbase", "BROWSERBASE_API_KEY"),
-        ("get_browse_provider", "browserbase:pinned", "browserbase", "BROWSERBASE_API_KEY"),
+        # A browser or browse method takes the pin's backend; the mode is Browserbase's extract one, checked when built.
+        ("get_browser_provider", "browserbase:browserbase-proxies", "browserbase", "BROWSERBASE_API_KEY"),
+        ("get_browse_provider", "browserbase:browserbase-proxies", "browserbase", "BROWSERBASE_API_KEY"),
     ],
 )
 def test_a_pinned_default_serves_other_methods_through_its_backend(

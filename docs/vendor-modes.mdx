@@ -55,6 +55,15 @@ canonical: `exa-highlights+exa-instant` is `exa-instant+exa-highlights`.
 `web_router.modes.parse_id` reads an id; an unknown part, or a slot filled
 twice, raises `InvalidParameterError`.
 
+A router checks its default id when it is built: `WebRouter("exa:exa-instnat")`
+raises `InvalidParameterError`, and an unknown backend `ProviderNotFoundError`,
+before any call. An id that names its method is checked for that method only;
+one that names none passes when any method that knows the backend takes it, and
+each other method still checks it when it is used. To check an id without
+building a router, as a config check does, call
+`web_router.check_provider_id(provider_id, tool=None)`: it raises the same
+errors and calls nothing.
+
 ## What each backend declares
 
 | Backend | Tiers | Contents | Flags |

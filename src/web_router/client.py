@@ -56,7 +56,8 @@ from web_router.client_vendors import AsyncVendors, DataApiCredentials, SyncVend
 from web_router.client_vendors_compat import renamed_credentials
 from web_router.client_warmup import AsyncWarmup, SyncWarmup
 from web_router.constants import BROWSE_TIMEOUT, DEFAULT_PROVIDER, MSG_SYNC_ROUTER_ASYNC_CLIENT, RESEARCH_TIMEOUT
-from web_router.exceptions import ConfigurationError, ProviderNotFoundError
+from web_router.exceptions import ConfigurationError
+from web_router.provider_ids import check_provider_id
 from web_router.providers._pinning import backend_of
 from web_router.providers._runtime import Runtime
 from web_router.providers.answer import AnswerProvider
@@ -80,7 +81,6 @@ from web_router.registry import (
     create_provider,
     create_research_provider,
 )
-from web_router.registry_answer import every_provider_name
 from web_router.routing import Budget, RouterLike, ToolName
 from web_router.routing.router_setup import RouterSetup
 from web_router.routing.submitted import asubmitted, submitted
@@ -141,10 +141,9 @@ class _BaseRouter(RouterSetup, _VendorLookup, _HandleTracking[_HandleT]):
         self._runtime = Runtime.capped(max_concurrency, hop_timeout, timeout_cooldown)
         self._init_vendors(renamed_credentials(data_api_credentials, vendor_credentials))
         name = provider_name(provider)
-        # Either registry names a default (a pinned search id by its backend); a method that can't serve it says so.
-        known = every_provider_name()
-        if backend_of(name) not in known:
-            raise ProviderNotFoundError(name, known)
+        # Any registry may name the default, a pin's mode checked here so a typo fails now, not on the first call;
+        # a method that can't serve it says so when used.
+        check_provider_id(name)
         self.default_provider = name
         # Normalized on the way in so a config key matches get_provider's lookup, whatever form it was given in.
         self._config: dict[str, dict[str, Any]] = {
