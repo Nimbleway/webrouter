@@ -153,9 +153,10 @@ MSG_YOU_SEARCH_DOMAINS = (
 
 MSG_YOU_MCP_SITE_HOST = (
     "include_domains goes into the query as site:, which You.com matches on the host alone and not on a path,"
-    " so each must be a host name with no path (github.com, not github.com/python)."
+    " so each must be a host name with no path (github.com, not github.com/python), and at most"
+    f" {YOU_DOMAIN_LIMITS['include_domains']:,} of them."
 )
-"""Why ``you-mcp`` refuses an ``include_domains`` value with a path, or one that is not a host name."""
+"""Why ``you-mcp`` refuses an ``include_domains`` value with a path, one that is not a host name, or too many."""
 
 YOU_MCP_PARAM_NAMES: dict[str, str] = {"max_results": "count", "exclude_domains": "exclude_domains"}
 """Normalized parameter -> argument of ``you-search``; the other filters go into the query, below."""
