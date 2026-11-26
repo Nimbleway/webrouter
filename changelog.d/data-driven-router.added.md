@@ -1,1 +1,0 @@
-`router="data-driven"`, an experimental keyless router that ranks web methods and providers from bundled data, with no routing model call: it picks search, extract or research (browse only with `router_config={"browse": True}`) from labelled requests keyed on five prompt features. Its tables ship as a versioned release (0.1.3), named in each decision's reason.
