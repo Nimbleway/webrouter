@@ -36,6 +36,10 @@ from web_router.providers.nimble_live_data import NimbleLiveDataProvider
 # -- Through the SDK client ---------------------------------------------------
 
 
+# A listing's run: the SDK reads each item as its success wrapper, whose `status` and `entities` are not the record's.
+_LISTING = [RECORD, {"title": "See America", "price": "£48.87", "upc": "0000000000000002", "num_reviews": 0}]
+
+
 class _Api:
     """A fake of the three template endpoints behind the SDK, answering as the API does and recording each request."""
 
@@ -47,7 +51,7 @@ class _Api:
         self.requests.append(request)
         path = request.url.path
         if path.endswith("/extract/templates/run"):
-            return httpx.Response(200, json=_run_payload(RECORD))
+            return httpx.Response(200, json=_run_payload(_LISTING))
         if path.endswith("/extract/templates"):
             return httpx.Response(200, json={"items": [_item(_version())], "total": 1, "limit": 20, "offset": 5})
         name = path.rsplit("/", 1)[-1]
@@ -86,7 +90,7 @@ def test_run_list_and_describe_through_the_sdk_client(monkeypatch: pytest.Monkey
     assert run.method == "POST" and run.url.path.endswith("/v2/extract/templates/run")
     assert json.loads(run.content) == {"template": TEMPLATE, "params": {"url": URL}, "formats": ["markdown"]}
     assert run.headers["authorization"] == "Bearer test-key"
-    assert response.data == RECORD
+    assert response.records == _LISTING and response.data == RECORD
     assert response.status_code == 200, "the API's float status code is coerced to an int"
     assert response.document is not None and response.document.format == "markdown"
 
@@ -136,7 +140,7 @@ async def test_the_async_calls_go_out_on_the_caller_s_client_as_its_end_user() -
     finally:
         await provider.aclose()
 
-    assert response.data == RECORD and response.document is None
+    assert response.records == _LISTING and response.document is None
     assert page.names == [TEMPLATE]
     assert template.name == TEMPLATE
     assert all(request.headers["authorization"] == "Bearer end-user-key" for request in api.requests)

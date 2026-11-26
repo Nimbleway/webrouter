@@ -61,14 +61,17 @@ def to_response(provider: str, request: LiveDataRequest, payload: dict[str, Any]
         detail = MSG_LIVE_DATA_PAGE_FAILED.format(source=request.source, status=status_code)
         raise ProviderError(provider, "; ".join([detail, *(payload.get("warnings") or [])]))
 
-    record = _record(provider, request, data.get("parsing"))
+    # A listing template sends a list of records, outside the SDK's types: each item is read as one record.
+    parsing = data.get("parsing")
+    items = parsing if isinstance(parsing, list) and parsing else [parsing]
+    records = [_record(provider, request, item) for item in items]
     document = _document(request, payload, data)
 
     return LiveDataResponse(
         provider=provider,
         source=request.source,
         inputs=dict(request.inputs),
-        data=record,
+        records=records,
         url=payload.get("url"),
         document=document,
         status_code=_as_int(payload.get("status_code")),

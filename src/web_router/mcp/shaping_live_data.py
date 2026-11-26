@@ -12,6 +12,7 @@ from typing import Any
 
 from web_router.constants import MCP_MIN_FIELD_CHARS, MCP_MSG_OVERSIZED, MCP_MSG_SAMPLES_OMITTED
 from web_router.mcp.shaping import _fit, redact, render
+from web_router.mcp.shaping_fit import _leading_records
 from web_router.types_live_data import LiveDataResponse, LiveDataSource, LiveDataSourcePage
 
 
@@ -85,9 +86,9 @@ def shape_live_data(response: LiveDataResponse, handle: str, *, budget: int) -> 
 
     The records are what the caller asked for, shaped by the source's own
     schema; the page beside them, when one was asked for, is the one thing
-    long enough to cut. Records that do not fit are left out whole, with a
-    note naming the handle that holds them, and ``record_count`` still says
-    how many the run returned.
+    long enough to cut. Records that do not fit are left out whole, from the
+    end, with a note naming the handle that holds them, and ``record_count``
+    still says how many the run returned.
     """
     page = (
         {
@@ -112,6 +113,7 @@ def shape_live_data(response: LiveDataResponse, handle: str, *, budget: int) -> 
         "document": page,
     }
     fitted = _fit(payload, [page] if page is not None else [], ("content",), handle=handle, budget=budget)
+    _leading_records(fitted, handle=handle, budget=budget)
     return _bounded(fitted, ((payload, "records"),), handle=handle, budget=budget)
 
 

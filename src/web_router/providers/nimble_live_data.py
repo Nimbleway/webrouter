@@ -52,12 +52,12 @@ class NimbleLiveDataProvider(_NimbleClients, LiveDataProvider):
     def _run(self, request: LiveDataRequest) -> LiveDataResponse:
         with _unknown_live_data_source_named(self.name, request.source):
             raw = self._within_deadline(self._sync_client).extract.templates.run(**self._build_payload(request))
-        return to_response(self.name, request, model_to_dict(raw))
+        return to_response(self.name, request, _dump(raw))
 
     async def _arun(self, request: LiveDataRequest) -> LiveDataResponse:
         with _unknown_live_data_source_named(self.name, request.source):
             raw = await self._within_deadline(self._async_client).extract.templates.run(**self._build_payload(request))
-        return to_response(self.name, request, model_to_dict(raw))
+        return to_response(self.name, request, _dump(raw))
 
     def _list(self, *, limit: int | None, offset: int | None) -> LiveDataSourcePage:
         raw = self._sync_client.extract.templates.list(**compact({"limit": limit, "offset": offset}))
@@ -89,6 +89,17 @@ class NimbleLiveDataProvider(_NimbleClients, LiveDataProvider):
             params=dict(request.inputs),
             formats=[NIMBLE_EXTRACT_FORMATS[request.format]] if request.format else None,
         )
+
+
+def _dump(raw: Any) -> dict[str, Any]:
+    """A run's answer as the fields the API sent.
+
+    The SDK reads each item of a listing's ``parsing`` list as its success
+    wrapper: a full ``model_dump`` would add that wrapper's ``status`` and
+    ``entities`` to every record as None, and warn that the item is not one.
+    """
+    dump: dict[str, Any] = raw.to_dict(warnings=False)
+    return dump
 
 
 @contextmanager
