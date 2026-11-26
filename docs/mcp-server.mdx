@@ -633,7 +633,10 @@ these with `[redacted]`:
   `devtools`, `cdp`, `live` or `debug` in its host or path, as in
   `http://127.0.0.1:9222/devtools/browser/…`; or a `token`, `apiKey`,
   `x-api-key`, `signingKey`, `jwt`, `key`, `auth`, `access_token`,
-  `signature` or `sig` query or fragment parameter.
+  `refresh_token`, `id_token`, `client_secret`, `secret`, `password`,
+  `private_key`, `access_key`, `signature` or `sig` query or fragment
+  parameter, or a presigned URL's `X-Amz-Signature`,
+  `X-Amz-Security-Token` or `X-Goog-Signature`.
 
 The result's `note` says how many values were replaced. Every other handle's
 payload is returned verbatim, except `browser_read`'s, below.
