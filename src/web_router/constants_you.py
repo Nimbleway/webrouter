@@ -126,13 +126,13 @@ MSG_YOU_SEARCH_VALUES = (
     "those, leave it unset, or name another provider -- see the search table at https://docs.webrouter.net/providers#search."
 )
 
-# Checked live on 2026-11-24 against the REST API: include_domains=["github.com/python"] returned the same 10
-# results as github.com, 2 of them under /python, and exclude_domains=["github.com/python"] dropped every
-# github.com result.
 YOU_DOMAIN_LIMITS: dict[str, int] = {"include_domains": 500, "exclude_domains": 5000}
 """The most entries each domain list takes. Checked live on 2026-11-24: 500 and 5,000 were served with the last entry
 honored, and one more in either list answered 422 "invalid request parameter(s)"."""
 
+# Checked live on 2026-11-24 against the REST API: include_domains=["github.com/python"] returned the same 10
+# results as github.com, 2 of them under /python, and exclude_domains=["github.com/python"] dropped every
+# github.com result.
 MSG_YOU_SEARCH_DOMAINS = (
     "You.com matches a domain filter on the host alone and ignores a path, so each entry must be a host name with no"
     " path (github.com, not github.com/python); it also searches with one domain list, not both, of at most"
