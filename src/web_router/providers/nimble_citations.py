@@ -22,8 +22,11 @@ from web_router.constants_nimble import NIMBLE_INDEX_ENTRY, NIMBLE_INDEX_HEADING
 from web_router.providers._utils import compact
 from web_router.types import Citation
 
-_ITEM_START = re.compile(r"^[ \t]*(?:[-*]|\d+[.)])[ \t]+")
-"""A line that opens a list item, which starts a passage of its own."""
+_ITEM_START = re.compile(r"^[ \t]*(?:[-*]|\d{1,3}[.)])[ \t]+")
+"""A line that opens a list item, which starts a passage of its own.
+
+A number takes at most three digits, so a wrapped line opening with a year (``2019. It grew``) stays prose.
+"""
 
 ANSWER_PASSAGES = "answer_passages"
 """The ``extra`` key holding the prose's paragraphs that cite a source, for a run without trust."""
@@ -119,8 +122,9 @@ def _passages(body: str) -> list[str]:
         text = line.strip()
         if not text:
             passages.append([])
-        elif item := _ITEM_START.match(line):
-            passages.append([line[item.end() :].strip()])
+        elif item := _ITEM_START.match(line):  # not ``text``: stripping would cut the space a bare ``1. `` needs
+            rest = line[item.end() :].strip()
+            passages.append([rest] if rest else [])
         elif not passages:
             passages.append([text])
         else:

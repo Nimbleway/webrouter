@@ -121,3 +121,21 @@ def test_a_numbered_list_item_loses_its_number_like_a_bullet_does() -> None:
         "**Margins** widened on lower costs [1].",
         "**Guidance** was raised for the year [1].",
     ]
+
+
+def test_a_numbered_item_on_the_answer_s_first_line_loses_its_number() -> None:
+    answer = f"1. **Revenue** grew 12% year over year [1].\n\nSource index:\n\n- [1] Summary — {SUMMARY}\n"
+    (cited,) = [c for c in research_citations(answer, {"sources": SOURCES[:1]}) if c.url == SUMMARY]
+    assert cited.extra[ANSWER_PASSAGES] == ["**Revenue** grew 12% year over year [1]."]
+
+
+def test_a_marker_alone_on_its_line_leaves_no_leading_space() -> None:
+    answer = f"Intro.\n\n1. \nRevenue grew 12% [1].\n\nSource index:\n\n- [1] Summary — {SUMMARY}\n"
+    (cited,) = [c for c in research_citations(answer, {"sources": SOURCES[:1]}) if c.url == SUMMARY]
+    assert cited.extra[ANSWER_PASSAGES] == ["Revenue grew 12% [1]."]
+
+
+def test_a_wrapped_line_opening_with_a_year_keeps_the_year() -> None:
+    answer = f"The company was founded in\n2019. It grew fast [1].\n\nSource index:\n\n- [1] Summary — {SUMMARY}\n"
+    (cited,) = [c for c in research_citations(answer, {"sources": SOURCES[:1]}) if c.url == SUMMARY]
+    assert cited.extra[ANSWER_PASSAGES] == ["The company was founded in 2019. It grew fast [1]."]
