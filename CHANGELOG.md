@@ -6,6 +6,59 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html); while on
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-26
+
+### Added
+
+- MCP results that carry web content, `fetch_raw`, `call_data_api` and the browser actions that show a page included, now start with `"origin": "web page"`, so a model reads the page text as the web's, not the tool's.
+- A call that every backend failed because this machine's proxy or firewall refused their hosts, or could not reach them, now says so: `ProviderError.kind` is `network_blocked` or `unreachable`, `AllProvidersFailedError` names the hosts to allow in `blocked_hosts`, and the CLI's error JSON adds `kind`, `hops` and `blocked_hosts`.
+- Firecrawl now searches as well as extracts: `search(provider="firecrawl")` calls its `/v2/search`, maps `max_results` and `search_depth` (`lite`, or `deep` for each result's page as markdown), and runs keyless with `allow_keyless`. `auto` appends it after the keyless tier when `FIRECRAWL_API_KEY` is set.
+- New opt-in `obscura` extract backend: runs the open-source Obscura headless browser on your machine, so pages that only render in JavaScript can be read with no key, no Chromium and no vendor call. Name it with `provider="obscura"` once the binary is on `PATH` or in `OBSCURA_PATH`; it is in no `auto` chain.
+- Data API catalog: VPNDetection, with 2 read-only endpoints (single and batch IP lookups) for VPN, Tor and relay detection, written from its own API documentation and called live; its free plan answers single lookups without a key.
+- Estimated prices for six search tiers at the `fast` depth (Exa `exa-lite` and `exa-deep-lite`, Parallel `parallel-turbo` and `parallel-advanced`, Keenable `keenable-realtime` and `keenable-pro`), and for `exa:exa-lite` itself, so a cost cap can admit them.
+- Data API catalog: SearchApi, with 13 read-only endpoints (Google web, News, Maps, Shopping, Images, Videos, Scholar, Jobs, Trends and Autocomplete, Bing, YouTube and Amazon search), each written from the vendor's own documentation; the Google web search was called live.
+- `router="data-driven"`, an experimental keyless router that ranks web methods and providers from bundled data, with no routing model call: it picks search, extract or research (browse only with `router_config={"browse": True}`) from labelled requests keyed on five prompt features. Its tables ship as a versioned release (0.1.3), named in each decision's reason.
+- Two search tiers you can pin or route to: `exa:exa-lite` (Exa's `lite` type, which `effort="low"` already sends) and `keenable:keenable-pro` (Keenable's `pro` mode, its default, named outright).
+- Experimental: a router's `extra_modes` maps search backends to extra candidate mode ids, including tier-at-depth combinations such as `parallel-turbo+fast`. Local routers can request extras without `route_modes`; remote routers still need their own `route_modes=True`. A caller's `route_modes=False` turns all modes off.
+
+### Changed
+
+- `WebRouter(provider)` and `AsyncWebRouter(provider)` now check the id when built: a mode typo (`"exa:exa-instnat"`) raises `InvalidParameterError`, and an id naming a method that does not serve its backend (`"extract:parallel"`) raises `ProviderNotFoundError`, not on first use. `check_provider_id(provider_id, tool=None)` runs the same check without building a router.
+- No router is attached by default any more (it was `rules`): `plan()`, `run()` and the MCP server's `web_run` search every prompt unless you attach one, so a URL in the prompt is no longer extracted. Pass `router="data-driven"`, or set `WEB_ROUTER_MCP_ROUTER=data-driven`, to pick the method from the trained table; it can plan billed research.
+- MCP: a finished `research` run's result may now be five times `WEB_ROUTER_MCP_MAX_CHARS` (40,000 characters by default), with three quarters for the report. Before, a report of any length reached the model as its first 4,000 characters, and the rest only through `fetch_raw`'s untouched payload.
+- `webrouter providers` shows what `auto` can run without a key and, for a method with nothing configured, the variables that would enable it; research and browse list no backend when no key serves them. Adds `webrouter --version`.
+- Under `auto`, extract now tries the next backend when a page is a tracking pixel or a redirect to another site; an off-site page comes back with its warning when no later backend reads the URL. A named provider keeps both as documents with warnings, and a near-empty page stays a document with its warning.
+- Plain `pip install webrouter` now runs keyless search and extract: httpx and the Nimble and Tavily SDKs are in the base install, and the `search`, `extract`, `research`, `answer`, `remote` and `vendors` extras add nothing more.
+- **Breaking (MCP):** the default is slim, `load_env` is off and private browser destinations are refused. Restore with `WEB_ROUTER_MCP_PROFILE=full`, `WEB_ROUTER_MCP_LOAD_ENV=remember` and `WEB_ROUTER_MCP_PRIVATE_URLS=on`. Tools with no configured backend stay hidden in every profile; name them in `WEB_ROUTER_MCP_TOOLS` to list them anyway.
+- A search result's `description` is now the backend's own short snippet, or at most 500 characters taken from the body when the backend sends none; the full text is only in `content`, no longer repeated in `description`.
+- Breaking: `FIRECRAWL_BASE_URL`, `FIRECRAWL_EXTRACT_PATH`, `FIRECRAWL_API_KEY_PREFIX`, `FIRECRAWL_EXTRACT_FORMATS` and `FIRECRAWL_EXTRACT_DEFAULT_FORMAT` move from `web_router.constants` to `web_router.constants_firecrawl`.
+- The `data-driven` router's cost-order reasons now say they use benchmark prices. `prefer="cheap"` and the quality line use the provider table's prices; budget eligibility still uses the library price list, including page text. The guide states the difference and its Exa lite/Parallel advanced example.
+- The `data-driven` router now orders measured search candidates from its provider table in `plan()`, `run()` and MCP `web_run`. `prefer` selects the cost or speed line; `route_modes=False` leaves the default order when fewer than two measured rows remain. Use `route_tools=("search",)` to order plain `search()` calls too.
+- Resolve each navigated host once, reusing short-lived DNS answers and sharing in-flight lookups across the many requests of one page load.
+
+### Deprecated
+
+- The `rules` router is deprecated, retained for one release, then removed in the following release. `router="rules"` and `WEB_ROUTER_MCP_ROUTER=rules` keep their old behavior and warn when built. Use `router="data-driven"`, `router=None` (the default) for a plain search plan, or start a custom router from `examples/router_rules.py`.
+
+### Fixed
+
+- Valyu search no longer drops a structured dataset result's content: rows such as stock prices, which are not text, now stay in the result's `extra["content"]` instead of reaching only `raw`.
+- Parallel research now escapes the run id in its status and result paths, as every other job provider already did, so an id holding `/`, `?` or `#` can no longer send the poll to a different Parallel endpoint.
+- `extract()` no longer sends explicit non-HTTP(S) URLs, scheme-relative URLs, or hostless HTTP(S) URLs to backends. Mixed batches keep their valid results and report refused inputs as failures. A call with only refused inputs raises `InvalidParameterError`; bare domains still pass through.
+- An extracted page whose backend returned no title now gets one from the HTML `<title>`, then `og:title`, then the first heading; a title the backend sent is kept.
+- MCP backend-call errors, including a call's deadline, now start with `"origin": "web page"` before text that may quote a remote response. Error flags, kinds, retry advice and credential redaction are preserved; local argument errors keep their existing text.
+- With `route_modes` or `extra_modes`, a vendor mode its backend refuses for the request, such as Parallel's `low` effort beside an `include_domains` entry with a path, is now dropped from the candidates with why, so a routed search moves on to the next attempt instead of raising `UnsupportedParameterError`.
+- Nimble search keeps each result's `entities`, the company or creator records `focus="company"` and `focus="creators"` return, and any other field it does not map in `SearchResult.extra`, instead of leaving them only in `raw`.
+- Nimble search refuses `recency` at `search_depth="lite"`, which does not filter by it, instead of returning unfiltered results. Ask for `fast` or `deep`, or leave `recency` unset; `auto` passes Nimble over for such a call.
+- CLI JSON arguments loaded with `@path` now accept UTF-8 files with a byte order mark.
+- You.com search refuses an `include_domains` or `exclude_domains` entry with a path (`github.com/python`), as You.com MCP already did. You.com matches either list on the host alone, so the path was ignored: an include searched the whole host and an exclude dropped it. `auto` passes You.com over for such a call.
+
+### Security
+
+- url_policy="public_only" (on by default for the MCP server's extract, browse, live_data and web_run) now resolves a host name and refuses it when any answer is a private, loopback or cloud metadata address, so a public name that points inside the network is no longer sent to a backend.
+- The MCP server no longer keeps the connection URL and session id of every browser session it ever opened; a session's values are masked while it is open and dropped once it ends.
+- The MCP browser now refuses a URL whose authority a browser could read differently from the guard (a backslash, @ or % there), such as http://169.254.169.254\@example.com/. A space in a URL's path or query no longer gets it refused.
+
 ## [0.15.0] - 2026-11-24
 
 ### Added
