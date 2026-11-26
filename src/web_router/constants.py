@@ -561,7 +561,7 @@ AUTO_APPENDED: tuple[str, ...] = _chain("search", "appended")
 """Keyed members the frozen results do not rank, tried after the keyless tier, with a credential, in joining order.
 
 From ``data/chains.json``, unmeasured: ``keenable``, ``deepseek``, ``agentcore``, ``valyu``, ``seltz``, ``octen``,
-``keirolabs``, ``specstream`` and ``firecrawl`` joined after the scan that set the order, unranked by it. A
+``keirolabs``, ``specstream``, ``firecrawl`` and ``apify`` joined after the scan that set the order, unranked by it. A
 backend that joins later goes at the end of the file's ``appended``, so joining changes no environment's routing;
 ``make chains`` moves it ahead of the keyless tier only once frozen results rank it.
 """
@@ -646,7 +646,7 @@ AUTO_EXTRACT_APPENDED: tuple[str, ...] = (
 ``exa`` returns plain text alone, so it serves only ``format="text"``. ``webiq`` reads only pages in WebIQ's own
 index; one it lacks fails, and the chain moves on. ``keenable`` and ``deepseek`` return markdown alone. ``browserbase``
 (2026-10-29): its Fetch API never renders a page, so it is the member of last resort for an ordinary fetch, and the
-only one that maps ``profile`` -- a request setting it passes over every other member. ``specstream`` joined last.
+only one that maps ``profile`` -- a request setting it passes over every other member. ``apify`` joined last.
 """
 
 AUTO_EXTRACT_FORMATS: frozenset[ExtractFormat] = frozenset({"markdown", "html", "text"})

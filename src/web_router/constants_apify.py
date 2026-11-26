@@ -1,4 +1,5 @@
-"""Apify's API: the paths web-router's live data provider calls, from https://docs.apify.com/api/v2."""
+"""Apify's API: the paths web-router's live data provider calls, from https://docs.apify.com/api/v2, and the
+server interface of the Web Search and Web Fetch Server Actors that search and extract call."""
 
 from __future__ import annotations
 
