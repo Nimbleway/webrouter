@@ -89,7 +89,7 @@ from web_router.live_data_compat import TemplateMethods
 from web_router.modes import ModeDeclarations
 from web_router.providers._credential import _CredentialMixin
 from web_router.providers._deadline import _DeadlineMixin, _is_timeout, _job_window, current_deadline
-from web_router.providers._error_pages import named_failures, split_error_pages
+from web_router.providers._error_pages import left_out, named_failures, split_error_pages
 from web_router.providers._exhausted import nothing_returned
 from web_router.providers._page import AsyncPage, SyncPage
 from web_router.routing.metered import collected_cost
@@ -403,22 +403,7 @@ class _Collected:
         self.documents.extend(documents)
         self.failures.extend([*response.failures, *error_pages])
         self.reported += len(response.failures) + len(error_pages)
-        self._account_for(urls, response)
-
-    def _account_for(self, urls: list[str], response: ExtractResponse) -> None:
-        """Report any URL of this call the backend mentioned neither way.
-
-        A backend can answer 200 with a payload its mapping did not expect --
-        Oxylabs returns no result tagged with the format asked for, a batching
-        backend leaves a URL out of its list -- and the URL would otherwise
-        vanish from a call that partly succeeded. Only reached when fewer items
-        came back than URLs went out, so a rewritten echo is not read as a drop.
-        """
-        if len(response.documents) + len(response.failures) >= len(urls):
-            return
-
-        mentioned = {document.url for document in response.documents} | {failure.url for failure in response.failures}
-        dropped = [ExtractFailure(url=url, error=MSG_EXTRACT_NO_DOCUMENT) for url in urls if url not in mentioned]
+        dropped = left_out(response, urls)
         self.failures.extend(dropped)
         self.reported += len(dropped)
 
