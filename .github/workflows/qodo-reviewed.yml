@@ -46,13 +46,9 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
-        with:
-          enable-cache: false
-
       - name: Verify stored review evidence for the current commit
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           QODO_API_KEY: ${{ secrets.QODO_REVIEW_READ_API_KEY }}
           PR: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
-        run: uv run --frozen --only-group review-gate python scripts/qodo_reviewed.py "$PR"
+        run: python3 -m scripts.qodo_reviewed "$PR"

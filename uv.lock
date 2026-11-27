@@ -3623,9 +3623,6 @@ dev = [
     { name = "python-dotenv" },
     { name = "ruff" },
 ]
-review-gate = [
-    { name = "mcp" },
-]
 
 [package.metadata]
 requires-dist = [
@@ -3697,7 +3694,6 @@ dev = [
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "ruff", specifier = ">=0.6" },
 ]
-review-gate = [{ name = "mcp", specifier = "==2.3.0" }]
 
 [[package]]
 name = "websockets"

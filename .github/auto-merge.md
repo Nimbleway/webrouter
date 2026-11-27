@@ -14,10 +14,19 @@ The label never overrides any GitHub protection.
 
 ## Review completion
 
-`qodo-reviewed.yml` uses the official MCP SDK, pinned in the `review-gate` dependency group and
-`uv.lock`, to read Qodo's stored `get-pr-review-findings` results. It calls no review-generation
-or finding-resolution tools. Qodo documents MCP as its integration for
-[remote workflows](https://docs.qodo.ai/agentic-toolbox/mcp).
+`qodo-reviewed.yml` uses Python's standard library to read stored `get-pr-review-findings` results
+from Qodo's versioned managed-tools HTTP API. The runner needs Python3.11 or newer; no Python
+dependencies are installed by this workflow.
+The API is described in Qodo's [published SDK](https://www.npmjs.com/package/@qodo/sdk) and used by
+its [distributed CLI](https://get.qodo.ai/releases/2.7.1/qodo.mjs); it is not a separate full REST
+reference or stability guarantee. The reader calls no review-generation or finding-resolution tools.
+
+The reader requires API-version-2 confirmation, validates the result envelope, and handles HTTP202
+by polling the accepted operation rather than repeating the invocation. Polling obeys retry delays
+and the overall deadline, including rate-limited poll requests. Operation URLs must match the exact
+operation on the configured HTTPS origin; redirects are disabled. Failed, cancelled, interactive,
+unknown, malformed or oversized responses cannot produce a passing completion status. HTTP errors
+are reported without credentials or response bodies.
 
 Success requires the expected PR URL, a completed session with a valid run ID and UTC start time,
 `review_complete: true`,
@@ -85,7 +94,7 @@ workflow requests only Contents/Pull requests read and Commit statuses write.
 Set `WEBROUTER_AUTOMERGE_APP_ID` and `WEBROUTER_AUTOMERGE_APP_PRIVATE_KEY`. Provision
 `QODO_REVIEW_READ_API_KEY` separately through GitHub secrets, using a CI-specific Qodo principal with
 access to this repository and the read tool. Do not copy a developer's keychain credential.
-The adapter uses the documented SaaS endpoint; a different deployment needs its own reviewed
+The adapter uses the SaaS endpoint verified against Qodo's client; a different deployment needs its own reviewed
 endpoint configuration. Never log the key or raw vendor responses.
 
 Roll out with automatic merging disabled until the required gate is verified:

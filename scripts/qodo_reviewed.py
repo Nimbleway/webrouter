@@ -3,19 +3,14 @@
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
-import os
 import subprocess
+import time
 from datetime import datetime, timedelta
 from typing import Any
 
-import httpx2
-from mcp.client.streamable_http import streamable_http_client
+from scripts.qodo_api import read_review
 
-from mcp import ClientSession
-
-QODO_ENDPOINT = "https://sdk.qodo.ai/v1/tools/mcp/"
 REPOSITORY = "Nimbleway/webrouter"
 CONTEXT = "qodo-reviewed"
 ATTEMPTS = 12
@@ -75,20 +70,7 @@ def publish(head: str, state: str, description: str, url: str) -> None:
     )
 
 
-async def read_review(session: ClientSession, pr_url: str) -> object:
-    """Read stored results from Qodo; never request a new review."""
-    result = await session.call_tool("get-pr-review-findings", {"pr_url": pr_url})
-    if result.isError:
-        raise RuntimeError("Qodo could not return review evidence")
-    if result.structuredContent is not None:
-        return result.structuredContent
-    texts = [block.text for block in result.content if block.type == "text"]
-    if len(texts) != 1:
-        raise RuntimeError("Qodo returned an unsupported review response")
-    return json.loads(texts[0])
-
-
-async def reconcile(pr: int) -> None:
+def reconcile(pr: int) -> None:
     """Wait briefly for stored review evidence, leaving missing evidence blocking."""
     path = f"repos/{REPOSITORY}/pulls/{pr}"
     pull = github(path)
@@ -97,29 +79,21 @@ async def reconcile(pr: int) -> None:
     head = pull["head"]["sha"]
     pr_url = f"https://github.com/{REPOSITORY}/pull/{pr}"
     publish(head, "pending", "Waiting for a completed Qodo review of this commit", pr_url)
+    deadline = time.monotonic() + 180
     try:
-        async with (
-            asyncio.timeout(180),
-            httpx2.AsyncClient(
-                headers={"Authorization": f"Bearer {os.environ['QODO_API_KEY']}"},
-                follow_redirects=False,
-            ) as client,
-            streamable_http_client(QODO_ENDPOINT, http_client=client) as (read, write, _),
-            ClientSession(read, write) as session,
-        ):
-            await session.initialize()
-            for attempt in range(ATTEMPTS):
-                payload = await read_review(session, pr_url)
-                live = github(path)
-                if live["state"] != "open" or live["head"]["sha"] != head:
-                    return
-                if review_completed(payload, pr_url, head):
-                    assert isinstance(payload, dict)
-                    started = payload["review_session"]["started_at"]
-                    publish(head, "success", f"Qodo reviewed; started={started}", pr_url)
-                    return
-                if attempt + 1 < ATTEMPTS:
-                    await asyncio.sleep(RETRY_SECONDS)
+        for attempt in range(ATTEMPTS):
+            payload = read_review(pr_url, deadline)
+            live = github(path)
+            if live["state"] != "open" or live["head"]["sha"] != head:
+                return
+            if review_completed(payload, pr_url, head):
+                started = payload["review_session"]["started_at"]
+                publish(head, "success", f"Qodo reviewed; started={started}", pr_url)
+                return
+            if attempt + 1 < ATTEMPTS:
+                if time.monotonic() + RETRY_SECONDS >= deadline:
+                    raise TimeoutError("Qodo read deadline exceeded")
+                time.sleep(RETRY_SECONDS)
         print("Qodo review is missing, incomplete or stale; qodo-reviewed remains pending.")
     except Exception:
         # Vendor and transport exceptions can contain response bodies or credentials.
@@ -133,7 +107,7 @@ def main() -> None:
     args = parser.parse_args()
     if args.pr <= 0:
         parser.error("PR number must be positive")
-    asyncio.run(reconcile(args.pr))
+    reconcile(args.pr)
 
 
 if __name__ == "__main__":
