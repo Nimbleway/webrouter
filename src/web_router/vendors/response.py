@@ -64,7 +64,11 @@ def response(prepared: Prepared, answer: httpx.Response) -> VendorResponse:
         detail = MSG_VENDOR_HTTP_ERROR.format(
             status=answer.status_code, method=plan.method, path=plan.path, body=body or VENDOR_EMPTY_BODY
         )
-        raise ProviderError(plan.vendor.vendor, detail)
+        # Preserve the status without attaching the upstream request or response, which may contain credentials.
+        original = httpx.HTTPStatusError(
+            detail, request=httpx.Request(plan.method, ""), response=httpx.Response(answer.status_code)
+        )
+        raise ProviderError(plan.vendor.vendor, detail, original=original)
     data: Any = None
     text: str | None = None
     content: bytes | None = None

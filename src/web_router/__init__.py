@@ -76,6 +76,7 @@ from web_router.exceptions_live_data import LiveDataJobError, LiveDataSourceNotF
 from web_router.exceptions_merchant import MerchantNotValidatedError, MerchantRouteError
 from web_router.exceptions_typed import AllProvidersFailedError, ExtractFailedError, InvalidParameterError
 from web_router.exceptions_vendors import VendorNotFoundError, VendorWriteRefusedError
+from web_router.github_read import GitHubReadResponse
 from web_router.live_data_search import NativeSourceSearch
 from web_router.providers.answer import AnswerProvider
 from web_router.providers.base import (
@@ -220,6 +221,7 @@ __all__ = [
     "ExtractRequest",
     "ExtractResponse",
     "ExtractedDocument",
+    "GitHubReadResponse",
     "InvalidParameterError",
     "LiveDataBackendChoiceError",
     "LiveDataJobError",
