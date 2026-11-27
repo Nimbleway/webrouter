@@ -105,7 +105,9 @@ class ContextProvider(HttpSearchProvider):
 
     def _safe_error(self, exc: Exception) -> ProviderError:
         facts = classify(exc)
-        original = TimeoutError(MSG_CONTEXT_FAILED) if facts.kind == ERROR_KIND_TIMEOUT else None
+        original = (
+            TimeoutError(MSG_CONTEXT_FAILED) if facts.kind == ERROR_KIND_TIMEOUT and facts.status_code is None else None
+        )
         error = ProviderError(self.name, MSG_CONTEXT_FAILED, original=original, kind=facts.kind)
         error.status_code = facts.status_code
         error.retry_after = facts.retry_after
