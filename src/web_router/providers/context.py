@@ -14,6 +14,8 @@ from web_router.constants_context import (
     CONTEXT_API_KEY_PREFIX,
     CONTEXT_BASE_URL,
     CONTEXT_HIGHLIGHTS_CODES,
+    CONTEXT_HIGHLIGHTS_NOT_REQUESTED,
+    CONTEXT_HIGHLIGHTS_SUCCESS,
     CONTEXT_MAX_RESULTS,
     CONTEXT_SEARCH_PATH,
     MSG_CONTEXT_FAILED,
@@ -23,7 +25,7 @@ from web_router.providers._http import HttpSearchProvider
 from web_router.providers._utils import build_payload
 from web_router.snippet import as_snippet
 from web_router.types import SearchRequest, SearchResponse, SearchResult
-from web_router.types_errors import classify
+from web_router.types_errors import ERROR_KIND_TIMEOUT, classify
 
 
 class ContextProvider(HttpSearchProvider):
@@ -68,7 +70,7 @@ class ContextProvider(HttpSearchProvider):
             highlights = {}
         if not isinstance(highlights, dict):
             raise ValueError(MSG_CONTEXT_FAILED)
-        code = highlights.get("code", "NOT_REQUESTED")
+        code = highlights.get("code", CONTEXT_HIGHLIGHTS_NOT_REQUESTED)
         if code not in CONTEXT_HIGHLIGHTS_CODES:
             raise ValueError(MSG_CONTEXT_FAILED)
         passages = highlights.get("highlights")
@@ -77,7 +79,7 @@ class ContextProvider(HttpSearchProvider):
         if not isinstance(passages, list) or not all(isinstance(p, str) for p in passages):
             raise ValueError(MSG_CONTEXT_FAILED)
         description = hit.get("description") or ""
-        content = "\n".join(passages).strip() if code == "SUCCESS" else ""
+        content = "\n".join(passages).strip() if code == CONTEXT_HIGHLIGHTS_SUCCESS else ""
         return SearchResult(
             url=url,
             title=hit.get("title") or "",
@@ -103,7 +105,8 @@ class ContextProvider(HttpSearchProvider):
 
     def _safe_error(self, exc: Exception) -> ProviderError:
         facts = classify(exc)
-        error = ProviderError(self.name, MSG_CONTEXT_FAILED, kind=facts.kind)
+        original = TimeoutError(MSG_CONTEXT_FAILED) if facts.kind == ERROR_KIND_TIMEOUT else None
+        error = ProviderError(self.name, MSG_CONTEXT_FAILED, original=original, kind=facts.kind)
         error.status_code = facts.status_code
         error.retry_after = facts.retry_after
         return error
