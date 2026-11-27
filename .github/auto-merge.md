@@ -1,92 +1,108 @@
-# Auto-merge controller
+# Review completion and automatic merging
 
-Pull requests into `main` are armed for squash auto-merge when Qodo approves their current head.
-GitHub still decides when the merge may happen by enforcing required CI, code-owner approval,
-conversation resolution, and `qodo-ready`.
+Two workflows answer different questions:
 
-```mermaid
-flowchart TD
-    A[PR into main opens or receives a new head] --> B
-    subgraph Controller[Repository auto-merge controller]
-        B[Set qodo-ready pending] --> C[Disable old auto-merge]
-        C --> E{Qodo App added the label\nfor the live head?}
-        E -- No --> C
-        E -- Yes --> F[Arm squash auto-merge\nfor the exact head SHA]
-        F --> G[Set qodo-ready success]
-    end
-    G --> H
-    subgraph GitHub[Native GitHub protection]
-        H{CI, qodo-ready, current\ncode-owner approval, and\nconversations all clear?}
-        H -- No --> I[Keep waiting]
-        I --> H
-        H -- Yes --> J[Merge automatically]
-    end
-```
-
-The workflow uses `pull_request_target` because it needs repository secrets. It checks out only the
-trusted default branch and never checks out or executes pull-request code. It also fetches the pull
-request again before every ready transition and pins the auto-merge request with
-`--match-head-commit`.
-
-The label is accepted only when GitHub records Qodo's bot account, ID `151058649`, as its actor. It is
-an authenticated approval event, not the durable merge gate. The controller App records that approval
-as `qodo-ready` success on the exact commit. Once recorded, same-head label removal does not revoke
-the approval; only a new head needs a new approval and receives its own pending status.
-
-Before that durable status exists, every accepted pull-request event re-reads the live label timeline.
-This means a later queued event cannot hide a removed or collaborator-reapplied label by replacing
-the original label event. Qodo owns its label lifecycle and removes approval on a new push. The
-controller never deletes that label, so a delayed reset cannot erase a newer approval.
-
-## Scope
-
-The controller runs only when `base == main`. This is the exact stack boundary:
-
-- a stack parent targets an integration branch, so the controller ignores it and maintainers can
-  merge it with a merge commit;
-- the final integration pull request targets `main`, so the controller arms it for squash.
-
-If an armed pull request is retargeted away from `main`, the controller disables its auto-merge
-request before returning it to the integration-branch flow.
-
-## GitHub App configuration
-
-Install a repository-scoped GitHub App with these repository permissions:
-
-| Permission | Access | Used for |
+| Gate | Meaning | Required for |
 | --- | --- | --- |
-| Contents | Write | Authorize the App to create the eventual merge commit |
-| Pull requests | Write | Disable and enable auto-merge |
-| Commit statuses | Write | Publish the head-bound `qodo-ready` context |
+| `qodo-reviewed` | Qodo finished reviewing this PR's current commit and its findings are available | Every merge, manual or automatic |
+| `Qodo approved` label, applied by Qodo | Qodo's approval conditions are satisfied | Enabling automatic merging into `main` only |
 
-Configure the repository variable `WEBROUTER_AUTOMERGE_APP_ID` and secret
-`WEBROUTER_AUTOMERGE_APP_PRIVATE_KEY`. The workflow requests a token for this repository only and the
-action revokes it when the job finishes.
+An open finding does not fail `qodo-reviewed`. A code owner assesses it before approving, including
+documenting a deliberate decision not to fix it. Without the approval label, maintainers can merge
+manually once CI, review completion, code-owner approval and conversation requirements pass.
+The label never overrides any GitHub protection.
 
-Bootstrap the required check without leaving an unguarded window:
+## Review completion
 
-1. Verify that an effective GitHub Actions policy permits `pull_request_target` for this workflow. If
-   no organization policy does, create a repository policy before enabling the controller.
-2. Configure the App, variable, and secret while the workflow is already on `main`.
-3. Open or use a draft pull request into `main`. Let its reset run publish `qodo-ready` as pending,
-   but do not add Qodo approval or mark the pull request ready.
-4. Add that `qodo-ready` status to the required checks on `main`, selecting the controller App as the
-   expected source.
-5. Only then allow the pull request to become Qodo-ready and arm auto-merge.
+`qodo-reviewed.yml` uses the official MCP SDK, pinned in the `review-gate` dependency group and
+`uv.lock`, to read Qodo's stored `get-pr-review-findings` results. It calls no review-generation
+or finding-resolution tools. Qodo documents MCP as its integration for
+[remote workflows](https://docs.qodo.ai/agentic-toolbox/mcp).
 
-Keep the existing `CI` check and every review and conversation rule unchanged throughout rollout.
+Success requires the expected PR URL, a completed session with a run ID, `review_complete: true`,
+a matching current head SHA, and available, nontruncated findings. Finding severity, count, attribution
+status and the approval label do not affect completion. The adapter re-reads the current head before
+publishing success and writes the status only on the reviewed SHA.
 
-## Failure and rollback
+PR opening, new commits, reopening, retargeting and becoming ready trigger reconciliation. Authenticated
+Qodo issue-comment events wake the same reader when review results arrive. Comment text
+is never parsed as evidence. The reader waits up to two minutes for stored results to catch up.
+Missing, running, incomplete and stale reviews leave the status pending; API or authentication failures
+leave it in error. A missing status also blocks merging once GitHub requires it.
 
-The controller fails closed. A new head posts `qodo-ready` as pending before it attempts to disable
-old auto-merge, so a failure cannot leave the earlier success status active. If arming fails after
-Qodo readiness was recorded, it changes that status to error. A label from any actor other than Qodo
-also leaves the status pending. Stale webhook events and pull requests that never targeted `main`
-make no changes; a pull request retargeted away from `main` has auto-merge disabled.
+There is no documented vendor completion-webhook guarantee. If no notification arrives, or propagation
+outlasts the bounded wait, use **Actions → Qodo review completion → Run workflow**, selecting `main`
+and entering the PR number. This re-reads stored results; it does not spend tokens on another review.
+If Qodo has not reviewed the latest commit, request a final `/agentic_review` and reconcile after it
+finishes. Disabling per-push reviews does not make an older review valid for a newer commit.
 
-Converting an approved head back to draft disables auto-merge but preserves the authenticated,
-head-bound `qodo-ready` success so the same unchanged head can become ready again. A manual label
-removal on that same commit likewise does not revoke the recorded approval; pushing a commit does.
+Completion reconciliation handles every target branch. GitHub enforcement must be configured on every
+target branch covered by the all-merges policy, including integration branches; requiring the status
+only on `main` does not enforce it elsewhere. GitHub commit statuses are shared by PRs at the same
+SHA: the published evidence links the originating PR, but an identical SHA can reuse its status.
+Code-owner approval and conversation rules remain PR-specific. Do not treat this as independent
+verification of each PR's base branch or diff.
 
-To roll back automation, disable or remove the workflow and remove `qodo-ready` from required checks.
-Existing branch protection continues to block merges that lack CI, approval, or resolved conversations.
+## Auto-merge
+
+`auto-merge.yml` manages only native auto-merge requests. For a non-draft PR into `main`, it checks
+that the approval label is currently present and that GitHub's latest event for that label records
+Qodo's bot account (ID `151058649`) as the actor. It re-reads live state before arming squash
+auto-merge with `--match-head-commit`. GitHub then waits for all required checks and reviews.
+
+A new commit, draft conversion, removed or untrusted label, or retarget away from `main` disables
+existing auto-merge. A later event reconciles current state, so a delayed label-removal event cannot
+undo a newer authentic label. Integration branches are never armed automatically; stack parents can
+retain merge commits, with squash for the final PR into `main`.
+
+Label presence authorizes arming; label removal revokes it asynchronously. An already eligible merge
+can race the removal webhook before the workflow disables auto-merge. The label is deliberately not
+a required GitHub check because that would also prevent the approved manual-merge path.
+The controller cannot prevent someone with write access from manually enabling native auto-merge;
+maintainers should follow the label policy when using automation.
+
+Both workflows check out trusted default-branch code only, never PR code, and do not persist Git
+credentials. The completion token has no merge permission, and the merge token cannot produce review evidence.
+Do not add a credentialed `pull_request_review` trigger: that event uses the PR's workflow definition.
+
+## Configuration and rollout
+
+Install a repository-scoped GitHub App with Contents write, Pull requests write and Commit statuses
+write permissions. The merge workflow requests only Contents/Pull requests write; the completion
+workflow requests only Contents/Pull requests read and Commit statuses write.
+
+Set `WEBROUTER_AUTOMERGE_APP_ID` and `WEBROUTER_AUTOMERGE_APP_PRIVATE_KEY`. Provision
+`QODO_REVIEW_READ_API_KEY` separately through GitHub secrets, using a CI-specific Qodo principal with
+access to this repository and the read tool. Do not copy a developer's keychain credential.
+The adapter uses the documented SaaS endpoint; a different deployment needs its own reviewed
+endpoint configuration. Never log the key or raw vendor responses.
+
+Roll out with automatic merging disabled until the required gate is verified:
+
+1. Verify the effective GitHub Actions policy permits these trusted `pull_request_target` workflows.
+2. Merge the workflows, then disable **Auto-merge controller** before configuring its App credentials.
+3. Configure the App and Qodo read key. Run completion on a draft PR and verify that the App publishes
+   `qodo-reviewed` on the PR head SHA, not just a successful job on the base branch.
+4. Exercise a completed review with open findings and no approval label, a new push after approval,
+   a stale/running review, and missing or invalid Qodo credentials. Verify the completion notification
+   path on a fork PR and manual dispatch recovery. Qodo issue-comment wakeups run on the default
+   branch. Recovery dispatch must select the trusted default branch too.
+5. Require `qodo-reviewed` from the controller App on all target branches covered by the policy,
+   alongside existing CI, code-owner and conversation requirements. Remove `qodo-ready` if it was
+   previously configured. Preserve stale-review dismissal and administrator enforcement.
+6. Enable **Auto-merge controller**. Verify authenticated-label arming and label-removal cleanup.
+   Test manual merging without the label after a completed review and current code-owner approval.
+
+A draft PR or local test cannot validate live credentials, GitHub event policy or branch protection.
+Until these rollout steps are complete, the new gate is proposed, not enforced.
+
+## Recovery and rollback
+
+Re-run the completion workflow after restoring its credential or connectivity. Re-run a failed merge
+controller only after checking the current label and head. Never manufacture a green completion
+status or remove required checks just to merge a PR with missing evidence.
+
+To roll back automation alone, disable **Auto-merge controller**; review completion continues to gate
+manual merges. To roll back the completion integration, coordinate removal of `qodo-reviewed` from
+every protected target branch before disabling its producer. Other CI and human-review protections
+remain in effect.

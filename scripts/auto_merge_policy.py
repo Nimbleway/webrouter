@@ -8,7 +8,7 @@ from typing import Literal
 
 QODO_LABEL = "Qodo approved"
 QODO_ACTOR_ID = "151058649"
-DecisionName = Literal["ignore", "reset", "hold", "cleanup", "approve", "ready"]
+DecisionName = Literal["ignore", "disable", "ready"]
 
 
 @dataclass(frozen=True)
@@ -26,7 +26,6 @@ def decide(
     *,
     label_actor_id: str | None = None,
     previous_base: str | None = None,
-    qodo_status: str | None = None,
 ) -> Decision:
     head = _nested_string(pull_request, "head", "sha")
     guard = _guard_event(action, event_head, head, pull_request, previous_base)
@@ -34,10 +33,10 @@ def decide(
         return guard
 
     if action in {"opened", "reopened", "synchronize"}:
-        return Decision("reset", head, "new pull request state")
+        return Decision("disable", head, "new pull request state")
     if action == "edited" and previous_base:
-        return Decision("reset", head, "base changed to main")
-    return _current_state_decision(head, pull_request, label_actor_id, qodo_status)
+        return Decision("disable", head, "base changed to main")
+    return _current_state_decision(head, pull_request, label_actor_id)
 
 
 def _guard_event(
@@ -53,7 +52,7 @@ def _guard_event(
         return Decision("ignore", head, "pull request is not open")
     if _nested_string(pull_request, "base", "ref") != "main":
         if action == "edited" and previous_base == "main":
-            return Decision("cleanup", head, "base changed away from main")
+            return Decision("disable", head, "base changed away from main")
         return Decision("ignore", head, "base is not main")
     return None
 
@@ -62,18 +61,13 @@ def _current_state_decision(
     head: str,
     pull_request: dict[str, object],
     label_actor_id: str | None,
-    qodo_status: str | None,
 ) -> Decision:
-    if qodo_status == "success":
-        if pull_request.get("draft") is True:
-            return Decision("approve", head, "Qodo approved the current draft head")
-        return Decision("ready", head, "Qodo approved the current head")
-    if QODO_LABEL not in _label_names(pull_request):
-        return Decision("hold", head, "current head is not Qodo approved")
-    if label_actor_id != QODO_ACTOR_ID:
-        return Decision("hold", head, "Qodo label was not applied by Qodo")
     if pull_request.get("draft") is True:
-        return Decision("approve", head, "Qodo approved the current draft head")
+        return Decision("disable", head, "pull request is a draft")
+    if QODO_LABEL not in _label_names(pull_request):
+        return Decision("disable", head, "current head is not Qodo approved")
+    if label_actor_id != QODO_ACTOR_ID:
+        return Decision("disable", head, "Qodo label was not applied by Qodo")
     return Decision("ready", head, "Qodo approved the current head")
 
 
@@ -103,7 +97,6 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--event-label")
     parser.add_argument("--previous-base")
     parser.add_argument("--pull-request", required=True, type=Path)
-    parser.add_argument("--qodo-status")
     parser.add_argument("--github-output", required=True, type=Path)
     return parser.parse_args()
 
@@ -122,7 +115,6 @@ def main() -> None:
         pull_request,
         label_actor_id=args.label_actor_id,
         previous_base=args.previous_base,
-        qodo_status=args.qodo_status,
     )
     result = f"decision={decision.name}\nhead={decision.head}\nreason={decision.reason}\n"
     with args.github_output.open("a") as output:
