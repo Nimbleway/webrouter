@@ -67,7 +67,7 @@ MCP_SEARCH_PROPERTIES: dict[str, dict[str, Any]] = {
 }
 
 MCP_DESC_SEARCH = (
-    "Search the web: ranked links with titles and text, in seconds; free if keyless, else billed. "
+    "Search: ranked web links with titles and text, in seconds; free if keyless, else billed. "
     "Use `extract` for a known URL, `research` to investigate. Higher `effort` costs more; leave it unset "
     "unless needed. For a login or form, suggest `browser_open`. `data_apis`: data APIs for `call_data_api`; "
     "offer one if it beats the pages."

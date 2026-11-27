@@ -24,6 +24,7 @@ class Provider(str, Enum):
     TAVILY = "tavily"
     YOU = "you"
     BRAVE = "brave"
+    CONTEXT = "context"
     EXA = "exa"
     PARALLEL = "parallel"
     PERPLEXITY = "perplexity"

@@ -19,6 +19,7 @@ README_NAMES = {
     "Linkup": "linkup",
     "Tavily": "tavily",
     "Brave": "brave",
+    "Context.dev": "context",
     "WebIQ": "webiq",
     "Parallel": "parallel",
     "Exa": "exa",

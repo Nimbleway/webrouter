@@ -1,0 +1,63 @@
+{
+  "provider": "context",
+  "method": "search",
+  "class": "web_router.providers.context.ContextProvider",
+  "transport": {
+    "kind": "http",
+    "base_url": "https://api.context.dev",
+    "paths": {
+      "search_path": "/v1/web/search"
+    },
+    "method": "POST",
+    "auth_header": "Authorization"
+  },
+  "credentials": [
+    "CONTEXT_DEV_API_KEY"
+  ],
+  "keyless": null,
+  "always_sent": {
+    "body.highlightsOptions.enabled": true,
+    "body.query": "probe query"
+  },
+  "options": {
+    "max_results": {
+      "sample": {
+        "body.numResults": 3
+      }
+    }
+  },
+  "not_mapped": [
+    "country",
+    "effort",
+    "exclude_domains",
+    "include_domains",
+    "locale",
+    "recency",
+    "search_depth"
+  ],
+  "source": [
+    "https://docs.context.dev/api-reference/web-scraping/search",
+    "https://www.context.dev/pricing"
+  ],
+  "verified": {
+    "max_results": "live: tests/providers/test_context.py::test_live_context_search_returns_query_relevant_content"
+  },
+  "vendor_options": {
+    "markdownOptions": {
+      "status": "passthrough",
+      "note": "Request page Markdown explicitly; not mapped to a shared search depth."
+    },
+    "includeDomains": {
+      "status": "passthrough",
+      "note": "Domain filter in the API request, not mapped from the shared include_domains option."
+    },
+    "excludeDomains": {
+      "status": "passthrough",
+      "note": "Domain exclusion in the API request, not mapped from the shared exclude_domains option."
+    },
+    "timeoutOpts": {
+      "status": "passthrough",
+      "note": "Server deadline and partial response policy; partial remains in raw."
+    }
+  }
+}
