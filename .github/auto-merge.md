@@ -89,7 +89,7 @@ Do not add a credentialed `pull_request_review` trigger: that event uses the PR'
 ## Configuration and rollout
 
 Install a repository-scoped GitHub App with Contents write, Pull requests write and Commit statuses
-write permissions. The merge workflow requests only Contents/Pull requests write; the completion
+write permissions. The merge workflow requests Contents/Pull requests write and Commit statuses read; the completion
 workflow requests only Contents/Pull requests read and Commit statuses write.
 
 Set `WEBROUTER_AUTOMERGE_APP_ID` and `WEBROUTER_AUTOMERGE_APP_PRIVATE_KEY`. Provision
