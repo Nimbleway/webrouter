@@ -3358,6 +3358,28 @@
       "latency_n": null,
       "latency_runs": null,
       "latency_measured": null
+    },
+    {
+      "provider": "context",
+      "method": "search",
+      "mode": null,
+      "price_usd": null,
+      "unit": "unknown",
+      "note": "Search plus Highlights costs 2 credits per started block of 10 results; USD per credit varies by account plan and grandfathered rate. No account-independent dollar estimate.",
+      "source_url": "https://www.context.dev/pricing",
+      "checked": "2026-11-27",
+      "setup": "`context`",
+      "setting": "`highlightsOptions.enabled=true`",
+      "does": "Titles, URLs, search descriptions and query-relevant Highlights",
+      "kind": null,
+      "depth_assumed": null,
+      "adds_usd": null,
+      "writes": null,
+      "latency_p50_s": null,
+      "latency_p90_s": null,
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
     }
   ]
 }

@@ -237,6 +237,16 @@ month.
 | `valyu` | default (`search_type=web`) | Titles, URLs, a relevance score and the page body per result | $6.25 per 1k; searches of 10 web results: 0.1 credit per result, at $10 per 1,600 credits pay-as-you-go; dataset results cost more | [docs.valyu.ai](https://docs.valyu.ai/pricing) | 2026-11-12 |
 <!-- /prices -->
 
+### Context.dev
+
+Context Search is billed in account credits: search and Highlights each cost 1 credit per 10 results. Credit-to-dollar rates vary by plan and grandfathered account rate, so no account-independent USD estimate is reported. See [pricing](https://www.context.dev/pricing).
+
+<!-- prices: method=search provider=context -->
+| Setup | What web-router sends | What it returns | Estimated price | Source | Checked |
+|---|---|---|---|---|---|
+| `context` | `highlightsOptions.enabled=true` | Titles, URLs, search descriptions and query-relevant Highlights | Search plus Highlights costs 2 credits per started block of 10 results; USD per credit varies by account plan and grandfathered rate. No account-independent dollar estimate. | [www.context.dev](https://www.context.dev/pricing) | 2026-11-27 |
+<!-- /prices -->
+
 ### Seltz
 
 Per search, however many documents it returns ([pricing](https://docs.seltz.ai/pricing)): $5 per 1k on

@@ -39,6 +39,12 @@ from web_router.constants_mcp_env import MCP_DESC_LOAD_ENV, MCP_LOAD_ENV_PROPERT
 from web_router.constants_search import MCP_DESC_SEARCH, MCP_SEARCH_PROPERTIES
 from web_router.constants_search import described as _described
 from web_router.constants_vendors_mcp import VENDOR_MCP_DESCRIPTIONS, VENDOR_MCP_PROPERTIES, VENDOR_MCP_REQUIRED
+from web_router.constants_you import YOU_API_KEY_HEADER as YOU_API_KEY_HEADER
+from web_router.constants_you import YOU_BASE_URL as YOU_BASE_URL
+from web_router.constants_you import YOU_EXTRACTION_BY_DEPTH as YOU_EXTRACTION_BY_DEPTH
+from web_router.constants_you import YOU_KNOWLEDGE_ANSWER_TYPE as YOU_KNOWLEDGE_ANSWER_TYPE
+from web_router.constants_you import YOU_RESULT_SECTIONS as YOU_RESULT_SECTIONS
+from web_router.constants_you import YOU_SEARCH_PATH as YOU_SEARCH_PATH
 from web_router.snippet import SNIPPET_LIMIT as SNIPPET_LIMIT
 from web_router.types import (
     BROWSE_PARAMETERS,
@@ -68,6 +74,7 @@ PROVIDER_NIMBLE = Provider.NIMBLE.value
 PROVIDER_TAVILY = Provider.TAVILY.value
 PROVIDER_YOU = Provider.YOU.value
 PROVIDER_BRAVE = Provider.BRAVE.value
+PROVIDER_CONTEXT = Provider.CONTEXT.value
 PROVIDER_EXA = Provider.EXA.value
 PROVIDER_PARALLEL = Provider.PARALLEL.value
 PROVIDER_PERPLEXITY = Provider.PERPLEXITY.value
@@ -177,6 +184,7 @@ ENV_OXYLABS_PASSWORD = "OXYLABS_PASSWORD"
 ENV_BRIGHTDATA_API_KEY = "BRIGHTDATA_API_TOKEN"
 ENV_BRIGHTDATA_ZONE = "BRIGHTDATA_ZONE"
 ENV_FIRECRAWL_API_KEY = "FIRECRAWL_API_KEY"
+ENV_CONTEXT_DEV_API_KEY = "CONTEXT_DEV_API_KEY"
 ENV_JINA_API_KEY = "JINA_API_KEY"
 ENV_OBSCURA_PATH = "OBSCURA_PATH"
 ENV_STEEL_API_KEY = "STEEL_API_KEY"
@@ -192,6 +200,7 @@ ENV_BY_PROVIDER: dict[str, str | None] = {
     PROVIDER_TAVILY: ENV_TAVILY_API_KEY,
     PROVIDER_YOU: ENV_YOU_API_KEY,
     PROVIDER_BRAVE: ENV_BRAVE_API_KEY,
+    PROVIDER_CONTEXT: ENV_CONTEXT_DEV_API_KEY,
     PROVIDER_EXA: ENV_EXA_API_KEY,
     PROVIDER_PARALLEL: ENV_PARALLEL_API_KEY,
     PROVIDER_PERPLEXITY: ENV_PERPLEXITY_API_KEY,
@@ -406,24 +415,6 @@ NIMBLE_LIVE_DATA_RECORD_SHAPE: frozenset[str] = frozenset(
 )
 NIMBLE_LIVE_DATA_ERROR_SHAPE: frozenset[str] = frozenset({NIMBLE_LIVE_DATA_STATUS_FIELD, NIMBLE_LIVE_DATA_ERROR_FIELD})
 """The exact keys of the SDK's two wrapped shapes; a dict with any other key beside them is a bare record."""
-
-# --- You.com ----------------------------------------------------------------
-# You.com publishes no Python SDK, so the wire details are ours to maintain.
-
-YOU_BASE_URL = "https://ydc-index.io"
-YOU_SEARCH_PATH = "/v1/search"
-YOU_API_KEY_HEADER = "X-API-Key"
-YOU_RESULT_SECTIONS = ("web", "news")
-YOU_KNOWLEDGE_ANSWER_TYPE = "answer"
-
-YOU_EXTRACTION_BY_DEPTH: dict[SearchDepth, dict[str, Any] | None] = {
-    # You.com always returns snippets; extraction controls how much page body
-    # comes with them. `full_page` yields markdown on its own -- sending the
-    # documented `extraction_formats` alongside it is rejected with a 422.
-    "lite": None,
-    "fast": {"extraction_mode": "highlights"},
-    "deep": {"extraction_mode": "full_page"},
-}
 
 # --- Tavily -----------------------------------------------------------------
 

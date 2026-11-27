@@ -23,6 +23,7 @@ used here for identification only.
 | [Bright Data](https://brightdata.com) |  | ✓ | ✓ |  |  |  |  |
 | [Browser Use](https://browser-use.com) |  |  |  |  |  |  | ✓ |
 | [Browserbase](https://www.browserbase.com) |  | ✓ |  |  |  | ✓ | ✓ |
+| [Context.dev](https://context.dev) | ✓ |  |  |  |  |  |  |
 | [DeepSeek](https://api-docs.deepseek.com) | ✓ | ✓ |  |  |  |  |  |
 | [Exa](https://exa.ai) | ✓ keyless | ✓ |  | ✓ |  |  |  |
 | [Firecrawl](https://firecrawl.dev) | ✓ | ✓ keyless |  |  |  |  |  |
@@ -78,6 +79,7 @@ and what `response.provider` and `configured_providers()` report back.
 | `Provider.TAVILY` | `tavily` | [Tavily](https://tavily.com) | `tavily-python` | all but `effort` |
 | `Provider.YOU` | `you` | [You.com](https://you.com/platform) | direct HTTP | all but `effort` |
 | `Provider.BRAVE` | `brave` | [Brave](https://brave.com/search/api/) | direct HTTP | all but `effort`; `search_depth` at `lite` only |
+| `Provider.CONTEXT` | `context` | [Context.dev Search](https://docs.context.dev/api-reference/web-scraping/search) | direct HTTP; `CONTEXT_DEV_API_KEY` | `max_results` (at most 100); Highlights by default, or the description if unavailable. `partial` stays in `raw`. |
 | `Provider.EXA` | `exa` | [Exa](https://exa.ai) | direct HTTP | all but `locale` |
 | `Provider.PARALLEL` | `parallel` | [Parallel](https://parallel.ai) | direct HTTP (`/v1/search`, `mode=fast` unless `effort` sets it) | all but `locale`; `search_depth` at `lite` and `fast` |
 | `Provider.PERPLEXITY` | `perplexity` | [Perplexity](https://docs.perplexity.ai) | direct HTTP | all of them; `search_depth` at `lite` and `fast` |
@@ -260,7 +262,7 @@ Every backend you hold a key for is a candidate, in a fixed order:
 
 | Method | Keyed members, in order | Then keyless | Then members added since, with a key |
 | --- | --- | --- | --- |
-| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Nimble keyless, Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore, Exa LiteLLM, Tavily LiteLLM, Parallel LiteLLM, Valyu, Seltz, Octen, Keirolabs, SpecStream, Firecrawl |
+| `search` | Perplexity, Nimble, WebIQ, Linkup, Tavily, Exa, Parallel, Brave, You.com | Nimble keyless, Tavily keyless, You.com MCP, Exa MCP, Parallel MCP, Keenable keyless | Keenable, DeepSeek, AgentCore, Exa LiteLLM, Tavily LiteLLM, Parallel LiteLLM, Valyu, Seltz, Octen, Keirolabs, SpecStream, Firecrawl, Context.dev |
 | `extract` | Nimble, Tavily, Firecrawl, Oxylabs, Bright Data | Nimble keyless, Tavily keyless, Jina Reader, Firecrawl keyless, Keenable keyless | Linkup, Exa, WebIQ, Keenable, DeepSeek, Browserbase, SpecStream |
 | `research` | Nimble, Parallel, Perplexity, Linkup, You.com | nothing — every run bills | — |
 

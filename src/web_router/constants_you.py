@@ -8,9 +8,28 @@ place in ``auto`` stay there, beside every other backend's.
 from __future__ import annotations
 
 import re
+from typing import Any
 
-from web_router.types import ResearchEffort, ResearchState
+from web_router.types import ResearchEffort, ResearchState, SearchDepth
 from web_router.types_answer import Recency
+
+# --- You.com ----------------------------------------------------------------
+# You.com publishes no Python SDK, so the wire details are ours to maintain.
+
+YOU_BASE_URL = "https://ydc-index.io"
+YOU_SEARCH_PATH = "/v1/search"
+YOU_API_KEY_HEADER = "X-API-Key"
+YOU_RESULT_SECTIONS = ("web", "news")
+YOU_KNOWLEDGE_ANSWER_TYPE = "answer"
+
+YOU_EXTRACTION_BY_DEPTH: dict[SearchDepth, dict[str, Any] | None] = {
+    # You.com always returns snippets; extraction controls how much page body
+    # comes with them. `full_page` yields markdown on its own -- sending the
+    # documented `extraction_formats` alongside it is rejected with a 422.
+    "lite": None,
+    "fast": {"extraction_mode": "highlights"},
+    "deep": {"extraction_mode": "full_page"},
+}
 
 # Verified live on 2026-10-16. Research lives on api.you.com, not on the
 # ydc-index.io host search uses: there the same path answers 403. POST with
