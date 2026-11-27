@@ -18,7 +18,13 @@ def evidence() -> dict:
     return {
         "pr_url": URL,
         "finding_count": 1,
-        "review_session": {"run_id": 123, "status": "completed", "commit_sha": HEAD, "review_complete": True},
+        "review_session": {
+            "run_id": 123,
+            "status": "completed",
+            "commit_sha": HEAD,
+            "review_complete": True,
+            "started_at": "2026-11-27T12:00:00Z",
+        },
         "findings": [{"attribution_status": "pending", "action_level": "action_required"}],
     }
 
@@ -36,6 +42,12 @@ def test_completed_review_with_open_findings_is_reviewed() -> None:
         ("commit_sha", "b" * 40),
         ("review_complete", False),
         ("run_id", None),
+        ("run_id", ""),
+        ("run_id", True),
+        ("run_id", -1),
+        ("started_at", "yesterday"),
+        ("started_at", "2026-11-27T12:00:00"),
+        ("started_at", None),
     ],
 )
 def test_incomplete_stale_and_failed_sessions_cannot_pass(field: str, value: object) -> None:
@@ -60,7 +72,7 @@ def test_missing_or_unusable_results_cannot_pass(changes: dict) -> None:
     assert not review_completed(payload, URL, HEAD)
 
 
-@pytest.mark.parametrize("changes", [{"finding_count": 2}, {"findings": [None]}])
+@pytest.mark.parametrize("changes", [{"finding_count": 2}, {"finding_count": True}, {"findings": [None]}])
 def test_incomplete_finding_inventory_cannot_pass(changes: dict) -> None:
     payload = evidence()
     payload.update(changes)

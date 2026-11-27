@@ -3,21 +3,53 @@ name: Auto-merge controller
 on:
   pull_request_target: # zizmor: ignore[dangerous-triggers] App credentials; trusted base only.
     types: [opened, reopened, synchronize, edited, ready_for_review, converted_to_draft, labeled, unlabeled]
+  status:
 
 permissions:
   contents: read
-
-concurrency:
-  group: auto-merge-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
+  pull-requests: read # Discover open PRs associated with a completion-status commit.
 
 jobs:
-  reconcile:
-    name: Reconcile auto-merge
+  targets:
+    name: Find current pull requests
+    concurrency:
+      group: auto-merge-targets-${{ github.event.pull_request.number || github.event.sha }}
+      cancel-in-progress: false
     if: >-
       github.repository == 'Nimbleway/webrouter' &&
-      (github.event.pull_request.base.ref == 'main' ||
-      (github.event.action == 'edited' && github.event.changes.base.ref.from == 'main'))
+      (github.event_name != 'status' || github.event.context == 'qodo-reviewed')
+    runs-on: ubuntu-latest
+    outputs:
+      prs: ${{ steps.targets.outputs.prs }}
+    steps:
+      - name: Resolve event targets without checking out PR code
+        id: targets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SHA: ${{ github.event.sha }}
+        run: |
+          if [[ "$EVENT_NAME" == status ]]; then
+            prs="$(gh api --paginate --slurp "repos/$REPO/commits/$EVENT_SHA/pulls?per_page=100" \
+              --jq '[.[][] | select(.state == "open") | .number] | unique')"
+          else
+            prs="[$PR]"
+          fi
+          printf 'prs=%s\n' "$prs" >> "$GITHUB_OUTPUT"
+
+  reconcile:
+    name: Reconcile auto-merge
+    needs: targets
+    if: needs.targets.outputs.prs != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        pr: ${{ fromJSON(needs.targets.outputs.prs) }}
+    concurrency:
+      group: auto-merge-${{ matrix.pr }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -39,7 +71,8 @@ jobs:
       - name: Reconcile the live label and auto-merge request
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PR: ${{ github.event.pull_request.number }}
+          PR: ${{ matrix.pr }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
           REPO: ${{ github.repository }}
           ACTION: ${{ github.event.action }}
           EVENT_HEAD: ${{ github.event.pull_request.head.sha }}
@@ -51,9 +84,16 @@ jobs:
             gh api "repos/$REPO/pulls/$PR" > "$RUNNER_TEMP/pull-request.json"
             gh api --paginate --slurp "repos/$REPO/issues/$PR/events?per_page=100" > "$RUNNER_TEMP/events.json"
             actor="$(jq -r '[.[][] | select((.event == "labeled" or .event == "unlabeled") and .label.name == "Qodo approved")] | last | select(.event == "labeled") | .actor.id // ""' "$RUNNER_TEMP/events.json")"
+            label_time="$(jq -r '[.[][] | select((.event == "labeled" or .event == "unlabeled") and .label.name == "Qodo approved")] | last | select(.event == "labeled") | .created_at // ""' "$RUNNER_TEMP/events.json")"
+            head="$(jq -er '.head.sha' "$RUNNER_TEMP/pull-request.json")"
+            gh api "repos/$REPO/commits/$head/status" > "$RUNNER_TEMP/status.json"
+            review_start="$(jq -r --arg creator "$APP_SLUG[bot]" \
+              '[.statuses[] | select(.context == "qodo-reviewed" and .creator.login == $creator)] | first | select(.state == "success") | .description | select(type == "string" and startswith("Qodo reviewed; started=")) | ltrimstr("Qodo reviewed; started=")' \
+              "$RUNNER_TEMP/status.json")"
             python3 scripts/auto_merge_policy.py \
               --action "$ACTION" --event-head "$EVENT_HEAD" --event-label "$EVENT_LABEL" \
               --previous-base "$PREVIOUS_BASE" --label-actor-id "$actor" \
+              --review-started-at "$review_start" --label-applied-at "$label_time" \
               --pull-request "$RUNNER_TEMP/pull-request.json" --github-output "$RUNNER_TEMP/decision-$pass"
             decision="$(sed -n 's/^decision=//p' "$RUNNER_TEMP/decision-$pass")"
             head="$(jq -er '.head.sha' "$RUNNER_TEMP/pull-request.json")"

@@ -7,6 +7,7 @@ import asyncio
 import json
 import os
 import subprocess
+from datetime import datetime, timedelta
 from typing import Any
 
 import httpx2
@@ -29,14 +30,26 @@ def review_completed(payload: object, pr_url: str, head: str) -> bool:
     return (
         payload.get("qar_operation_result_truncated", False) is False
         and isinstance(payload.get("findings"), list)
+        and type(payload.get("finding_count")) is int
         and payload.get("finding_count") == len(payload["findings"])
         and all(isinstance(finding, dict) for finding in payload["findings"])
         and isinstance(session, dict)
         and session.get("status") == "completed"
         and session.get("review_complete") is True
         and session.get("commit_sha") == head
-        and session.get("run_id") is not None
+        and type(session.get("run_id")) is int
+        and session["run_id"] > 0
+        and _valid_start(session.get("started_at"))
     )
+
+
+def _valid_start(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        return datetime.fromisoformat(value).utcoffset() == timedelta(0)
+    except ValueError:
+        return False
 
 
 def github(path: str, *args: str) -> Any:
@@ -101,7 +114,9 @@ async def reconcile(pr: int) -> None:
                 if live["state"] != "open" or live["head"]["sha"] != head:
                     return
                 if review_completed(payload, pr_url, head):
-                    publish(head, "success", "Qodo finished reviewing this commit; findings may remain", pr_url)
+                    assert isinstance(payload, dict)
+                    started = payload["review_session"]["started_at"]
+                    publish(head, "success", f"Qodo reviewed; started={started}", pr_url)
                     return
                 if attempt + 1 < ATTEMPTS:
                     await asyncio.sleep(RETRY_SECONDS)

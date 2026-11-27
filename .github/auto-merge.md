@@ -19,14 +19,16 @@ The label never overrides any GitHub protection.
 or finding-resolution tools. Qodo documents MCP as its integration for
 [remote workflows](https://docs.qodo.ai/agentic-toolbox/mcp).
 
-Success requires the expected PR URL, a completed session with a run ID, `review_complete: true`,
+Success requires the expected PR URL, a completed session with a valid run ID and UTC start time,
+`review_complete: true`,
 a matching current head SHA, and available, nontruncated findings. Finding severity, count, attribution
 status and the approval label do not affect completion. The adapter re-reads the current head before
 publishing success and writes the status only on the reviewed SHA.
 
 PR opening, new commits, reopening, retargeting and becoming ready trigger reconciliation. Authenticated
 Qodo issue-comment events wake the same reader when review results arrive. Comment text
-is never parsed as evidence. The reader waits up to two minutes for stored results to catch up.
+is never parsed as evidence. The reader makes twelve attempts with ten-second pauses and a
+three-minute deadline for stored results to catch up.
 Missing, running, incomplete and stale reviews leave the status pending; API or authentication failures
 leave it in error. A missing status also blocks merging once GitHub requires it.
 
@@ -48,16 +50,25 @@ verification of each PR's base branch or diff.
 `auto-merge.yml` manages only native auto-merge requests. For a non-draft PR into `main`, it checks
 that the approval label is currently present and that GitHub's latest event for that label records
 Qodo's bot account (ID `151058649`) as the actor. It re-reads live state before arming squash
-auto-merge with `--match-head-commit`. GitHub then waits for all required checks and reviews.
+auto-merge with `--match-head-commit`. It also requires the latest App-produced `qodo-reviewed`
+status to be successful, with the label applied no earlier than that review's UTC start time.
+Completion-status events wake the controller too, so label and completion notifications can arrive
+in either order. Each wake re-reads the status; webhook data alone never proves completion.
+GitHub then waits for all required checks and reviews.
 
 A new commit, draft conversion, removed or untrusted label, or retarget away from `main` disables
-existing auto-merge. A later event reconciles current state, so a delayed label-removal event cannot
-undo a newer authentic label. Integration branches are never armed automatically; stack parents can
+existing auto-merge. Every target branch is reconciled, so a queued retarget cleanup can be replaced
+without losing cleanup on the next event. A delayed label-removal event cannot undo a newer authentic
+label. Integration branches are never armed automatically; any existing auto-merge is disabled there.
+Stack parents can
 retain merge commits, with squash for the final PR into `main`.
 
 Label presence authorizes arming; label removal revokes it asynchronously. An already eligible merge
 can race the removal webhook before the workflow disables auto-merge. The label is deliberately not
 a required GitHub check because that would also prevent the approved manual-merge path.
+Comparing the label time to the review start rejects an old retained label, but does not establish a
+vendor-guaranteed commit binding against delayed vendor writes. A later review of the same commit
+may require Qodo to refresh the label before automation re-arms; manual merging remains available.
 The controller cannot prevent someone with write access from manually enabling native auto-merge;
 maintainers should follow the label policy when using automation.
 

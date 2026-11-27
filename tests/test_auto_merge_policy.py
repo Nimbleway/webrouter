@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+from functools import partial
+
 import pytest
 
-from scripts.auto_merge_policy import QODO_ACTOR_ID, QODO_LABEL, decide
+from scripts.auto_merge_policy import QODO_ACTOR_ID, QODO_LABEL
+from scripts.auto_merge_policy import decide as policy
 
 HEAD = "a" * 40
+START = "2026-11-27T12:00:00Z"
+LABEL_TIME = "2026-11-27T12:01:00Z"
+decide = partial(policy, review_started_at=START, label_applied_at=LABEL_TIME)
 
 
 def pull_request(**changes: object) -> dict[str, object]:
@@ -43,13 +49,42 @@ def test_drafts_are_not_armed_even_with_qodo_approval() -> None:
     )
 
 
-def test_stale_events_and_closed_pull_requests_are_ignored() -> None:
-    assert decide("labeled", "b" * 40, QODO_LABEL, pull_request()).name == "ignore"
+def test_stale_events_reconcile_live_state_and_closed_pull_requests_are_ignored() -> None:
+    assert decide("labeled", "b" * 40, QODO_LABEL, pull_request()).name == "disable"
     assert decide("labeled", HEAD, QODO_LABEL, pull_request(state="closed")).name == "ignore"
 
 
-def test_integration_branches_are_ignored_but_retargeting_cleans_up() -> None:
+def test_any_event_on_an_integration_branch_cleans_up_armed_auto_merge() -> None:
     pull = pull_request(base={"ref": "integration"})
-    assert decide("labeled", HEAD, QODO_LABEL, pull).name == "ignore"
+    assert decide("labeled", HEAD, QODO_LABEL, pull).name == "disable"
     assert decide("edited", HEAD, None, pull, previous_base="main").name == "disable"
     assert decide("edited", HEAD, None, pull_request(), previous_base="integration").name == "disable"
+
+
+@pytest.mark.parametrize(
+    "review_start,label_time",
+    [
+        (START, "2026-11-27T11:59:00Z"),
+        (None, LABEL_TIME),
+        (START, None),
+        ("invalid", LABEL_TIME),
+        (START, "2026-11-27T12:01:00"),
+    ],
+)
+def test_old_or_unbound_labels_never_arm_a_current_commit(review_start: str | None, label_time: str | None) -> None:
+    assert (
+        decide(
+            "labeled",
+            HEAD,
+            QODO_LABEL,
+            pull_request(),
+            label_actor_id=QODO_ACTOR_ID,
+            review_started_at=review_start,
+            label_applied_at=label_time,
+        ).name
+        == "disable"
+    )
+
+
+def test_completion_wakeup_can_arm_a_label_received_before_status_publication() -> None:
+    assert decide("status", HEAD, None, pull_request(), label_actor_id=QODO_ACTOR_ID).name == "ready"
