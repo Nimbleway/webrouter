@@ -238,6 +238,7 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
     PROVIDER_SPECSTREAM: (ENV_SPECSTREAM_API_KEY,),
     PROVIDER_JINA: (),
     PROVIDER_OBSCURA: (),
+    Provider.YOUTUBE_CAPTIONS.value: (),
     PROVIDER_BROWSERBASE: (ENV_BROWSERBASE_API_KEY,),
     PROVIDER_AUTO: (),
     PROVIDER_MAX: (),
@@ -245,8 +246,7 @@ EXTRACT_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {
 """Which variables each extract provider needs, all of them; ``()`` means none.
 
 A tuple rather than a single name because two backends need more than a key: Oxylabs authenticates with a
-username and password, and Bright Data needs the zone that routes the request beside its token. ``jina`` needs
-nothing -- a key only raises its rate limit -- and ``auto`` needs whatever its chain does.
+username and password, and Bright Data needs the zone that routes the request beside its token. ``jina`` needs no key.
 """
 
 RESEARCH_ENV_BY_PROVIDER: dict[str, tuple[str, ...]] = {

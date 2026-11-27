@@ -60,9 +60,8 @@ See the format table at https://docs.webrouter.net/extract#formats
 class Provider(str, Enum):
     """The providers built into web-router.
 
-    Every argument that names a provider also accepts a plain string; this exists so the built-in names are
-    discoverable from an editor rather than remembered. Backends added with :func:`web_router.register_provider`
-    are named by string, which is why the string form is never going away.
+    The built-in names are discoverable in editors. Every provider argument also accepts a string, including
+    names registered with :func:`web_router.register_provider`.
 
     Not every name serves every method: ``oxylabs``, ``brightdata``, ``firecrawl``, ``jina`` and ``obscura`` only
     extract, and most search backends do not extract. ``steel``, ``browserbase``, ``hyperbrowser``, ``anchor``,
@@ -99,6 +98,7 @@ class Provider(str, Enum):
     FIRECRAWL = "firecrawl"
     JINA = "jina"
     OBSCURA = "obscura"
+    YOUTUBE_CAPTIONS = "youtube-captions"
     STEEL = "steel"
     BROWSERBASE = "browserbase"
     HYPERBROWSER = "hyperbrowser"

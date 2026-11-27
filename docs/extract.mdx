@@ -266,3 +266,26 @@ the whole list.
 `max` is left out of `benchmark()`'s default set as `auto` is: a row for it
 would repeat one of the others under a name that says nothing about who
 answered.
+
+## YouTube captions
+
+Install [yt-dlp](https://github.com/yt-dlp/yt-dlp#installation) on `PATH`
+and a [supported JavaScript runtime](https://github.com/yt-dlp/yt-dlp/wiki/EJS).
+Pass `provider="youtube-captions"` to read one public video's existing
+manual or auto-generated captions as plain text. No API key is required.
+The provider defaults to English and accepts a single exact YouTube language
+tag. It raises if the requested captions are unavailable.
+
+```python
+response = router.extract(
+    "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+    provider="youtube-captions",
+    provider_options={"language": "en"},
+    timeout=30,
+)
+print(response.documents[0].content)
+```
+
+This provider runs locally and is outside the default `auto` chain.
+Extraction fetches captions only. The original JSON3 events, including their
+timing data, are available in `response.raw`.
