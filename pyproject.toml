@@ -206,7 +206,7 @@ ignore = ["B008"]
 
 [tool.ruff.lint.per-file-ignores]
 # UP042 would turn the public `Provider` into a StrEnum, which changes what str(Provider.X) returns.
-"src/web_router/types.py" = ["UP042"]
+"src/web_router/types_provider.py" = ["UP042"]
 
 [tool.ruff.lint.mccabe]
 # McCabe's own threshold, and ruff's default.
