@@ -154,3 +154,20 @@ To pin a vendor's file or add one without forking, point
 shipped vendor replaces it whole. A vendor of your own takes one of the
 shipped categories as its `category`, or `custom` when none fits.
 [AGENTS.md](https://github.com/Nimbleway/webrouter/blob/main/AGENTS.md#adding-a-vendor) has the format's rules.
+
+## Read a GitHub URL
+
+`github_read(url)` combines two GitHub Data API calls on both the sync and
+async routers. A repository URL returns its metadata and the default branch's
+README as text, if present. An issue or pull request URL returns the resource
+and its first 100 conversation comments. Check `comments_truncated` for a
+further page, which you can fetch with `github.issues.comments`.
+
+```python
+with WebRouter() as router:
+    repo = router.github_read("https://github.com/Nimbleway/webrouter")
+    print(repo.resource["full_name"], repo.readme)
+```
+
+Public repositories work without a token, subject to GitHub's rate limits.
+The helper uses the same optional GitHub credentials as `call_data_api`.

@@ -24,7 +24,8 @@ from typing import TYPE_CHECKING, Any, Self
 from web_router.client_vendors_compat import AsyncVendorMethods, SyncVendorMethods, VendorLookupMethods
 from web_router.client_vendors_compat import VendorCredentials as VendorCredentials
 from web_router.constants_vendors import EXTRA_VENDORS, VENDOR_FIND_LIMIT
-from web_router.exceptions import ProviderNotInstalledError
+from web_router.exceptions import ProviderError, ProviderNotInstalledError
+from web_router.github_read import GitHubReadResponse, github_read_response, github_target, optional_context
 from web_router.vendors.catalog import get_catalog
 from web_router.vendors.credentials import CredentialSource, credential_source, summarize
 from web_router.vendors.plan import endpoint_plan, raw_plan
@@ -116,6 +117,17 @@ class _VendorLookup(VendorLookupMethods):
 
 
 class SyncVendors(SyncVendorMethods, _VendorLookup):
+    def github_read(self, url: str) -> GitHubReadResponse:
+        """Read a GitHub repo with its README, or an issue or PR with its first 100 conversation comments."""
+        target = github_target(url)
+        resource = self.call_data_api(*target.resource_call)
+        context = None
+        try:
+            context = self.call_data_api(*target.context_call)
+        except ProviderError as exc:
+            optional_context(target, exc)
+        return github_read_response(target, resource, context)
+
     def call_data_api(
         self,
         endpoint: str,
@@ -167,6 +179,17 @@ class SyncVendors(SyncVendorMethods, _VendorLookup):
 
 
 class AsyncVendors(AsyncVendorMethods, _VendorLookup):
+    async def github_read(self, url: str) -> GitHubReadResponse:
+        """Read a GitHub repo with its README, or an issue or PR with its first 100 conversation comments."""
+        target = github_target(url)
+        resource = await self.call_data_api(*target.resource_call)
+        context = None
+        try:
+            context = await self.call_data_api(*target.context_call)
+        except ProviderError as exc:
+            optional_context(target, exc)
+        return github_read_response(target, resource, context)
+
     async def call_data_api(
         self,
         endpoint: str,
