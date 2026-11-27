@@ -129,14 +129,16 @@ async def test_a_fresh_keyless_server_offers_only_the_slim_tools_that_can_run() 
     assert [tool.name for tool in listed.tools] == [*slim, MCP_TOOL_BUDGET_START, MCP_TOOL_BUDGET_STATUS]
 
 
-async def test_the_schemas_describe_an_install_with_no_credentials() -> None:
-    """With no key anywhere, the tools offer exactly the backends that need none.
+async def test_the_schemas_describe_an_install_with_no_credentials(tmp_path: Path) -> None:
+    """With no keys or local binaries, the tools offer exactly the usable backends.
 
     Serialized through the protocol rather than read off the objects, because a
     schema that survives construction and not JSON is the failure this module
     exists to catch.
     """
-    async with _session() as session:
+    env = isolated_environment(tmp_path)
+    env["PATH"] = str(tmp_path)
+    async with _session(env) as session:
         listed = await session.list_tools()
 
     schemas = {tool.name: tool.input_schema for tool in listed.tools}

@@ -79,6 +79,13 @@ def no_keys(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
+def no_local_extract(monkeypatch: pytest.MonkeyPatch, no_keys: None) -> None:
+    """Test an install with no credentials or optional extract executables."""
+    monkeypatch.setattr("web_router.providers.obscura.obscura_installed", lambda: False)
+    monkeypatch.setattr("web_router.providers.youtube_captions.captions_installed", lambda: False)
+
+
+@pytest.fixture
 def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, no_keys: None) -> Path:
     """A home directory of the test's own, an empty working directory, and no ``WEB_ROUTER_ENV_FILE``.
 

@@ -100,7 +100,7 @@ def test_serves_every_tool_in_order(tools: WebRouterTools, all_runnable: None) -
     ]
 
 
-def test_provider_enum_offers_only_configured_backends(tools: WebRouterTools, no_keys: None) -> None:
+def test_provider_enum_offers_only_configured_backends(tools: WebRouterTools, no_local_extract: None) -> None:
     search = _tool(tools, MCP_TOOL_SEARCH)
     extract = _tool(tools, MCP_TOOL_EXTRACT)
 

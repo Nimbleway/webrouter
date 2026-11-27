@@ -120,6 +120,11 @@ _BUILTIN_EXTRACT_PROVIDERS: dict[str, tuple[str, str, str]] = {
     PROVIDER_SPECSTREAM: ("web_router.providers.specstream", "SpecStreamExtractProvider", EXTRA_EXTRACT),
     PROVIDER_JINA: ("web_router.providers.jina", "JinaExtractProvider", EXTRA_EXTRACT),
     PROVIDER_OBSCURA: ("web_router.providers.obscura", "ObscuraExtractProvider", EXTRA_EXTRACT),
+    Provider.YOUTUBE_CAPTIONS.value: (
+        "web_router.providers.youtube_captions",
+        "YouTubeCaptionsExtractProvider",
+        EXTRA_EXTRACT,
+    ),
     PROVIDER_BROWSERBASE: ("web_router.providers.browserbase_extract", "BrowserbaseExtractProvider", EXTRA_EXTRACT),
     PROVIDER_AUTO: ("web_router.providers.auto", "AutoExtractProvider", AUTO_EXTRA),
     PROVIDER_MAX: ("web_router.providers.max", "MaxExtractProvider", AUTO_EXTRA),

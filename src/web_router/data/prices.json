@@ -1804,6 +1804,28 @@
       "latency_measured": null
     },
     {
+      "provider": "youtube-captions",
+      "method": "extract",
+      "mode": null,
+      "price_usd": 0,
+      "unit": "per_request",
+      "note": "runs a locally installed yt-dlp with no per-call charge",
+      "source_url": "https://github.com/yt-dlp/yt-dlp",
+      "checked": "2026-11-27",
+      "setup": null,
+      "setting": "public captions, local yt-dlp",
+      "does": null,
+      "kind": null,
+      "depth_assumed": null,
+      "adds_usd": null,
+      "writes": null,
+      "latency_p50_s": null,
+      "latency_p90_s": null,
+      "latency_n": null,
+      "latency_runs": null,
+      "latency_measured": null
+    },
+    {
       "provider": "parallel",
       "method": "extract",
       "mode": null,
