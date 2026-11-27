@@ -143,3 +143,18 @@ def test_missing_credentials_never_send_a_request(monkeypatch: pytest.MonkeyPatc
     with pytest.raises(RuntimeError, match="credential is missing"):
         api.read_review(URL, 30)
     transport.assert_not_called()
+
+
+@pytest.mark.parametrize("key", ["", " \t\n", "test\nkey", "test key"])
+def test_malformed_credentials_never_send_a_request(monkeypatch: pytest.MonkeyPatch, transport: Mock, key: str) -> None:
+    monkeypatch.setenv("QODO_API_KEY", key)
+    with pytest.raises(RuntimeError, match="credential is missing or invalid"):
+        api.read_review(URL, 30)
+    transport.assert_not_called()
+
+
+def test_surrounding_credential_whitespace_is_removed(monkeypatch: pytest.MonkeyPatch, transport: Mock) -> None:
+    monkeypatch.setenv("QODO_API_KEY", " \ntest-only\t")
+    transport.return_value = Response(payload={"result": RESULT})
+    assert api.read_review(URL, 30) == RESULT
+    assert transport.call_args.args[0].get_header("Authorization") == "Bearer test-only"

@@ -99,9 +99,9 @@ def _pause(headers: dict, payload: dict, deadline: float) -> None:
 
 def read_review(pr_url: str, deadline: float) -> dict:
     """Read existing findings, retaining and polling any accepted read operation."""
-    key = os.environ.get("QODO_API_KEY")
-    if not key:
-        raise RuntimeError("Qodo read credential is missing")
+    key = os.environ.get("QODO_API_KEY", "").strip()
+    if not key or any(character.isspace() for character in key):
+        raise RuntimeError("Qodo read credential is missing or invalid")
     code, payload, headers = _request(f"{API}/get-pr-review-findings:invoke", key, deadline, {"pr_url": pr_url})
     if code == 200:
         return _result(payload)

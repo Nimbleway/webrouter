@@ -65,8 +65,9 @@ Completion-status events wake the controller too, so label and completion notifi
 in either order. Each wake re-reads the status; webhook data alone never proves completion.
 GitHub then waits for all required checks and reviews.
 
-A new commit, draft conversion, removed or untrusted label, or retarget away from `main` disables
-existing auto-merge. Every target branch is reconciled, so a queued retarget cleanup can be replaced
+Missing current review evidence, draft conversion, removed/untrusted/stale labels, or a target other
+than `main` disables existing auto-merge. Decisions always use live state, so a delayed push or
+retarget event cannot disable a newly eligible PR. Every target branch is reconciled, so a queued retarget cleanup can be replaced
 without losing cleanup on the next event. A delayed label-removal event cannot undo a newer authentic
 label. Integration branches are never armed automatically; any existing auto-merge is disabled there.
 Stack parents can

@@ -20,34 +20,23 @@ class Decision:
 
 
 def decide(
-    action: str,
-    event_head: str,
-    event_label: str | None,
     pull_request: dict[str, object],
     *,
     label_actor_id: str | None = None,
-    previous_base: str | None = None,
     label_applied_at: str | None = None,
     review_started_at: str | None = None,
 ) -> Decision:
     head = _nested_string(pull_request, "head", "sha")
-    guard = _guard_event(action, event_head, head, pull_request, previous_base)
+    guard = _guard_request(head, pull_request)
     if guard:
         return guard
 
-    if action in {"opened", "reopened", "synchronize"} and event_head == head:
-        return Decision("disable", head, "new pull request state")
-    if action == "edited" and previous_base:
-        return Decision("disable", head, "base changed to main")
     return _current_state_decision(head, pull_request, label_actor_id, label_applied_at, review_started_at)
 
 
-def _guard_event(
-    action: str,
-    event_head: str,
+def _guard_request(
     head: str,
     pull_request: dict[str, object],
-    previous_base: str | None,
 ) -> Decision | None:
     if pull_request.get("state") != "open":
         return Decision("ignore", head, "pull request is not open")
@@ -103,11 +92,7 @@ def _label_names(pull_request: dict[str, object]) -> set[str]:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Decide how the auto-merge controller handles a pull request event.")
-    parser.add_argument("--action", required=True)
     parser.add_argument("--label-actor-id")
-    parser.add_argument("--event-head", required=True)
-    parser.add_argument("--event-label")
-    parser.add_argument("--previous-base")
     parser.add_argument("--label-applied-at")
     parser.add_argument("--review-started-at")
     parser.add_argument("--pull-request", required=True, type=Path)
@@ -123,12 +108,8 @@ def main() -> None:
         raise ValueError("pull request payload must be a JSON object")
 
     decision = decide(
-        args.action,
-        args.event_head,
-        args.event_label,
         pull_request,
         label_actor_id=args.label_actor_id,
-        previous_base=args.previous_base,
         label_applied_at=args.label_applied_at,
         review_started_at=args.review_started_at,
     )
