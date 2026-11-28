@@ -75,37 +75,4 @@ jobs:
           PR: ${{ matrix.pr }}
           APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
           REPO: ${{ github.repository }}
-        run: |
-          # Re-read immediately before arming; GitHub enforces the required checks.
-          for pass in 1 2; do
-            gh api "repos/$REPO/pulls/$PR" > "$RUNNER_TEMP/pull-request.json"
-            gh api --paginate --slurp "repos/$REPO/issues/$PR/events?per_page=100" > "$RUNNER_TEMP/events.json"
-            actor="$(jq -r '[.[][] | select((.event == "labeled" or .event == "unlabeled") and .label.name == "Qodo approved")] | last | select(.event == "labeled") | .actor.id // ""' "$RUNNER_TEMP/events.json")"
-            label_time="$(jq -r '[.[][] | select((.event == "labeled" or .event == "unlabeled") and .label.name == "Qodo approved")] | last | select(.event == "labeled") | .created_at // ""' "$RUNNER_TEMP/events.json")"
-            head="$(jq -er '.head.sha' "$RUNNER_TEMP/pull-request.json")"
-            gh api --paginate --slurp "repos/$REPO/commits/$head/status?per_page=100" > "$RUNNER_TEMP/status.json"
-            review_start="$(jq -r --arg creator "$APP_SLUG[bot]" \
-              '[.[].statuses[] | select(.context == "qodo-reviewed" and .creator.login == $creator)] | first | select(.state == "success") | .description | select(type == "string" and startswith("Qodo reviewed; started=")) | ltrimstr("Qodo reviewed; started=")' \
-              "$RUNNER_TEMP/status.json")"
-            python3 scripts/auto_merge_policy.py \
-              --label-actor-id "$actor" \
-              --review-started-at "$review_start" --label-applied-at "$label_time" \
-              --pull-request "$RUNNER_TEMP/pull-request.json" --github-output "$RUNNER_TEMP/decision-$pass"
-            decision="$(sed -n 's/^decision=//p' "$RUNNER_TEMP/decision-$pass")"
-            head="$(jq -er '.head.sha' "$RUNNER_TEMP/pull-request.json")"
-            if [[ "$decision" != ready ]]; then break; fi
-          done
-          auto_method="$(gh pr view "$PR" --repo "$REPO" --json autoMergeRequest --jq '.autoMergeRequest.mergeMethod // ""')"
-          case "$decision" in
-            ignore) exit 0 ;;
-            disable)
-              if [[ -n "$auto_method" ]]; then gh pr merge "$PR" --repo "$REPO" --disable-auto; fi
-              ;;
-            ready)
-              if [[ -n "$auto_method" && "$auto_method" != SQUASH ]]; then
-                gh pr merge "$PR" --repo "$REPO" --disable-auto
-              fi
-              gh pr merge "$PR" --repo "$REPO" --auto --squash --match-head-commit "$head"
-              ;;
-            *) exit 1 ;;
-          esac
+        run: python3 -m scripts.auto_merge_policy "$REPO" "$PR" "$APP_SLUG"

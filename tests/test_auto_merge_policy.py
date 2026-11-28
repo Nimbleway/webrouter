@@ -1,80 +1,79 @@
 from __future__ import annotations
 
-from functools import partial
+import json
 
 import pytest
 
-from scripts.auto_merge_policy import QODO_ACTOR_ID, QODO_LABEL
-from scripts.auto_merge_policy import decide as policy
+from scripts import auto_merge_policy as policy
 
 HEAD = "a" * 40
-START = "2026-11-27T12:00:00Z"
-LABEL_TIME = "2026-11-27T12:01:00Z"
-decide = partial(policy, review_started_at=START, label_applied_at=LABEL_TIME)
+REPO = "Nimbleway/webrouter"
+EVENT = {"event": "labeled", "actor": {"id": policy.QODO_ACTOR_ID}, "created_at": "2026-11-27T12:01:00Z"}
+STATUS = {
+    "context": "qodo-reviewed",
+    "creator": {"login": "controller[bot]"},
+    "state": "success",
+    "description": "Qodo reviewed; started=2026-11-27T12:00:00Z",
+}
 
 
-def pull_request(**changes: object) -> dict[str, object]:
+def pull_request(**changes: object) -> dict:
     return {
         "state": "open",
         "draft": False,
         "head": {"sha": HEAD},
         "base": {"ref": "main"},
-        "labels": [{"name": QODO_LABEL}],
+        "labels": [{"name": policy.QODO_LABEL}],
         **changes,
     }
 
 
-def test_a_delayed_wakeup_keeps_current_fresh_approval_armed() -> None:
-    assert decide(pull_request(), label_actor_id=QODO_ACTOR_ID).name == "ready"
-
-
-def test_only_a_live_label_from_qodo_can_arm_auto_merge() -> None:
-    assert decide(pull_request(), label_actor_id=QODO_ACTOR_ID).name == "ready"
-    assert decide(pull_request(), label_actor_id="123").name == "disable"
-
-
-def test_removing_the_label_revokes_auto_merge_on_the_same_commit() -> None:
-    assert decide(pull_request(labels=[])).name == "disable"
-
-
-def test_drafts_are_not_armed_even_with_qodo_approval() -> None:
-    assert decide(pull_request(draft=True), label_actor_id=QODO_ACTOR_ID).name == "disable"
-
-
-def test_a_new_head_without_review_evidence_is_not_armed_by_a_retained_label() -> None:
-    assert (
-        decide(pull_request(head={"sha": "b" * 40}), label_actor_id=QODO_ACTOR_ID, review_started_at=None).name
-        == "disable"
-    )
-
-
-def test_closed_pull_requests_are_ignored() -> None:
-    assert decide(pull_request(state="closed")).name == "ignore"
-
-
-@pytest.mark.parametrize("base", ["integration", "release"])
-def test_any_wakeup_on_a_non_main_target_cleans_up_armed_auto_merge(base: str) -> None:
-    assert decide(pull_request(base={"ref": base}), label_actor_id=QODO_ACTOR_ID).name == "disable"
+@pytest.mark.parametrize(
+    "changes",
+    [{"labels": []}, {"draft": True}, {"base": {"ref": "integration"}}],
+)
+def test_ineligible_pull_requests_disarm(changes: dict) -> None:
+    assert policy.decide(pull_request(**changes), EVENT, STATUS) == "disable"
 
 
 @pytest.mark.parametrize(
-    "review_start,label_time",
+    "event,status",
     [
-        (START, "2026-11-27T11:59:00Z"),
-        (None, LABEL_TIME),
-        (START, None),
-        ("invalid", LABEL_TIME),
-        (START, "2026-11-27T12:01:00"),
+        (dict(EVENT, actor={"id": 123}), STATUS),
+        (dict(EVENT, event="unlabeled"), STATUS),
+        (dict(EVENT, created_at="2026-11-27T11:59:00Z"), STATUS),
+        (dict(EVENT, created_at="2026-11-27T12:01:00"), STATUS),
+        (EVENT, {}),
+        (EVENT, dict(STATUS, description="Qodo reviewed; started=invalid")),
     ],
 )
-def test_old_or_unbound_labels_never_arm_a_current_commit(review_start: str | None, label_time: str | None) -> None:
-    assert (
-        decide(
-            pull_request(), label_actor_id=QODO_ACTOR_ID, review_started_at=review_start, label_applied_at=label_time
-        ).name
-        == "disable"
-    )
+def test_untrusted_or_stale_approval_disarms(event: dict, status: dict) -> None:
+    assert policy.decide(pull_request(), event, status) == "disable"
 
 
-def test_current_approval_survives_retarget_into_main_without_waiting_for_another_event() -> None:
-    assert decide(pull_request(base={"ref": "main"}), label_actor_id=QODO_ACTOR_ID).name == "ready"
+@pytest.mark.parametrize("label_removed", [False, True])
+def test_reconcile_checks_live_evidence_twice_before_acting(
+    monkeypatch: pytest.MonkeyPatch, label_removed: bool
+) -> None:
+    pulls = iter([pull_request(), pull_request(labels=[]) if label_removed else pull_request()])
+    commands = []
+
+    def gh(*args: str) -> str:
+        if args[-1].endswith("/pulls/123"):
+            return json.dumps(next(pulls))
+        if "/events?" in args[-1]:
+            event = dict(EVENT, label={"name": policy.QODO_LABEL})
+            return json.dumps([[], [event]])
+        if "/status?" in args[-1]:
+            other = dict(STATUS, creator={"login": "other[bot]"}, state="pending")
+            return json.dumps([{"statuses": [other]}, {"statuses": [STATUS]}])
+        if args[:2] == ("pr", "view"):
+            return json.dumps({"autoMergeRequest": {"mergeMethod": "SQUASH"} if label_removed else None})
+        commands.append(args)
+        return ""
+
+    monkeypatch.setattr(policy.review, "gh", gh)
+    policy.reconcile(REPO, 123, "controller")
+
+    action = ("--disable-auto",) if label_removed else ("--auto", "--squash", "--match-head-commit", HEAD)
+    assert commands == [("pr", "merge", "123", "--repo", REPO, *action)]

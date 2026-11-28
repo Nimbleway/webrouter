@@ -34,23 +34,29 @@ def review_completed(payload: object, pr_url: str, head: str) -> bool:
         and session.get("commit_sha") == head
         and type(session.get("run_id")) is int
         and session["run_id"] > 0
-        and _valid_start(session.get("started_at"))
+        and parse_utc_time(session.get("started_at")) is not None
     )
 
 
-def _valid_start(value: object) -> bool:
+def parse_utc_time(value: object) -> datetime | None:
+    """Parse the UTC timestamps shared by the completion and merge workflows."""
     if not isinstance(value, str):
-        return False
+        return None
     try:
-        return datetime.fromisoformat(value).utcoffset() == timedelta(0)
+        parsed = datetime.fromisoformat(value)
+        return parsed if parsed.utcoffset() == timedelta(0) else None
     except ValueError:
-        return False
+        return None
+
+
+def gh(*args: str) -> str:
+    """Run GitHub CLI with arguments passed directly to the process."""
+    return subprocess.run(["gh", *args], check=True, stdout=subprocess.PIPE, text=True).stdout
 
 
 def github(path: str, *args: str) -> Any:
-    """Call GitHub without interpreting pull-request data as shell code."""
-    result = subprocess.run(["gh", "api", path, *args], check=True, capture_output=True, text=True)
-    return json.loads(result.stdout)
+    """Read the JSON output of a GitHub API call."""
+    return json.loads(gh("api", *args, path))
 
 
 def publish(head: str, state: str, description: str, url: str) -> None:
