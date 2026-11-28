@@ -1,0 +1,54 @@
+name: Qodo review completion
+
+on:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] Review read credential; trusted base only.
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+  issue_comment:
+    types: [created, edited]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number to reconcile
+        required: true
+        type: number
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qodo-reviewed-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
+  cancel-in-progress: false
+
+jobs:
+  completion:
+    name: Verify Qodo review completion
+    if: >-
+      github.repository == 'Nimbleway/webrouter' &&
+      (github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'pull_request_target' ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.sender.id == 151058649))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        id: app-token
+        with:
+          app-id: ${{ vars.WEBROUTER_AUTOMERGE_APP_ID }}
+          private-key: ${{ secrets.WEBROUTER_AUTOMERGE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: read
+          permission-pull-requests: read
+          permission-statuses: write
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Verify stored review evidence for the current commit
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          QODO_API_KEY: ${{ secrets.QODO_REVIEW_READ_API_KEY }}
+          PR: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
+        run: python3 -m scripts.qodo_reviewed "$PR"

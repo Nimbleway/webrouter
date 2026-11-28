@@ -1628,16 +1628,8 @@ latest commit and every finding has a reply in its thread, starting with `@qodo`
 
 ### Merging
 
-Squash every pull request into `main`. An integration branch collects a stack of dependent pull
-requests before its final pull request into `main`. The only stack exception is a parent with open
-child pull requests: merge that parent into the integration branch with a merge commit so the stack
-keeps its ancestry, then squash only the final integration pull request into `main`.
-
-A required code-owner approval is valid only for the head commit it covers; Qodo's review is a
-separate gate. After any new commit, wait for fresh code-owner approval of the latest head.
-Immediately before enabling auto-merge, read the current head again and verify that every merge
-requirement is already satisfied, including green required checks, approval of that exact head, and
-the correct merge method. Do not enable auto-merge to wait for unfinished checks or approval.
+Follow the [merge policy in CONTRIBUTING.md](CONTRIBUTING.md#merging). If the current commit
+still needs Qodo review, request `/agentic_review` before handing the PR off for approval.
 
 A change users would notice adds a fragment, `changelog.d/<name>.<type>.md`, holding one entry of at
 most 400 characters (format in `changelog.d/README.md`); never edit `CHANGELOG.md`, which `make changelog`

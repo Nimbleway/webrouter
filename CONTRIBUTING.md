@@ -333,8 +333,12 @@ time.
 - The required code-owner approval applies only to the head commit it covers; Qodo's review is a
   separate gate. A new commit invalidates that approval, so the latest head needs fresh code-owner
   approval before merge.
-- Enable auto-merge only after every merge requirement is satisfied, including green required
-  checks, approval of the current head, and selection of the correct merge method above.
+- All merges require `qodo-reviewed` for the current commit. The check passes when Qodo finishes
+  and its findings are available. A code owner assesses any open findings before approving.
+- Automatic squash merging into `main` also requires a fresh `Qodo approved` label applied by Qodo.
+  Without it, a maintainer can merge manually once required checks and reviews pass. Integration
+  branches keep the stack-parent merge method above and still require `qodo-reviewed`.
+  See the [maintainer guide](.github/auto-merge.md) for setup and recovery.
 
 Every unit test must work without an API key. Anything that needs one belongs
 behind `@pytest.mark.integration`.
